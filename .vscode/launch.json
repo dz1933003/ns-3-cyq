@@ -18,7 +18,7 @@
                     "value": "./build/lib/"
                 }
             ],
-            "externalConsole": true,
+            "externalConsole": false,
             "MIMode": "gdb",
             "setupCommands": [
                 {
