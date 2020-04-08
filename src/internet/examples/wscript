@@ -7,3 +7,7 @@ def build(bld):
     obj = bld.create_ns3_program('main-simple',
                                  ['network', 'internet', 'applications'])
     obj.source = 'main-simple.cc'
+
+    obj = bld.create_ns3_program('ipv4-raw-socket',
+                                 ['network', 'internet', 'point-to-point', 'applications'])
+    obj.source = 'ipv4-raw-socket.cc'
