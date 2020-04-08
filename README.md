@@ -151,4 +151,5 @@ the priority of the socket is setting to high four bits.
 
 I add some examples to test the functionalities of NS3 which are not shown in the manual or document.
 
-- ipv4-raw-socket
+- `ipv4-raw-socket`: Test if the ipv4 raw socket working.
+- `tos-pq`: Test the PrioQueueDisc with modified socket tos.
