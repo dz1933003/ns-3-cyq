@@ -4,11 +4,15 @@ The Network Simulator, Version 3
 
 ## Table of Contents:
 
-1) [An overview](#an-open-source-project)
-2) [Building ns-3](#building-ns-3)
-3) [Running ns-3](#running-ns3)
-4) [Getting access to the ns-3 documentation](#getting-access-to-the-ns-3-documentation)
-5) [Working with the development version of ns-3](#working-with-the-development-version-of-ns-3)
+- [The Network Simulator, Version 3](#the-network-simulator-version-3)
+  - [Table of Contents:](#table-of-contents)
+  - [An Open Source project](#an-open-source-project)
+  - [Building ns-3](#building-ns-3)
+  - [Running ns-3](#running-ns-3)
+  - [Getting access to the ns-3 documentation](#getting-access-to-the-ns-3-documentation)
+  - [Working with the development version of ns-3](#working-with-the-development-version-of-ns-3)
+  - [Changes on Branch `dev-cyq` by Yanqing](#changes-on-branch-dev-cyq-by-yanqing)
+    - [Add Compiler Flag for Modified Socket Tos](#add-compiler-flag-for-modified-socket-tos)
 
 Note:  Much more substantial information about ns-3 can be found at
 http://www.nsnam.org
@@ -124,3 +128,20 @@ However, we recommend to follow the Gitlab guidelines for starters,
 that includes creating a Gitlab account, forking the ns-3-dev project
 under the new account's name, and then cloning the forked repository.
 You can find more information in the manual [link].
+
+## Changes on Branch `dev-cyq` by Yanqing
+
+Here I list some changes toke on NS3 itself due to my requirements.
+These changes will take effect on this and its branches.
+
+### Add Compiler Flag for Modified Socket Tos
+
+From [sockets-api](https://www.nsnam.org/docs/release/3.30/models/html/sockets-api.html#priority)
+we can see, the priority is forced setting to 4 different bands.
+No matter what the `ns3::PrioQueueDisc::PrioMap` is,
+it will only use 4 priority queues.
+So I change it to be able to use all 16 priority queues as your expectation.
+
+In the method `ns3::Socket::IpTos2Priority` of the file `socket.cc`,
+if the compiler flag `CYQ_TOS` exists,
+the priority of the socket is setting to high four bits.

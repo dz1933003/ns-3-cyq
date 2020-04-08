@@ -401,6 +401,7 @@ Socket::GetPriority (void) const
 uint8_t
 Socket::IpTos2Priority (uint8_t ipTos)
 {
+#ifndef CYQ_TOS
   uint8_t prio = NS3_PRIO_BESTEFFORT;
   ipTos &= 0x1e;
   switch (ipTos >> 1)
@@ -430,6 +431,10 @@ Socket::IpTos2Priority (uint8_t ipTos)
       prio = NS3_PRIO_INTERACTIVE_BULK;
       break;
     }
+#else
+  ipTos &= 0xf0;
+  ipTos >>= 4;
+#endif
   return prio;
 }
 
