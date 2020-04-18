@@ -71,7 +71,7 @@ public:
    * you must enable IP on the DPSK itself, by programing L3 logic etc,
    * never on the netdevices DPSK managing.
    */
-  void RegisterDevice (Ptr<NetDevice> device);
+  void AddDevice (Ptr<NetDevice> device);
 
   /**
    * \brief Gets the number of devices, i.e., the NetDevices
