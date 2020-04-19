@@ -96,14 +96,14 @@ public:
 
   /**
    * \brief Sends a packet from one device.
-   * \param device the originating port
+   * \param device the originating port (if NULL then broadcasts to all ports)
    * \param packet the sended packet
    * \param protocol the packet protocol (e.g., Ethertype)
    * \param source the packet source
    * \param destination the packet destination
    */
-  bool SendFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
-                       const Address &source, const Address &destination);
+  virtual bool SendFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
+                               const Address &source, const Address &destination);
 
   /**
    * A receive handler

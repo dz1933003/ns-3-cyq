@@ -11,6 +11,7 @@ def build(bld):
     module.source = [
         'model/dpsk.cc',
         'model/dpsk-channel.cc',
+        'model/dpsk-application.cc',
         'helper/dpsk-helper.cc',
         ]
 
@@ -24,11 +25,12 @@ def build(bld):
     headers.source = [
         'model/dpsk.h',
         'model/dpsk-channel.h',
+        'model/dpsk-application.h',
         'helper/dpsk-helper.h',
         ]
 
-    if bld.env.ENABLE_EXAMPLES:
-        bld.recurse('examples')
+    # if bld.env.ENABLE_EXAMPLES:
+    #     bld.recurse('examples')
 
     # bld.ns3_python_bindings()
 
