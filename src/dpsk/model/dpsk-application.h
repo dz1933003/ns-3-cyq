@@ -74,7 +74,7 @@ private:
    */
   void HandleTx (void);
 
-    /**
+  /**
    * \brief Application specific receiving logic
    *
    * This method is called when one device received one packet.
@@ -82,7 +82,7 @@ private:
    * subclasses.
    */
   void HandleRx (Ptr<NetDevice> incomingPort, Ptr<const Packet> packet, uint16_t protocol,
-                         Address const &src, Address const &dst, NetDevice::PacketType packetType);
+                 Address const &src, Address const &dst, NetDevice::PacketType packetType);
 
   /**
    * \brief Application specific startup code
