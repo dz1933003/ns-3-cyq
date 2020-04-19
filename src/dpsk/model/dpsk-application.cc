@@ -53,14 +53,6 @@ DpskApplication::~DpskApplication ()
 }
 
 void
-DpskApplication::SetupDpsk (Ptr<Dpsk> dpsk)
-{
-  NS_LOG_FUNCTION (dpsk);
-  m_dpsk = dpsk;
-  dpsk->RegisterReceiveFromDeviceHandler (MakeCallback (&DpskApplication::HandleRx, this));
-}
-
-void
 DpskApplication::HandleTx (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
@@ -77,13 +69,14 @@ void
 DpskApplication::StartApplication (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
-  HandleTx ();
+  m_dpsk->RegisterReceiveFromDeviceHandler (MakeCallback (&DpskApplication::HandleRx, this));
 }
 
 void
 DpskApplication::StopApplication (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
+  m_dpsk->UnregisterReceiveFromDeviceHandler (MakeCallback (&DpskApplication::HandleRx, this));
 }
 
 } // namespace ns3

@@ -55,15 +55,6 @@ public:
   DpskApplication ();
   virtual ~DpskApplication ();
 
-  /**
-   * \brief Application specific seting up logic
-   *
-   * This method is called to initialize the Dpsk application.
-   * This method should be overridden by all or most Dpsk application
-   * subclasses.
-   */
-  virtual void SetupDpsk (Ptr<Dpsk> dpsk);
-
 private:
   /**
    * \brief Application specific scheduling transmitting
@@ -72,7 +63,7 @@ private:
    * This method should be overridden by all or most Dpsk application
    * subclasses.
    */
-  void HandleTx (void);
+  virtual void HandleTx (void);
 
   /**
    * \brief Application specific receiving logic
@@ -81,8 +72,8 @@ private:
    * This method should be overridden by all or most application
    * subclasses.
    */
-  void HandleRx (Ptr<NetDevice> incomingPort, Ptr<const Packet> packet, uint16_t protocol,
-                 Address const &src, Address const &dst, NetDevice::PacketType packetType);
+  virtual void HandleRx (Ptr<NetDevice> incomingPort, Ptr<const Packet> packet, uint16_t protocol,
+                         Address const &src, Address const &dst, NetDevice::PacketType packetType);
 
   /**
    * \brief Application specific startup code
