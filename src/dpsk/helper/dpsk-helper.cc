@@ -23,41 +23,41 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("DPSKHelper");
+NS_LOG_COMPONENT_DEFINE ("DpskHelper");
 
-DPSKHelper::DPSKHelper ()
+DpskHelper::DpskHelper ()
 {
   NS_LOG_FUNCTION_NOARGS ();
-  m_deviceFactory.SetTypeId ("ns3::DPSK");
+  m_deviceFactory.SetTypeId ("ns3::Dpsk");
 }
 
 void
-DPSKHelper::SetDeviceAttribute (std::string n1, const AttributeValue &v1)
+DpskHelper::SetDeviceAttribute (std::string n1, const AttributeValue &v1)
 {
   NS_LOG_FUNCTION_NOARGS ();
   m_deviceFactory.Set (n1, v1);
 }
 
-Ptr<DPSK>
-DPSKHelper::Install (Ptr<Node> node, NetDeviceContainer c)
+Ptr<Dpsk>
+DpskHelper::Install (Ptr<Node> node, NetDeviceContainer c)
 {
   NS_LOG_FUNCTION_NOARGS ();
-  NS_LOG_LOGIC ("**** Install DPSK on node " << node->GetId ());
+  NS_LOG_LOGIC ("**** Install Dpsk on node " << node->GetId ());
 
-  Ptr<DPSK> dpsk = m_deviceFactory.Create<DPSK> ();
+  Ptr<Dpsk> dpsk = m_deviceFactory.Create<Dpsk> ();
   node->AddDevice (dpsk);
 
   for (NetDeviceContainer::Iterator iter = c.Begin (); iter != c.End (); ++iter)
     {
-      NS_LOG_LOGIC ("**** Add Port " << *iter << " to DPSK");
+      NS_LOG_LOGIC ("**** Add Port " << *iter << " to Dpsk");
       dpsk->AddDevice (*iter);
     }
 
   return dpsk;
 }
 
-Ptr<DPSK>
-DPSKHelper::Install (std::string nodeName, NetDeviceContainer c)
+Ptr<Dpsk>
+DpskHelper::Install (std::string nodeName, NetDeviceContainer c)
 {
   NS_LOG_FUNCTION_NOARGS ();
   Ptr<Node> node = Names::Find<Node> (nodeName);

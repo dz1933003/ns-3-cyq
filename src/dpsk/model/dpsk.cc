@@ -25,84 +25,84 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("DPSK");
+NS_LOG_COMPONENT_DEFINE ("Dpsk");
 
-NS_OBJECT_ENSURE_REGISTERED (DPSK);
+NS_OBJECT_ENSURE_REGISTERED (Dpsk);
 
 TypeId
-DPSK::GetTypeId (void)
+Dpsk::GetTypeId (void)
 {
   static TypeId tid =
-      TypeId ("ns3::DPSK")
+      TypeId ("ns3::Dpsk")
           .SetParent<NetDevice> ()
-          .SetGroupName ("DPSK")
-          .AddConstructor<DPSK> ()
+          .SetGroupName ("Dpsk")
+          .AddConstructor<Dpsk> ()
           .AddAttribute ("Address", "The MAC address of this device (Not used)",
                          Mac48AddressValue (Mac48Address ()),
-                         MakeMac48AddressAccessor (&DPSK::m_address), MakeMac48AddressChecker ())
+                         MakeMac48AddressAccessor (&Dpsk::m_address), MakeMac48AddressChecker ())
           .AddAttribute ("Mtu", "The MAC-level Maximum Transmission Unit (Not used)",
-                         UintegerValue (1500), MakeUintegerAccessor (&DPSK::SetMtu, &DPSK::GetMtu),
+                         UintegerValue (1500), MakeUintegerAccessor (&Dpsk::SetMtu, &Dpsk::GetMtu),
                          MakeUintegerChecker<uint16_t> ());
   return tid;
 }
 
-DPSK::DPSK () : m_node (0), m_ifIndex (0)
+Dpsk::Dpsk () : m_node (0), m_ifIndex (0)
 {
   NS_LOG_FUNCTION_NOARGS ();
-  m_channel = CreateObject<DPSKChannel> ();
+  m_channel = CreateObject<DpskChannel> ();
 }
 
-DPSK::~DPSK ()
+Dpsk::~Dpsk ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
 
 void
-DPSK::AddDevice (Ptr<NetDevice> device)
+Dpsk::AddDevice (Ptr<NetDevice> device)
 {
   NS_LOG_FUNCTION (device);
   NS_ASSERT (device != this);
 
   if (!Mac48Address::IsMatchingType (device->GetAddress ()))
     {
-      NS_FATAL_ERROR ("Device does not support eui 48 addresses: cannot be added to DPSK.");
+      NS_FATAL_ERROR ("Device does not support eui 48 addresses: cannot be added to Dpsk.");
     }
 
   if (!device->SupportsSendFrom ())
     {
-      NS_FATAL_ERROR ("Device does not support SendFrom: cannot be added to DPSK.");
+      NS_FATAL_ERROR ("Device does not support SendFrom: cannot be added to Dpsk.");
     }
 
   NS_LOG_DEBUG ("RegisterProtocolHandler for " << device->GetInstanceTypeId ().GetName ());
-  m_node->RegisterProtocolHandler (MakeCallback (&DPSK::ReceiveFromDevice, this), 0, device, true);
+  m_node->RegisterProtocolHandler (MakeCallback (&Dpsk::ReceiveFromDevice, this), 0, device, true);
 
   m_ports.push_back (device);
   m_channel->AddChannel (device->GetChannel ());
 }
 
 uint32_t
-DPSK::GetNDevices (void) const
+Dpsk::GetNDevices (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return m_ports.size ();
 }
 
 Ptr<NetDevice>
-DPSK::GetDevice (uint32_t n) const
+Dpsk::GetDevice (uint32_t n) const
 {
   NS_LOG_FUNCTION (n);
   return m_ports[n];
 }
 
 std::vector<Ptr<NetDevice>>
-DPSK::GetDevices (void) const
+Dpsk::GetDevices (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return m_ports;
 }
 
 bool
-DPSK::SendFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
+Dpsk::SendFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
                       Address const &source, Address const &destination)
 {
   NS_LOG_FUNCTION (device << packet << protocol << &source << &destination);
@@ -127,14 +127,14 @@ DPSK::SendFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t 
 }
 
 void
-DPSK::RegisterReceiveFromDeviceHandler (ReceiveFromDeviceHandler handler)
+Dpsk::RegisterReceiveFromDeviceHandler (ReceiveFromDeviceHandler handler)
 {
   NS_LOG_FUNCTION (&handler);
   m_handlers.push_back (handler);
 }
 
 void
-DPSK::UnregisterReceiveFromDeviceHandler (ReceiveFromDeviceHandler handler)
+Dpsk::UnregisterReceiveFromDeviceHandler (ReceiveFromDeviceHandler handler)
 {
   NS_LOG_FUNCTION (&handler);
 
@@ -150,42 +150,42 @@ DPSK::UnregisterReceiveFromDeviceHandler (ReceiveFromDeviceHandler handler)
 }
 
 void
-DPSK::SetIfIndex (const uint32_t index)
+Dpsk::SetIfIndex (const uint32_t index)
 {
   NS_LOG_FUNCTION (index);
   m_ifIndex = index;
 }
 
 uint32_t
-DPSK::GetIfIndex (void) const
+Dpsk::GetIfIndex (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return m_ifIndex;
 }
 
 Ptr<Channel>
-DPSK::GetChannel (void) const
+Dpsk::GetChannel (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return m_channel;
 }
 
 void
-DPSK::SetAddress (Address address)
+Dpsk::SetAddress (Address address)
 {
   NS_LOG_FUNCTION (address);
   m_address = Mac48Address::ConvertFrom (address);
 }
 
 Address
-DPSK::GetAddress (void) const
+Dpsk::GetAddress (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return m_address;
 }
 
 bool
-DPSK::SetMtu (const uint16_t mtu)
+Dpsk::SetMtu (const uint16_t mtu)
 {
   NS_LOG_FUNCTION (mtu);
   m_mtu = mtu;
@@ -193,48 +193,48 @@ DPSK::SetMtu (const uint16_t mtu)
 }
 
 uint16_t
-DPSK::GetMtu (void) const
+Dpsk::GetMtu (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return m_mtu;
 }
 
 bool
-DPSK::IsLinkUp (void) const
+Dpsk::IsLinkUp (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return true;
 }
 
 void
-DPSK::AddLinkChangeCallback (Callback<void> callback)
+Dpsk::AddLinkChangeCallback (Callback<void> callback)
 {
   NS_LOG_FUNCTION (&callback);
 }
 
 bool
-DPSK::IsBroadcast (void) const
+Dpsk::IsBroadcast (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return true;
 }
 
 Address
-DPSK::GetBroadcast (void) const
+Dpsk::GetBroadcast (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return Mac48Address ("ff:ff:ff:ff:ff:ff");
 }
 
 bool
-DPSK::IsMulticast (void) const
+Dpsk::IsMulticast (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return true;
 }
 
 Address
-DPSK::GetMulticast (Ipv4Address multicastGroup) const
+Dpsk::GetMulticast (Ipv4Address multicastGroup) const
 {
   NS_LOG_FUNCTION (multicastGroup);
   Mac48Address multicast = Mac48Address::GetMulticast (multicastGroup);
@@ -242,35 +242,35 @@ DPSK::GetMulticast (Ipv4Address multicastGroup) const
 }
 
 Address
-DPSK::GetMulticast (Ipv6Address addr) const
+Dpsk::GetMulticast (Ipv6Address addr) const
 {
   NS_LOG_FUNCTION (addr);
   return Mac48Address::GetMulticast (addr);
 }
 
 bool
-DPSK::IsBridge (void) const
+Dpsk::IsBridge (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return true;
 }
 
 bool
-DPSK::IsPointToPoint (void) const
+Dpsk::IsPointToPoint (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return false;
 }
 
 bool
-DPSK::Send (Ptr<Packet> packet, const Address &dest, uint16_t protocolNumber)
+Dpsk::Send (Ptr<Packet> packet, const Address &dest, uint16_t protocolNumber)
 {
   NS_LOG_FUNCTION (packet << dest << protocolNumber);
   return SendFrom (packet, m_address, dest, protocolNumber);
 }
 
 bool
-DPSK::SendFrom (Ptr<Packet> packet, const Address &src, const Address &dest,
+Dpsk::SendFrom (Ptr<Packet> packet, const Address &src, const Address &dest,
                 uint16_t protocolNumber)
 {
   NS_LOG_FUNCTION (packet << src << dest << protocolNumber);
@@ -283,49 +283,49 @@ DPSK::SendFrom (Ptr<Packet> packet, const Address &src, const Address &dest,
 }
 
 Ptr<Node>
-DPSK::GetNode (void) const
+Dpsk::GetNode (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return m_node;
 }
 
 void
-DPSK::SetNode (Ptr<Node> node)
+Dpsk::SetNode (Ptr<Node> node)
 {
   NS_LOG_FUNCTION (node);
   m_node = node;
 }
 
 bool
-DPSK::NeedsArp (void) const
+Dpsk::NeedsArp (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return true;
 }
 
 void
-DPSK::SetReceiveCallback (NetDevice::ReceiveCallback cb)
+Dpsk::SetReceiveCallback (NetDevice::ReceiveCallback cb)
 {
   NS_LOG_FUNCTION (&cb);
   m_rxCallback = cb;
 }
 
 void
-DPSK::SetPromiscReceiveCallback (NetDevice::PromiscReceiveCallback cb)
+Dpsk::SetPromiscReceiveCallback (NetDevice::PromiscReceiveCallback cb)
 {
   NS_LOG_FUNCTION (&cb);
   m_promiscRxCallback = cb;
 }
 
 bool
-DPSK::SupportsSendFrom () const
+Dpsk::SupportsSendFrom () const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return true;
 }
 
 void
-DPSK::DoDispose ()
+Dpsk::DoDispose ()
 {
   NS_LOG_FUNCTION_NOARGS ();
   for (std::vector<Ptr<NetDevice>>::iterator iter = m_ports.begin (); iter != m_ports.end ();
@@ -340,7 +340,7 @@ DPSK::DoDispose ()
 }
 
 void
-DPSK::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
+Dpsk::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
                          const Address &source, const Address &destination, PacketType packetType)
 {
   NS_LOG_FUNCTION (device << packet << protocol << &source << &destination << packetType);

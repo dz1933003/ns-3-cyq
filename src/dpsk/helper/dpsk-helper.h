@@ -30,19 +30,19 @@ class AttributeValue;
 
 /**
  * \ingroup dpsk
- * \brief Add capability to DPSK device management
+ * \brief Add capability to Dpsk device management
  */
-class DPSKHelper
+class DpskHelper
 {
 public:
   /*
-   * Construct a DPSKHelper
+   * Construct a DpskHelper
    */
-  DPSKHelper ();
+  DpskHelper ();
 
   /**
-   * Set an attribute on each ns3::DPSK created by
-   * DPSKHelper::Install
+   * Set an attribute on each ns3::Dpsk created by
+   * DpskHelper::Install
    *
    * \param n1 the name of the attribute to set
    * \param v1 the value of the attribute to set
@@ -50,28 +50,28 @@ public:
   void SetDeviceAttribute (std::string n1, const AttributeValue &v1);
 
   /**
-   * This method creates an ns3::DPSK with the attributes
-   * configured by DPSKHelper::SetDeviceAttribute, adds the device
+   * This method creates an ns3::Dpsk with the attributes
+   * configured by DpskHelper::SetDeviceAttribute, adds the device
    * to the node, and attaches the given NetDevices as ports of the
-   * DPSK.
+   * Dpsk.
    *
-   * \param node The node to install the DPSK in
-   * \param c Container of NetDevices to add as DPSK managed ports
-   * \returns The DPSK virtual device
+   * \param node The node to install the Dpsk in
+   * \param c Container of NetDevices to add as Dpsk managed ports
+   * \returns The Dpsk virtual device
    */
-  Ptr<DPSK> Install (Ptr<Node> node, NetDeviceContainer c);
+  Ptr<Dpsk> Install (Ptr<Node> node, NetDeviceContainer c);
 
   /**
-   * This method creates an ns3::DPSK with the attributes
-   * configured by DPSKHelper::SetDeviceAttribute, adds the device
+   * This method creates an ns3::Dpsk with the attributes
+   * configured by DpskHelper::SetDeviceAttribute, adds the device
    * to the node, and attaches the given NetDevices as ports of the
-   * DPSK.
+   * Dpsk.
    *
    * \param nodeName The name of the node to install the device in
-   * \param c Container of NetDevices to add as DPSK managed ports
-   * \returns The DPSK virtual device
+   * \param c Container of NetDevices to add as Dpsk managed ports
+   * \returns The Dpsk virtual device
    */
-  Ptr<DPSK> Install (std::string nodeName, NetDeviceContainer c);
+  Ptr<Dpsk> Install (std::string nodeName, NetDeviceContainer c);
 
 private:
   ObjectFactory m_deviceFactory; //!< Object factory

@@ -15,6 +15,7 @@
  *
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
+
 #ifndef DPSK_CHANNEL_H
 #define DPSK_CHANNEL_H
 
@@ -27,12 +28,12 @@ namespace ns3 {
 /**
  * \ingroup dpsk
  *
- * \brief Channel manager for DPSK.
+ * \brief Channel manager for Dpsk.
  *
- * Just like DPSK aggregates multiple NetDevices,
- * DPSKChannel aggregates multiple channels.
+ * Just like Dpsk aggregates multiple NetDevices,
+ * DpskChannel aggregates multiple channels.
  */
-class DPSKChannel : public Channel
+class DpskChannel : public Channel
 {
 public:
   /**
@@ -41,18 +42,18 @@ public:
    */
   static TypeId GetTypeId (void);
 
-  DPSKChannel ();
-  virtual ~DPSKChannel ();
+  DpskChannel ();
+  virtual ~DpskChannel ();
 
   /**
-   * Adds a channel to the DPSK channel pool
+   * Adds a channel to the Dpsk channel pool
    * \param channel the channel to add to the pool
    */
   void AddChannel (Ptr<Channel> channel);
 
   /**
-   * Get channels in the DPSK channel pool
-   * \param channels in the DPSK channel pool
+   * Get channels in the Dpsk channel pool
+   * \param channels in the Dpsk channel pool
    */
   std::vector<Ptr<Channel>> GetChannels (void);
 
@@ -67,7 +68,7 @@ private:
    *
    * Defined and unimplemented to avoid misuse
    */
-  DPSKChannel (const DPSKChannel &);
+  DpskChannel (const DpskChannel &);
 
   /**
    * \brief Copy constructor
@@ -75,9 +76,9 @@ private:
    * Defined and unimplemented to avoid misuse
    * \returns
    */
-  DPSKChannel &operator= (const DPSKChannel &);
+  DpskChannel &operator= (const DpskChannel &);
 
-  std::vector<Ptr<Channel>> m_dpskChannels; //!< pool of DPSK managed channels
+  std::vector<Ptr<Channel>> m_dpskChannels; //!< pool of Dpsk managed channels
 };
 
 } // namespace ns3

@@ -21,26 +21,26 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("DPSKChannel");
+NS_LOG_COMPONENT_DEFINE ("DpskChannel");
 
-NS_OBJECT_ENSURE_REGISTERED (DPSKChannel);
+NS_OBJECT_ENSURE_REGISTERED (DpskChannel);
 
 TypeId
-DPSKChannel::GetTypeId (void)
+DpskChannel::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::DPSKChannel")
+  static TypeId tid = TypeId ("ns3::DpskChannel")
                           .SetParent<Channel> ()
-                          .SetGroupName ("DPSK")
-                          .AddConstructor<DPSKChannel> ();
+                          .SetGroupName ("Dpsk")
+                          .AddConstructor<DpskChannel> ();
   return tid;
 }
 
-DPSKChannel::DPSKChannel () : Channel ()
+DpskChannel::DpskChannel () : Channel ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
 
-DPSKChannel::~DPSKChannel ()
+DpskChannel::~DpskChannel ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
@@ -53,21 +53,21 @@ DPSKChannel::~DPSKChannel ()
 }
 
 void
-DPSKChannel::AddChannel (Ptr<Channel> channel)
+DpskChannel::AddChannel (Ptr<Channel> channel)
 {
   NS_LOG_FUNCTION (channel);
   m_dpskChannels.push_back (channel);
 }
 
 std::vector<Ptr<Channel>>
-DPSKChannel::GetChannels (void)
+DpskChannel::GetChannels (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
   return m_dpskChannels;
 }
 
 std::size_t
-DPSKChannel::GetNDevices (void) const
+DpskChannel::GetNDevices (void) const
 {
   uint32_t nDevices = 0;
   for (std::vector<Ptr<Channel>>::const_iterator iter = m_dpskChannels.begin ();
@@ -79,7 +79,7 @@ DPSKChannel::GetNDevices (void) const
 }
 
 Ptr<NetDevice>
-DPSKChannel::GetDevice (std::size_t i) const
+DpskChannel::GetDevice (std::size_t i) const
 {
   return NULL;
 }

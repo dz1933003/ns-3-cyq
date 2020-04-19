@@ -28,22 +28,22 @@
 
 namespace ns3 {
 
-class DPSK;
+class Dpsk;
 
 /**
  * \ingroup applications
- * \defgroup dpskApplication DPSKApplication
+ * \defgroup dpskApplication DpskApplication
  *
- * This application can be used as a base class for ns3 DPSK applications.
- * DPSK applications can get packets directly from devices.
+ * This application can be used as a base class for ns3 Dpsk applications.
+ * Dpsk applications can get packets directly from devices.
  */
 
 /**
  * \ingroup dpsk
  *
- * \brief The base class for all DPSK applications
+ * \brief The base class for all Dpsk applications
  */
-class DPSKApplication : public Application
+class DpskApplication : public Application
 {
 public:
   /**
@@ -52,24 +52,24 @@ public:
    */
   static TypeId GetTypeId (void);
 
-  DPSKApplication ();
-  virtual ~DPSKApplication ();
+  DpskApplication ();
+  virtual ~DpskApplication ();
 
   /**
    * \brief Application specific seting up logic
    *
-   * This method is called to initialize the DPSK application.
-   * This method should be overridden by all or most DPSK application
+   * This method is called to initialize the Dpsk application.
+   * This method should be overridden by all or most Dpsk application
    * subclasses.
    */
-  virtual void SetupDPSK (Ptr<DPSK> dpsk);
+  virtual void SetupDpsk (Ptr<Dpsk> dpsk);
 
 private:
   /**
    * \brief Application specific scheduling transmitting
    *
    * This method is called accroding to the scheduling algorithm.
-   * This method should be overridden by all or most DPSK application
+   * This method should be overridden by all or most Dpsk application
    * subclasses.
    */
   void HandleTx (void);
@@ -102,7 +102,7 @@ private:
    */
   virtual void StopApplication (void);
 
-  Ptr<DPSK> m_dpsk; //!< DPSK framework
+  Ptr<Dpsk> m_dpsk; //!< Dpsk framework
 };
 
 } // namespace ns3

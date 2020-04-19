@@ -27,61 +27,61 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("DPSKApplication");
+NS_LOG_COMPONENT_DEFINE ("DpskApplication");
 
-NS_OBJECT_ENSURE_REGISTERED (DPSKApplication);
+NS_OBJECT_ENSURE_REGISTERED (DpskApplication);
 
 TypeId
-DPSKApplication::GetTypeId (void)
+DpskApplication::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::DPSKApplication")
+  static TypeId tid = TypeId ("ns3::DpskApplication")
                           .SetParent<Application> ()
                           .SetGroupName ("Applications")
-                          .AddConstructor<DPSKApplication> ();
+                          .AddConstructor<DpskApplication> ();
   return tid;
 }
 
-DPSKApplication::DPSKApplication ()
+DpskApplication::DpskApplication ()
 {
   NS_LOG_FUNCTION_NOARGS ();
   m_dpsk = NULL;
 }
 
-DPSKApplication::~DPSKApplication ()
+DpskApplication::~DpskApplication ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
 
 void
-DPSKApplication::SetupDPSK (Ptr<DPSK> dpsk)
+DpskApplication::SetupDpsk (Ptr<Dpsk> dpsk)
 {
   NS_LOG_FUNCTION (dpsk);
   m_dpsk = dpsk;
-  dpsk->RegisterReceiveFromDeviceHandler (MakeCallback (&DPSKApplication::HandleRx, this));
+  dpsk->RegisterReceiveFromDeviceHandler (MakeCallback (&DpskApplication::HandleRx, this));
 }
 
 void
-DPSKApplication::HandleTx (void)
+DpskApplication::HandleTx (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
 
 void
-DPSKApplication::HandleRx (Ptr<NetDevice> incomingPort, Ptr<const Packet> packet, uint16_t protocol,
+DpskApplication::HandleRx (Ptr<NetDevice> incomingPort, Ptr<const Packet> packet, uint16_t protocol,
                            Address const &src, Address const &dst, NetDevice::PacketType packetType)
 {
   NS_LOG_FUNCTION (incomingPort << packet << protocol << &src << &dst << packetType);
 }
 
 void
-DPSKApplication::StartApplication (void)
+DpskApplication::StartApplication (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
   HandleTx ();
 }
 
 void
-DPSKApplication::StopApplication (void)
+DpskApplication::StopApplication (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
