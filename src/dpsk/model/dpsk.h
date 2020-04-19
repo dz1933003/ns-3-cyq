@@ -94,6 +94,49 @@ public:
    */
   std::vector<Ptr<NetDevice>> GetDevices (void) const;
 
+  /**
+   * \brief Sends a packet from one device.
+   * \param device the originating port
+   * \param packet the sended packet
+   * \param protocol the packet protocol (e.g., Ethertype)
+   * \param source the packet source
+   * \param destination the packet destination
+   */
+  bool SendFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
+                       const Address &source, const Address &destination);
+
+  /**
+   * A receive handler
+   *
+   * \param device a pointer to the net device which received the packet
+   * \param packet the packet received
+   * \param protocol the 16 bit protocol number associated with this packet.
+   *        This protocol number is expected to be the same protocol number
+   *        given to the Send method by the user on the sender side.
+   * \param sender the address of the sender
+   * \param receiver the address of the receiver
+   * \param packetType type of packet received
+   *                   (broadcast/multicast/unicast/otherhost); Note:
+   *                   this value is only valid for promiscuous mode
+   *                   protocol handlers.
+   */
+  typedef Callback<void, Ptr<NetDevice>, Ptr<const Packet>, uint16_t, const Address &,
+                   const Address &, NetDevice::PacketType>
+      ReceiveFromDeviceHandler;
+
+  /**
+   * \param handler the handler to register
+   */
+  void RegisterReceiveFromDeviceHandler (ReceiveFromDeviceHandler handler);
+
+  /**
+   * \param handler the handler to unregister
+   *
+   * After this call returns, the input handler will never
+   * be invoked anymore.
+   */
+  void UnregisterReceiveFromDeviceHandler (ReceiveFromDeviceHandler handler);
+
   // Inherited from NetDevice base class
 
   virtual void SetIfIndex (const uint32_t index);
@@ -143,17 +186,6 @@ protected:
   virtual void DoDispose (void);
 
   /**
-   * \brief Sends a packet from one device.
-   * \param device the originating port
-   * \param packet the sended packet
-   * \param protocol the packet protocol (e.g., Ethertype)
-   * \param source the packet source
-   * \param destination the packet destination
-   */
-  bool SendFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
-                       const Address &source, const Address &destination);
-
-  /**
    * \brief Receives a packet from one device.
    * \param device the originating port
    * \param packet the received packet
@@ -182,9 +214,10 @@ private:
    */
   DPSK &operator= (const DPSK &);
 
-  NetDevice::ReceiveCallback m_rxCallback; //!< receive callback (Not used)
-  NetDevice::PromiscReceiveCallback
-      m_promiscRxCallback; //!< promiscuous receive callback (Not used)
+  /// receive callback (Not used)
+  NetDevice::ReceiveCallback m_rxCallback;
+  /// promiscuous receive callback (Not used)
+  NetDevice::PromiscReceiveCallback m_promiscRxCallback;
 
   Mac48Address m_address; //!< MAC address of the DPSK device (Not used)
   Ptr<Node> m_node; //!< node DPSK installs on
@@ -192,6 +225,10 @@ private:
   std::vector<Ptr<NetDevice>> m_ports; //!< devices managed by DPSK
   uint32_t m_ifIndex; //!< Interface index of DPSK (Not used)
   uint16_t m_mtu; //!< MTU of the DPSK (Not used)
+
+  /// Typedef for receive-from-device handlers container
+  typedef std::vector<ReceiveFromDeviceHandler> ReceiveFromDeviceHandlerList;
+  ReceiveFromDeviceHandlerList m_handlers; //!< Protocol handlers in the node
 };
 
 } // namespace ns3

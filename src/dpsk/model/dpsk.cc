@@ -101,6 +101,54 @@ DPSK::GetDevices (void) const
   return m_ports;
 }
 
+bool
+DPSK::SendFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
+                      Address const &source, Address const &destination)
+{
+  NS_LOG_FUNCTION (device << packet << protocol << &source << &destination);
+
+  if (device == NULL)
+    {
+      Ptr<Packet> pktCopy;
+      for (std::vector<Ptr<NetDevice>>::iterator iter = m_ports.begin (); iter != m_ports.end ();
+           iter++)
+        {
+          pktCopy = packet->Copy ();
+          Ptr<NetDevice> port = *iter;
+          port->SendFrom (pktCopy, source, destination, protocol);
+        }
+    }
+  else
+    {
+      device->SendFrom (packet->Copy (), source, destination, protocol);
+    }
+
+  return true;
+}
+
+void
+DPSK::RegisterReceiveFromDeviceHandler (ReceiveFromDeviceHandler handler)
+{
+  NS_LOG_FUNCTION (&handler);
+  m_handlers.push_back (handler);
+}
+
+void
+DPSK::UnregisterReceiveFromDeviceHandler (ReceiveFromDeviceHandler handler)
+{
+  NS_LOG_FUNCTION (&handler);
+
+  for (ReceiveFromDeviceHandlerList::iterator iter = m_handlers.begin (); iter != m_handlers.end ();
+       iter++)
+    {
+      if (iter->IsEqual (handler))
+        {
+          m_handlers.erase (iter);
+          break;
+        }
+    }
+}
+
 void
 DPSK::SetIfIndex (const uint32_t index)
 {
@@ -291,35 +339,17 @@ DPSK::DoDispose ()
   NetDevice::DoDispose ();
 }
 
-bool
-DPSK::SendFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
-                      Address const &source, Address const &destination)
-{
-  NS_LOG_FUNCTION (device << packet << protocol << &source << &destination);
-
-  if (device == NULL)
-    {
-      Ptr<Packet> pktCopy;
-      for (std::vector<Ptr<NetDevice>>::iterator iter = m_ports.begin (); iter != m_ports.end ();
-           iter++)
-        {
-          pktCopy = packet->Copy ();
-          Ptr<NetDevice> port = *iter;
-          port->SendFrom (pktCopy, source, destination, protocol);
-        }
-    }
-  else
-    {
-      device->SendFrom (packet->Copy (), source, destination, protocol);
-    }
-
-  return true;
-}
-
 void
 DPSK::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
                          const Address &source, const Address &destination, PacketType packetType)
 {
+  NS_LOG_FUNCTION (device << packet << protocol << &source << &destination << packetType);
+
+  for (ReceiveFromDeviceHandlerList::iterator iter = m_handlers.begin (); iter != m_handlers.end ();
+       iter++)
+    {
+      (*iter) (device, packet, protocol, source, destination, packetType);
+    }
 }
 
 } // namespace ns3
