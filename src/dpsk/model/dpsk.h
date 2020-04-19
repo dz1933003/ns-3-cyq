@@ -65,7 +65,7 @@ public:
    * the NetDevice is managed by DPSK and L2 frames start
    * being forwarded to/from this NetDevice by our programming.
    *
-   * \param bridgePort NetDevice
+   * \param device NetDevice
    * \attention The netdevice that is being added must _not_ have an
    * IP address.  In order to add IP connectivity to a bridging node
    * you must enable IP on the DPSK itself, by programing L3 logic etc,
@@ -87,6 +87,12 @@ public:
    * \return the n-th NetDevice
    */
   Ptr<NetDevice> GetDevice (uint32_t n) const;
+
+  /**
+   * \brief Gets all devices.
+   * \return All NetDevices DPSK is managing
+   */
+  std::vector<Ptr<NetDevice>> GetDevices (void) const;
 
   // Inherited from NetDevice base class
 
@@ -137,7 +143,18 @@ protected:
   virtual void DoDispose (void);
 
   /**
-   * \brief Receives a packet from one bridged port.
+   * \brief Sends a packet from one device.
+   * \param device the originating port
+   * \param packet the sended packet
+   * \param protocol the packet protocol (e.g., Ethertype)
+   * \param source the packet source
+   * \param destination the packet destination
+   */
+  bool SendFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
+                       const Address &source, const Address &destination);
+
+  /**
+   * \brief Receives a packet from one device.
    * \param device the originating port
    * \param packet the received packet
    * \param protocol the packet protocol (e.g., Ethertype)
@@ -145,8 +162,9 @@ protected:
    * \param destination the packet destination
    * \param packetType the packet type (e.g., host, broadcast, etc.)
    */
-  void ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uint16_t protocol,
-                          Address const &source, Address const &destination, PacketType packetType);
+  virtual void ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet,
+                                  uint16_t protocol, const Address &source,
+                                  const Address &destination, PacketType packetType);
 
 private:
   /**
@@ -164,14 +182,15 @@ private:
    */
   DPSK &operator= (const DPSK &);
 
-  NetDevice::ReceiveCallback m_rxCallback; //!< receive callback
-  NetDevice::PromiscReceiveCallback m_promiscRxCallback; //!< promiscuous receive callback
+  NetDevice::ReceiveCallback m_rxCallback; //!< receive callback (Not used)
+  NetDevice::PromiscReceiveCallback
+      m_promiscRxCallback; //!< promiscuous receive callback (Not used)
 
-  Mac48Address m_address; //!< MAC address of the DPSK device
+  Mac48Address m_address; //!< MAC address of the DPSK device (Not used)
   Ptr<Node> m_node; //!< node DPSK installs on
   Ptr<DPSKChannel> m_channel; //!< DPSK channel manager
   std::vector<Ptr<NetDevice>> m_ports; //!< devices managed by DPSK
-  uint32_t m_ifIndex; //!< Interface index of DPSK
+  uint32_t m_ifIndex; //!< Interface index of DPSK (Not used)
   uint16_t m_mtu; //!< MTU of the DPSK (Not used)
 };
 

@@ -50,6 +50,12 @@ public:
    */
   void AddChannel (Ptr<Channel> channel);
 
+  /**
+   * Get channels in the DPSK channel pool
+   * \param channels in the DPSK channel pool
+   */
+  std::vector<Ptr<Channel>> GetChannels (void);
+
   // Inherited from Channel base class
 
   virtual std::size_t GetNDevices (void) const;
