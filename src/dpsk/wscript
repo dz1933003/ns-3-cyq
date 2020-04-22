@@ -10,6 +10,7 @@ def build(bld):
     module = bld.create_ns3_module('dpsk', ['core', 'network'])
     module.source = [
         'model/dpsk.cc',
+        'model/dpsk-layer.cc',
         'model/dpsk-channel.cc',
         'model/dpsk-application.cc',
         'helper/dpsk-helper.cc',
@@ -24,6 +25,7 @@ def build(bld):
     headers.module = 'dpsk'
     headers.source = [
         'model/dpsk.h',
+        'model/dpsk-layer.h',
         'model/dpsk-channel.h',
         'model/dpsk-application.h',
         'helper/dpsk-helper.h',
