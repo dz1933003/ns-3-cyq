@@ -22,6 +22,7 @@
 #include "ns3/dpsk.h"
 #include "ns3/object.h"
 #include "ns3/net-device.h"
+#include <map>
 
 namespace ns3 {
 
@@ -43,6 +44,20 @@ public:
    */
   DpskLayer ();
   virtual ~DpskLayer ();
+
+  /**
+   * \brief Get the name of the Dpsk layer.
+   * \return name
+   */
+  std::string GetName () const;
+
+  /**
+   * \brief Set the name of the Dpsk layer.
+   * \param name the name of the Dpsk layer
+   *
+   * In fact, every instance of a DPSK layer should have a unique name.
+   */
+  void SetName (std::string name);
 
   /**
    * \brief Sends a packet from one device.
@@ -68,35 +83,6 @@ public:
                                   uint16_t protocol, const Address &source,
                                   const Address &destination, NetDevice::PacketType packetType);
 
-protected:
-  /**
-   * Perform any object release functionality required to break reference
-   * cycles in reference counted objects held by the device.
-   */
-  virtual void DoDispose (void);
-
-private:
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   */
-  DpskLayer (const DpskLayer &);
-
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   * \returns
-   */
-  DpskLayer &operator= (const DpskLayer &);
-
-  /// Typedef for Dpsk layer container
-  typedef std::vector<Ptr<DpskLayer>> DpskLayerList;
-  DpskLayerList m_layers; //!< Dpsk layers in the layer
-
-  Ptr<Dpsk> m_dpsk; //!< Dpsk framework
-
   /**
    * A receive handler
    *
@@ -116,9 +102,86 @@ private:
                    const Address &, NetDevice::PacketType>
       ReceiveFromDeviceHandler;
 
-  /// Typedef for receive-from-device handlers container
-  typedef std::vector<ReceiveFromDeviceHandler> ReceiveFromDeviceHandlerList;
-  ReceiveFromDeviceHandlerList m_handlers; //!< Protocol handlers in the node
+  /**
+   * \param handler the handler to register
+   */
+  void RegisterReceiveFromDeviceHandler (ReceiveFromDeviceHandler handler);
+
+  /**
+   * \param handler the handler to unregister
+   *
+   * After this call returns, the input handler will never
+   * be invoked anymore.
+   */
+  void UnregisterReceiveFromDeviceHandler (ReceiveFromDeviceHandler handler);
+
+  /**
+   * \brief Register an associated layer to send to.
+   * \param layer the layer to register
+   */
+  void RegisterLayerSendDownward (Ptr<DpskLayer> layer);
+
+  /**
+   * \brief Register an associated layer to call receive callback after received.
+   * \param layer the layer to register
+   */
+  void RegisterLayerReceiveUpward (Ptr<DpskLayer> layer);
+
+  /**
+   * \brief Install the upper layer.
+   * \param layer the layer to install
+   */
+  void InstallUpperLayer (Ptr<DpskLayer> layer);
+
+  /**
+   * \brief Install the lower layer.
+   * \param layer the layer to install
+   */
+  void InstallLowerLayer (Ptr<DpskLayer> layer);
+
+  /**
+   * \brief Install DPSK to handle packets directly.
+   * \param dpsk the DPSK framework
+   */
+  void InstallDpsk (Ptr<Dpsk> dpsk);
+
+protected:
+  /**
+   * Perform any object release functionality required to break reference
+   * cycles in reference counted objects held by the device.
+   */
+  virtual void DoDispose (void);
+
+  std::string m_name; //!< Dpsk layer name
+
+  /// Typedef for Dpsk layer container
+  typedef std::map<const std::string, Ptr<DpskLayer>> DpskLayerMap;
+  DpskLayerMap m_dpskLayers; //!< Dpsk layers in the layer
+
+  /// Typedef for ReceiveFromDevice handlers container
+  typedef std::map<const std::string, ReceiveFromDeviceHandler> LayerReceiveHandlerMap;
+  LayerReceiveHandlerMap m_layerHandlers; //!< Dpsk layer receive handlers in the layer
+
+  Ptr<Dpsk> m_dpsk; //!< Dpsk framework
+
+  /// Typedef for ReceiveFromDevice handlers container
+  typedef std::vector<ReceiveFromDeviceHandler> AppReceiveHandlerList;
+  AppReceiveHandlerList m_appHandlers; //!< Application receive handlers in the layer
+private:
+  /**
+   * \brief Copy constructor
+   *
+   * Defined and unimplemented to avoid misuse
+   */
+  DpskLayer (const DpskLayer &);
+
+  /**
+   * \brief Copy constructor
+   *
+   * Defined and unimplemented to avoid misuse
+   * \returns
+   */
+  DpskLayer &operator= (const DpskLayer &);
 };
 
 } // namespace ns3
