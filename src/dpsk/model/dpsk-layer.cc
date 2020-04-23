@@ -146,6 +146,7 @@ DpskLayer::InstallDpsk (Ptr<Dpsk> dpsk)
 {
   NS_LOG_FUNCTION (dpsk);
   m_dpsk = dpsk;
+  m_dpsk->RegisterReceiveFromDeviceHandler (MakeCallback (DpskLayer::ReceiveFromDevice, this));
 }
 
 void
