@@ -146,6 +146,47 @@ public:
    */
   void Receive (Ptr<Packet> p);
 
+  /**
+   * Trigger transmit process.
+   */
+  void TriggerTransmit ();
+
+  /**
+   * Callback type for transmiting. Returns the pointer of a Packet and
+   * takes no arguments.
+   */
+  typedef Callback<Ptr<Packet>> TransmitRequestHandler;
+
+  /**
+   * Set the sending callback.
+   *
+   * \param the sending handler
+   */
+  void SetTransmitRequestHandler (TransmitRequestHandler h);
+
+  /**
+   * Clean the sending callback.
+   */
+  void ResetTransmitRequestHandler ();
+
+  /**
+   * Callback type for receiving. Takes a pointer of a Packet to do
+   * post-process after get the Packet from Node.
+   */
+  typedef Callback<void, Ptr<Packet>> ReceivePostProcessHandler;
+
+  /**
+   * Set the receiving post-process callback.
+   *
+   * \param the sending handler
+   */
+  void SetReceivePostProcessHandler (ReceivePostProcessHandler h);
+
+  /**
+   * Clean the receiving post-process callback.
+   */
+  void ResetReceivePostProcessHandler ();
+
   // The remaining methods are documented in ns3::NetDevice*
 
   virtual void SetIfIndex (const uint32_t index);
@@ -228,25 +269,6 @@ private:
    */
   Address GetRemote (void) const;
 
-  // TODO cyq: remove specific header
-  // /**
-  //  * Adds the necessary headers and trailers to a packet of data in order to
-  //  * respect the protocol implemented by the agent.
-  //  * \param p packet
-  //  * \param protocolNumber protocol number
-  //  */
-  // void AddHeader (Ptr<Packet> p, uint16_t protocolNumber);
-
-  // /**
-  //  * Removes, from a packet of data, all headers and trailers that
-  //  * relate to the protocol implemented by the agent
-  //  * \param p Packet whose headers need to be processed
-  //  * \param param An integer parameter that can be set by the function
-  //  * \return Returns true if the packet should be forwarded up the
-  //  * protocol stack.
-  //  */
-  // bool ProcessHeader (Ptr<Packet> p, uint16_t &param);
-
   /**
    * Start Sending a Packet Down the Wire.
    *
@@ -265,6 +287,16 @@ private:
   bool TransmitStart (Ptr<Packet> p);
 
   /**
+   * Request Sending a Packet Down the Wire.
+   *
+   * The TransmitRequest method is the method that is used when the Queue on
+   * the device is empty and user sets the keep transmit state.
+   *
+   * \returns true if success, false on failure
+   */
+  bool TransmitRequest (void);
+
+  /**
    * Stop Sending a Packet Down the Wire and Begin the Interframe Gap.
    *
    * The TransmitComplete method is used internally to finish the process
@@ -278,6 +310,14 @@ private:
    * It calls also the linkChange callback.
    */
   void NotifyLinkUp (void);
+
+  /**
+   * Keep transmit state
+   */
+  bool m_keepTransmit;
+
+  TransmitRequestHandler m_txCallback; //!< transmit callback
+  ReceivePostProcessHandler m_rxPostProcessingCallback; //!< receive post-process callback
 
   /**
    * Enumeration of the states of the transmit machine of the net device.
@@ -433,8 +473,7 @@ private:
   Ptr<Node> m_node; //!< Node owning this NetDevice
   Mac48Address m_address; //!< Mac48Address of this NetDevice
   NetDevice::ReceiveCallback m_rxCallback; //!< Receive callback
-  NetDevice::PromiscReceiveCallback m_promiscCallback; //!< Receive callback
-      //   (promisc data)
+  NetDevice::PromiscReceiveCallback m_promiscCallback; //!< Receive callback (promisc data)
   uint32_t m_ifIndex; //!< Index of the interface
   bool m_linkUp; //!< Identify if the link is up or not
   TracedCallback<> m_linkChangeCallbacks; //!< Callback for the link change event
@@ -452,21 +491,6 @@ private:
   uint32_t m_mtu;
 
   Ptr<Packet> m_currentPkt; //!< Current packet processed
-
-  // TODO cyq: remove specific header
-  // /**
-  //  * \brief PPP to Ethernet protocol number mapping
-  //  * \param protocol A PPP protocol number
-  //  * \return The corresponding Ethernet protocol number
-  //  */
-  // static uint16_t PppToEther (uint16_t protocol);
-
-  // /**
-  //  * \brief Ethernet to PPP protocol number mapping
-  //  * \param protocol An Ethernet protocol number
-  //  * \return The corresponding PPP protocol number
-  //  */
-  // static uint16_t EtherToPpp (uint16_t protocol);
 };
 
 } // namespace ns3

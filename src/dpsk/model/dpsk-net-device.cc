@@ -165,7 +165,11 @@ DpskNetDevice::GetTypeId (void)
 }
 
 DpskNetDevice::DpskNetDevice ()
-    : m_txMachineState (READY), m_channel (0), m_linkUp (false), m_currentPkt (0)
+    : m_keepTransmit (false),
+      m_txMachineState (READY),
+      m_channel (0),
+      m_linkUp (false),
+      m_currentPkt (0)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -174,25 +178,6 @@ DpskNetDevice::~DpskNetDevice ()
 {
   NS_LOG_FUNCTION (this);
 }
-
-// void
-// DpskNetDevice::AddHeader (Ptr<Packet> p, uint16_t protocolNumber)
-// {
-//   NS_LOG_FUNCTION (this << p << protocolNumber);
-//   PppHeader ppp;
-//   ppp.SetProtocol (EtherToPpp (protocolNumber));
-//   p->AddHeader (ppp);
-// }
-
-// bool
-// DpskNetDevice::ProcessHeader (Ptr<Packet> p, uint16_t& param)
-// {
-//   NS_LOG_FUNCTION (this << p << param);
-//   PppHeader ppp;
-//   p->RemoveHeader (ppp);
-//   param = PppToEther (ppp.GetProtocol ());
-//   return true;
-// }
 
 void
 DpskNetDevice::DoDispose ()
@@ -218,6 +203,37 @@ DpskNetDevice::SetInterframeGap (Time t)
 {
   NS_LOG_FUNCTION (this << t.GetSeconds ());
   m_tInterframeGap = t;
+}
+
+void
+DpskNetDevice::SetTransmitRequestHandler (TransmitRequestHandler h)
+{
+  m_txCallback = h;
+}
+
+void
+DpskNetDevice::ResetTransmitRequestHandler ()
+{
+  m_txCallback.Nullify ();
+}
+
+void
+DpskNetDevice::SetReceivePostProcessHandler (ReceivePostProcessHandler h)
+{
+  m_rxPostProcessingCallback = h;
+}
+
+void
+DpskNetDevice::ResetReceivePostProcessHandler ()
+{
+  m_rxPostProcessingCallback.Nullify ();
+}
+
+void
+DpskNetDevice::TriggerTransmit ()
+{
+  m_keepTransmit = true;
+  TransmitRequest ();
 }
 
 bool
@@ -250,6 +266,25 @@ DpskNetDevice::TransmitStart (Ptr<Packet> p)
   return result;
 }
 
+bool
+DpskNetDevice::TransmitRequest ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+
+  Ptr<Packet> p = m_txCallback ();
+  if (p == 0)
+    {
+      m_keepTransmit = false;
+      return false;
+    }
+  else
+    {
+      m_snifferTrace (p);
+      m_promiscSnifferTrace (p);
+      return TransmitStart (p);
+    }
+}
+
 void
 DpskNetDevice::TransmitComplete (void)
 {
@@ -273,6 +308,11 @@ DpskNetDevice::TransmitComplete (void)
   if (p == 0)
     {
       NS_LOG_LOGIC ("No pending packets in device queue after tx complete");
+      if (m_keepTransmit)
+        {
+          NS_LOG_LOGIC ("Request transmiting");
+          TransmitRequest ();
+        }
       return;
     }
 
@@ -347,14 +387,6 @@ DpskNetDevice::Receive (Ptr<Packet> packet)
       //
       Ptr<Packet> originalPacket = packet->Copy ();
 
-      // TODO cyq: remove header process
-      // Strip off the point-to-point protocol header and forward this packet
-      // up the protocol stack.  Since this is a simple point-to-point link,
-      // there is no difference in what the promisc callback sees and what the
-      // normal receive callback sees.
-      //
-      // ProcessHeader (packet, protocol);
-
       if (!m_promiscCallback.IsNull ())
         {
           m_macPromiscRxTrace (originalPacket);
@@ -363,6 +395,8 @@ DpskNetDevice::Receive (Ptr<Packet> packet)
         }
 
       m_macRxTrace (originalPacket);
+
+      m_rxPostProcessingCallback (packet);
       m_rxCallback (this, packet, protocol, GetRemote ());
     }
 }
@@ -509,12 +543,6 @@ DpskNetDevice::Send (Ptr<Packet> packet, const Address &dest, uint16_t protocolN
       return false;
     }
 
-  // TODO cyq: remove header process
-  // Stick a point to point protocol header on the packet in preparation for
-  // shoving it out the door.
-  //
-  // AddHeader (packet, protocolNumber);
-
   m_macTxTrace (packet);
 
   //
@@ -544,10 +572,10 @@ DpskNetDevice::Send (Ptr<Packet> packet, const Address &dest, uint16_t protocolN
 
 bool
 DpskNetDevice::SendFrom (Ptr<Packet> packet, const Address &source, const Address &dest,
-                                 uint16_t protocolNumber)
+                         uint16_t protocolNumber)
 {
   NS_LOG_FUNCTION (this << packet << source << dest << protocolNumber);
-  return false;
+  return Send (packet, dest, protocolNumber);
 }
 
 Ptr<Node>
@@ -628,38 +656,5 @@ DpskNetDevice::GetMtu (void) const
   NS_LOG_FUNCTION (this);
   return m_mtu;
 }
-
-// TODO cyq: remove header process
-// uint16_t
-// PointToPointNetDevice::PppToEther (uint16_t proto)
-// {
-//   NS_LOG_FUNCTION_NOARGS ();
-//   switch (proto)
-//     {
-//     case 0x0021:
-//       return 0x0800; //IPv4
-//     case 0x0057:
-//       return 0x86DD; //IPv6
-//     default:
-//       NS_ASSERT_MSG (false, "PPP Protocol number not defined!");
-//     }
-//   return 0;
-// }
-
-// uint16_t
-// PointToPointNetDevice::EtherToPpp (uint16_t proto)
-// {
-//   NS_LOG_FUNCTION_NOARGS ();
-//   switch (proto)
-//     {
-//     case 0x0800:
-//       return 0x0021; //IPv4
-//     case 0x86DD:
-//       return 0x0057; //IPv6
-//     default:
-//       NS_ASSERT_MSG (false, "PPP Protocol number not defined!");
-//     }
-//   return 0;
-// }
 
 } // namespace ns3
