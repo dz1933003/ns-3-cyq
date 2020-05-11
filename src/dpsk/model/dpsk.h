@@ -20,7 +20,6 @@
 #define DPSK_H
 
 #include "ns3/net-device.h"
-#include "ns3/dpsk-channel.h"
 
 namespace ns3 {
 

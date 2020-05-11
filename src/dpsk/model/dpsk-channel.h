@@ -18,8 +18,8 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#ifndef DPSK_NET_DEVICE_CHANNEL_H
-#define DPSK_NET_DEVICE_CHANNEL_H
+#ifndef DPSK_CHANNEL_H
+#define DPSK_CHANNEL_H
 
 #include <list>
 #include "ns3/channel.h"
@@ -35,9 +35,9 @@ class Packet;
 
 /**
  * \ingroup dpsk
- * \brief Dpsk Net Device Channel.
+ * \brief Dpsk Channel.
  *
- * This class represents a very simple DPSK net device channel.
+ * This class represents a very simple DPSK channel.
  *
  * There are two "wires" in the channel.  The first device connected gets the
  * [0] wire to transmit on.  The second device gets the [1] wire.  There is a
@@ -46,7 +46,7 @@ class Packet;
  * \see Attach
  * \see TransmitStart
  */
-class DpskNetDeviceChannel : public Channel
+class DpskChannel : public Channel
 {
 public:
   /**
@@ -57,12 +57,12 @@ public:
   static TypeId GetTypeId (void);
 
   /**
-   * \brief Create a DpskNetDeviceChannel
+   * \brief Create a DpskChannel
    *
    * By default, you get a channel that has an "infinitely" fast
    * transmission speed and zero delay.
    */
-  DpskNetDeviceChannel ();
+  DpskChannel ();
 
   /**
    * \brief Attach a given netdevice to this channel
@@ -183,7 +183,7 @@ private:
   };
 
   /**
-   * \brief Wire model for the DpskNetDeviceChannel
+   * \brief Wire model for the DpskChannel
    */
   class Link
   {
@@ -205,4 +205,4 @@ private:
 
 } // namespace ns3
 
-#endif /* DPSK_NET_DEVICE_CHANNEL_H */
+#endif /* DPSK_CHANNEL_H */

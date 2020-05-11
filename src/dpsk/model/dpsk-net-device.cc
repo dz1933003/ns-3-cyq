@@ -28,8 +28,7 @@
 #include "ns3/uinteger.h"
 #include "ns3/pointer.h"
 #include "dpsk-net-device.h"
-#include "dpsk-net-device-channel.h"
-// #include "ppp-header.h"
+#include "dpsk-channel.h"
 
 namespace ns3 {
 
@@ -325,7 +324,7 @@ DpskNetDevice::TransmitComplete (void)
 }
 
 bool
-DpskNetDevice::Attach (Ptr<DpskNetDeviceChannel> ch)
+DpskNetDevice::Attach (Ptr<DpskChannel> ch)
 {
   NS_LOG_FUNCTION (this << &ch);
 

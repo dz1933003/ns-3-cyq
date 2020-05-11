@@ -12,8 +12,8 @@ def build(bld):
         'model/dpsk.cc',
         'model/dpsk-layer.cc',
         'model/dpsk-application.cc',
+        'model/dpsk-channel.cc',
         'model/dpsk-net-device.cc',
-        'model/dpsk-net-device-channel.cc',
         'helper/dpsk-helper.cc',
         ]
 
@@ -28,8 +28,8 @@ def build(bld):
         'model/dpsk.h',
         'model/dpsk-layer.h',
         'model/dpsk-application.h',
+        'model/dpsk-channel.h',
         'model/dpsk-net-device.h',
-        'model/dpsk-net-device-channel.h',
         'helper/dpsk-helper.h',
         ]
 

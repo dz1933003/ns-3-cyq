@@ -18,7 +18,7 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#include "dpsk-net-device-channel.h"
+#include "dpsk-channel.h"
 #include "dpsk-net-device.h"
 #include "ns3/trace-source-accessor.h"
 #include "ns3/packet.h"
@@ -27,39 +27,39 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("DpskNetDeviceChannel");
+NS_LOG_COMPONENT_DEFINE ("DpskChannel");
 
-NS_OBJECT_ENSURE_REGISTERED (DpskNetDeviceChannel);
+NS_OBJECT_ENSURE_REGISTERED (DpskChannel);
 
 TypeId
-DpskNetDeviceChannel::GetTypeId (void)
+DpskChannel::GetTypeId (void)
 {
   static TypeId tid =
-      TypeId ("ns3::DpskNetDeviceChannel")
+      TypeId ("ns3::DpskChannel")
           .SetParent<Channel> ()
           .SetGroupName ("Dpsk")
-          .AddConstructor<DpskNetDeviceChannel> ()
+          .AddConstructor<DpskChannel> ()
           .AddAttribute ("Delay", "Propagation delay through the channel", TimeValue (Seconds (0)),
-                         MakeTimeAccessor (&DpskNetDeviceChannel::m_delay), MakeTimeChecker ())
+                         MakeTimeAccessor (&DpskChannel::m_delay), MakeTimeChecker ())
           .AddTraceSource ("TxRxDpskNetDevice",
                            "Trace source indicating transmission of packet "
-                           "from the DpskNetDeviceChannel, used by the Animation "
+                           "from the DpskChannel, used by the Animation "
                            "interface.",
-                           MakeTraceSourceAccessor (&DpskNetDeviceChannel::m_txrxDpskNetDevice),
-                           "ns3::DpskNetDeviceChannel::TxRxAnimationCallback");
+                           MakeTraceSourceAccessor (&DpskChannel::m_txrxDpskNetDevice),
+                           "ns3::DpskChannel::TxRxAnimationCallback");
   return tid;
 }
 
 //
 // By default, you get a channel that
 // has an "infinitely" fast transmission speed and zero delay.
-DpskNetDeviceChannel::DpskNetDeviceChannel () : Channel (), m_delay (Seconds (0.)), m_nDevices (0)
+DpskChannel::DpskChannel () : Channel (), m_delay (Seconds (0.)), m_nDevices (0)
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
 
 void
-DpskNetDeviceChannel::Attach (Ptr<DpskNetDevice> device)
+DpskChannel::Attach (Ptr<DpskNetDevice> device)
 {
   NS_LOG_FUNCTION (this << device);
   NS_ASSERT_MSG (m_nDevices < N_DEVICES, "Only two devices permitted");
@@ -80,7 +80,7 @@ DpskNetDeviceChannel::Attach (Ptr<DpskNetDevice> device)
 }
 
 bool
-DpskNetDeviceChannel::TransmitStart (Ptr<const Packet> p, Ptr<DpskNetDevice> src, Time txTime)
+DpskChannel::TransmitStart (Ptr<const Packet> p, Ptr<DpskNetDevice> src, Time txTime)
 {
   NS_LOG_FUNCTION (this << p << src);
   NS_LOG_LOGIC ("UID is " << p->GetUid () << ")");
@@ -99,14 +99,14 @@ DpskNetDeviceChannel::TransmitStart (Ptr<const Packet> p, Ptr<DpskNetDevice> src
 }
 
 std::size_t
-DpskNetDeviceChannel::GetNDevices (void) const
+DpskChannel::GetNDevices (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return m_nDevices;
 }
 
 Ptr<DpskNetDevice>
-DpskNetDeviceChannel::GetDpskNetDevice (std::size_t i) const
+DpskChannel::GetDpskNetDevice (std::size_t i) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   NS_ASSERT (i < 2);
@@ -114,32 +114,32 @@ DpskNetDeviceChannel::GetDpskNetDevice (std::size_t i) const
 }
 
 Ptr<NetDevice>
-DpskNetDeviceChannel::GetDevice (std::size_t i) const
+DpskChannel::GetDevice (std::size_t i) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return GetDpskNetDevice (i);
 }
 
 Time
-DpskNetDeviceChannel::GetDelay (void) const
+DpskChannel::GetDelay (void) const
 {
   return m_delay;
 }
 
 Ptr<DpskNetDevice>
-DpskNetDeviceChannel::GetSource (uint32_t i) const
+DpskChannel::GetSource (uint32_t i) const
 {
   return m_link[i].m_src;
 }
 
 Ptr<DpskNetDevice>
-DpskNetDeviceChannel::GetDestination (uint32_t i) const
+DpskChannel::GetDestination (uint32_t i) const
 {
   return m_link[i].m_dst;
 }
 
 bool
-DpskNetDeviceChannel::IsInitialized (void) const
+DpskChannel::IsInitialized (void) const
 {
   NS_ASSERT (m_link[0].m_state != INITIALIZING);
   NS_ASSERT (m_link[1].m_state != INITIALIZING);

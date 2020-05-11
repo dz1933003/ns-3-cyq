@@ -37,7 +37,7 @@ namespace ns3 {
 
 template <typename Item>
 class Queue;
-class DpskNetDeviceChannel;
+class DpskChannel;
 class ErrorModel;
 
 /**
@@ -46,12 +46,12 @@ class ErrorModel;
  * \brief A Programmabel Device for a Dpsk Network.
  *
  * This DpskNetDevice class specializes the NetDevice abstract
- * base class.  Together with a DpskNetDeviceChannel (and a peer
+ * base class.  Together with a DpskChannel (and a peer
  * DpskNetDevice), the class models, with some level of
  * abstraction, a generic point-to-point or serial link.
  * Key parameters or objects that can be specified for this device
  * include a queue, data rate, and interframe transmission gap (the
- * propagation delay is set in the DpskNetDeviceChannel).
+ * propagation delay is set in the DpskChannel).
  *
  * Different from PointToPointNetDevice, Dpsk device can be
  * programmed by the user.
@@ -105,7 +105,7 @@ public:
    * \param ch Ptr to the channel to which this object is being attached.
    * \return true if the operation was successful (always true actually)
    */
-  bool Attach (Ptr<DpskNetDeviceChannel> ch);
+  bool Attach (Ptr<DpskChannel> ch);
 
   /**
    * Attach a queue to the DpskNetDevice.
@@ -135,7 +135,7 @@ public:
   void SetReceiveErrorModel (Ptr<ErrorModel> em);
 
   /**
-   * Receive a packet from a connected DpskNetDeviceChannel.
+   * Receive a packet from a connected DpskChannel.
    *
    * The DpskNetDevice receives packets from its connected channel
    * and forwards them up the protocol stack.  This is the public method
@@ -265,7 +265,7 @@ private:
 private:
   /**
    * \returns the address of the remote device connected to this device
-   * through the Dpsk net device channel.
+   * through the Dpsk channel.
    */
   Address GetRemote (void) const;
 
@@ -279,7 +279,7 @@ private:
    * started sending signals.  An event is scheduled for the time at which
    * the bits have been completely transmitted.
    *
-   * \see DpskNetDeviceChannel::TransmitStart ()
+   * \see DpskChannel::TransmitStart ()
    * \see TransmitComplete()
    * \param p a reference to the packet to send
    * \returns true if success, false on failure
@@ -344,10 +344,10 @@ private:
   Time m_tInterframeGap;
 
   /**
-   * The DpskNetDeviceChannel to which this DpskNetDevice has been
+   * The DpskChannel to which this DpskNetDevice has been
    * attached.
    */
-  Ptr<DpskNetDeviceChannel> m_channel;
+  Ptr<DpskChannel> m_channel;
 
   /**
    * The Queue which this DpskNetDevice uses as a packet source.
