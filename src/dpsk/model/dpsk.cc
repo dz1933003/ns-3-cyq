@@ -49,7 +49,6 @@ Dpsk::GetTypeId (void)
 Dpsk::Dpsk () : m_node (0), m_ifIndex (0)
 {
   NS_LOG_FUNCTION_NOARGS ();
-  m_channel = CreateObject<DpskChannel> ();
 }
 
 Dpsk::~Dpsk ()
@@ -77,7 +76,6 @@ Dpsk::AddDevice (Ptr<NetDevice> device)
   m_node->RegisterProtocolHandler (MakeCallback (&Dpsk::ReceiveFromDevice, this), 0, device, true);
 
   m_ports.push_back (device);
-  m_channel->AddChannel (device->GetChannel ());
 }
 
 uint32_t
@@ -167,7 +165,7 @@ Ptr<Channel>
 Dpsk::GetChannel (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
-  return m_channel;
+  return NULL;
 }
 
 void
@@ -334,7 +332,6 @@ Dpsk::DoDispose ()
       *iter = NULL;
     }
   m_ports.clear ();
-  m_channel = NULL;
   m_node = NULL;
   NetDevice::DoDispose ();
 }

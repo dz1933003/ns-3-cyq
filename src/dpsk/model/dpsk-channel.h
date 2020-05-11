@@ -1,5 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
+ * Copyright (c) 2007 University of Washington
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation;
@@ -19,66 +21,186 @@
 #ifndef DPSK_CHANNEL_H
 #define DPSK_CHANNEL_H
 
-#include "ns3/net-device.h"
+#include <list>
 #include "ns3/channel.h"
-#include <vector>
+#include "ns3/ptr.h"
+#include "ns3/nstime.h"
+#include "ns3/data-rate.h"
+#include "ns3/traced-callback.h"
 
 namespace ns3 {
 
+class DpskNetDevice;
+class Packet;
+
 /**
  * \ingroup dpsk
+ * \brief Dpsk Channel.
  *
- * \brief Channel manager for Dpsk.
+ * This class represents a very simple DPSK channel.
  *
- * Just like Dpsk aggregates multiple NetDevices,
- * DpskChannel aggregates multiple channels.
+ * There are two "wires" in the channel.  The first device connected gets the
+ * [0] wire to transmit on.  The second device gets the [1] wire.  There is a
+ * state (IDLE, TRANSMITTING) associated with each wire.
+ *
+ * \see Attach
+ * \see TransmitStart
  */
 class DpskChannel : public Channel
 {
 public:
   /**
-   * \brief Get the type ID.
-   * \return the object TypeId
+   * \brief Get the TypeId
+   *
+   * \return The TypeId for this class
    */
   static TypeId GetTypeId (void);
 
+  /**
+   * \brief Create a DpskChannel
+   *
+   * By default, you get a channel that has an "infinitely" fast
+   * transmission speed and zero delay.
+   */
   DpskChannel ();
-  virtual ~DpskChannel ();
 
   /**
-   * Adds a channel to the Dpsk channel pool
-   * \param channel the channel to add to the pool
+   * \brief Attach a given netdevice to this channel
+   * \param device pointer to the netdevice to attach to the channel
    */
-  void AddChannel (Ptr<Channel> channel);
+  void Attach (Ptr<DpskNetDevice> device);
 
   /**
-   * Get channels in the Dpsk channel pool
-   * \param channels in the Dpsk channel pool
+   * \brief Transmit a packet over this channel
+   * \param p Packet to transmit
+   * \param src Source DpskNetDevice
+   * \param txTime Transmit time to apply
+   * \returns true if successful (currently always true)
    */
-  std::vector<Ptr<Channel>> GetChannels (void);
+  virtual bool TransmitStart (Ptr<const Packet> p, Ptr<DpskNetDevice> src, Time txTime);
 
-  // Inherited from Channel base class
-
+  /**
+   * \brief Get number of devices on this channel
+   * \returns number of devices on this channel
+   */
   virtual std::size_t GetNDevices (void) const;
+
+  /**
+   * \brief Get DpskNetDevice corresponding to index i on this channel
+   * \param i Index number of the device requested
+   * \returns Ptr to DpskNetDevice requested
+   */
+  Ptr<DpskNetDevice> GetDpskNetDevice (std::size_t i) const;
+
+  /**
+   * \brief Get NetDevice corresponding to index i on this channel
+   * \param i Index number of the device requested
+   * \returns Ptr to NetDevice requested
+   */
   virtual Ptr<NetDevice> GetDevice (std::size_t i) const;
 
+protected:
+  /**
+   * \brief Get the delay associated with this channel
+   * \returns Time delay
+   */
+  Time GetDelay (void) const;
+
+  /**
+   * \brief Check to make sure the link is initialized
+   * \returns true if initialized, asserts otherwise
+   */
+  bool IsInitialized (void) const;
+
+  /**
+   * \brief Get the net-device source
+   * \param i the link requested
+   * \returns Ptr to DpskNetDevice source for the
+   * specified link
+   */
+  Ptr<DpskNetDevice> GetSource (uint32_t i) const;
+
+  /**
+   * \brief Get the net-device destination
+   * \param i the link requested
+   * \returns Ptr to DpskNetDevice destination for
+   * the specified link
+   */
+  Ptr<DpskNetDevice> GetDestination (uint32_t i) const;
+
+  /**
+   * TracedCallback signature for packet transmission animation events.
+   *
+   * \param [in] packet The packet being transmitted.
+   * \param [in] txDevice the TransmitTing NetDevice.
+   * \param [in] rxDevice the Receiving NetDevice.
+   * \param [in] duration The amount of time to transmit the packet.
+   * \param [in] lastBitTime Last bit receive time (relative to now)
+   * \deprecated The non-const \c Ptr<NetDevice> argument is deprecated
+   * and will be changed to \c Ptr<const NetDevice> in a future release.
+   */
+  typedef void (*TxRxAnimationCallback) (Ptr<const Packet> packet, Ptr<NetDevice> txDevice,
+                                         Ptr<NetDevice> rxDevice, Time duration, Time lastBitTime);
+
 private:
-  /**
-   * \brief Copy constructor
-   *
-   * Defined and unimplemented to avoid misuse
-   */
-  DpskChannel (const DpskChannel &);
+  /** Each point to point link has exactly two net devices. */
+  static const std::size_t N_DEVICES = 2;
+
+  Time m_delay; //!< Propagation delay
+  std::size_t m_nDevices; //!< Devices of this channel
 
   /**
-   * \brief Copy constructor
+   * The trace source for the packet transmission animation events that the
+   * device can fire.
+   * Arguments to the callback are the packet, transmitting
+   * net device, receiving net device, transmission time and
+   * packet receipt time.
    *
-   * Defined and unimplemented to avoid misuse
-   * \returns
+   * \see class CallBackTraceSource
+   * \deprecated The non-const \c Ptr<NetDevice> argument is deprecated
+   * and will be changed to \c Ptr<const NetDevice> in a future release.
    */
-  DpskChannel &operator= (const DpskChannel &);
+  TracedCallback<Ptr<const Packet>, // Packet being transmitted
+                 Ptr<NetDevice>, // Transmitting NetDevice
+                 Ptr<NetDevice>, // Receiving NetDevice
+                 Time, // Amount of time to transmit the pkt
+                 Time // Last bit receive time (relative to now)
+                 >
+      m_txrxDpskNetDevice;
 
-  std::vector<Ptr<Channel>> m_dpskChannels; //!< pool of Dpsk managed channels
+  /** \brief Wire states
+   *
+   */
+  enum WireState {
+    /** Initializing state */
+    INITIALIZING,
+    /** Idle state (no transmission from NetDevice) */
+    IDLE,
+    /** Transmitting state (data being transmitted from NetDevice. */
+    TRANSMITTING,
+    /** Propagating state (data is being propagated in the channel. */
+    PROPAGATING
+  };
+
+  /**
+   * \brief Wire model for the DpskChannel
+   */
+  class Link
+  {
+  public:
+    /** \brief Create the link, it will be in INITIALIZING state
+     *
+     */
+    Link () : m_state (INITIALIZING), m_src (0), m_dst (0)
+    {
+    }
+
+    WireState m_state; //!< State of the link
+    Ptr<DpskNetDevice> m_src; //!< First NetDevice
+    Ptr<DpskNetDevice> m_dst; //!< Second NetDevice
+  };
+
+  Link m_link[N_DEVICES]; //!< Link model
 };
 
 } // namespace ns3

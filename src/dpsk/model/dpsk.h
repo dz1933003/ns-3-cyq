@@ -20,7 +20,6 @@
 #define DPSK_H
 
 #include "ns3/net-device.h"
-#include "ns3/dpsk-channel.h"
 
 namespace ns3 {
 
@@ -221,7 +220,6 @@ private:
 
   Mac48Address m_address; //!< MAC address of the Dpsk device (Not used)
   Ptr<Node> m_node; //!< node Dpsk installs on
-  Ptr<DpskChannel> m_channel; //!< Dpsk channel manager
   std::vector<Ptr<NetDevice>> m_ports; //!< devices managed by Dpsk
   uint32_t m_ifIndex; //!< Interface index of Dpsk (Not used)
   uint16_t m_mtu; //!< MTU of the Dpsk (Not used)
