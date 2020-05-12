@@ -92,10 +92,11 @@ DpskNetDeviceImpl::Tx ()
   return 0;
 }
 
-void
+bool
 DpskNetDeviceImpl::Rx (Ptr<Packet> p)
 {
   // User's receiving post-process implementation
+  return true;
 }
 
 } // namespace ns3

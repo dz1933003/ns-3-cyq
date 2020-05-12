@@ -87,8 +87,9 @@ protected:
    * Receive process
    *
    * \param p Ptr to the received packet.
+   * \return whether need to forward up.
    */
-  virtual void Rx (Ptr<Packet> p);
+  virtual bool Rx (Ptr<Packet> p);
 
 private:
   /**
@@ -110,6 +111,7 @@ private:
    */
   DpskNetDeviceImpl (const DpskNetDeviceImpl &o);
 
+protected:
   /**
    * \brief Dispose of the object
    */

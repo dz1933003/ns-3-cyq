@@ -179,7 +179,7 @@ public:
    * Callback type for receiving. Takes a pointer of a Packet to do
    * post-process after get the Packet from Node.
    */
-  typedef Callback<void, Ptr<Packet>> ReceivePostProcessHandler;
+  typedef Callback<bool, Ptr<Packet>> ReceivePostProcessHandler;
 
   /**
    * Set the receiving post-process callback.

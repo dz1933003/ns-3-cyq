@@ -431,8 +431,8 @@ DpskNetDevice::Receive (Ptr<Packet> packet)
 
       m_macRxTrace (originalPacket);
 
-      m_rxPostProcessingCallback (packet);
-      m_rxCallback (this, packet, protocol, GetRemote ());
+      if (m_rxPostProcessingCallback (packet))
+        m_rxCallback (this, packet, protocol, GetRemote ());
     }
 }
 
