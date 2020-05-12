@@ -63,6 +63,9 @@ DpskNetDevice::GetTypeId (void)
           .AddAttribute ("InterframeGap", "The time to wait between packet (frame) transmissions",
                          TimeValue (Seconds (0.0)),
                          MakeTimeAccessor (&DpskNetDevice::m_tInterframeGap), MakeTimeChecker ())
+          .AddAttribute ("TxMode", "The mode of transmitting, passive or active",
+                         EnumValue (PASSIVE), MakeEnumAccessor (&DpskNetDevice::m_txMode),
+                         MakeEnumChecker (PASSIVE, "Passive", ACTIVE, "Active"))
 
           //
           // Transmit queueing discipline for the device which includes its own set
@@ -205,6 +208,20 @@ DpskNetDevice::SetInterframeGap (Time t)
   m_tInterframeGap = t;
 }
 
+DpskNetDevice::TxMode
+DpskNetDevice::GetTxMode (void) const
+{
+  NS_LOG_FUNCTION (this);
+  return m_txMode;
+}
+
+void
+DpskNetDevice::SetTxMode (const TxMode &mode)
+{
+  NS_LOG_FUNCTION (this << mode);
+  m_txMode = mode;
+}
+
 void
 DpskNetDevice::SetTransmitRequestHandler (TransmitRequestHandler h)
 {
@@ -232,8 +249,16 @@ DpskNetDevice::ResetReceivePostProcessHandler ()
 void
 DpskNetDevice::TriggerTransmit ()
 {
+  NS_ASSERT_MSG (m_txMode == ACTIVE, "Must be ACTIVE transmit mode");
   m_keepTransmit = true;
   TransmitRequest ();
+}
+
+void
+DpskNetDevice::PauseTransmit ()
+{
+  NS_ASSERT_MSG (m_txMode == ACTIVE, "Must be ACTIVE transmit mode");
+  m_keepTransmit = false;
 }
 
 bool
@@ -304,24 +329,34 @@ DpskNetDevice::TransmitComplete (void)
   m_phyTxEndTrace (m_currentPkt);
   m_currentPkt = 0;
 
-  Ptr<Packet> p = m_queue->Dequeue ();
-  if (p == 0)
+  if (m_txMode == PASSIVE)
     {
-      NS_LOG_LOGIC ("No pending packets in device queue after tx complete");
+      Ptr<Packet> p = m_queue->Dequeue ();
+      if (p == 0)
+        {
+          NS_LOG_LOGIC ("No pending packets in device queue after tx complete");
+          return;
+        }
+
+      //
+      // Got another packet off of the queue, so start the transmit process again.
+      //
+      m_snifferTrace (p);
+      m_promiscSnifferTrace (p);
+      TransmitStart (p);
+    }
+  else if (m_txMode == ACTIVE)
+    {
       if (m_keepTransmit)
         {
           NS_LOG_LOGIC ("Request transmiting");
           TransmitRequest ();
         }
-      return;
     }
-
-  //
-  // Got another packet off of the queue, so start the transmit process again.
-  //
-  m_snifferTrace (p);
-  m_promiscSnifferTrace (p);
-  TransmitStart (p);
+  else
+    {
+      NS_ASSERT_MSG (false, "DpskNetDevice::TransmitComplete(): m_txMode outbound");
+    }
 }
 
 bool
@@ -532,6 +567,7 @@ DpskNetDevice::Send (Ptr<Packet> packet, const Address &dest, uint16_t protocolN
   NS_LOG_FUNCTION (this << packet << dest << protocolNumber);
   NS_LOG_LOGIC ("p=" << packet << ", dest=" << &dest);
   NS_LOG_LOGIC ("UID is " << packet->GetUid ());
+  NS_ASSERT_MSG (m_txMode == PASSIVE, "Must be PASSIVE transmit mode");
 
   //
   // If IsLinkUp() is false it means there is no channel to send any packet
@@ -575,6 +611,7 @@ DpskNetDevice::SendFrom (Ptr<Packet> packet, const Address &source, const Addres
                          uint16_t protocolNumber)
 {
   NS_LOG_FUNCTION (this << packet << source << dest << protocolNumber);
+  NS_ASSERT_MSG (m_txMode == PASSIVE, "Must be PASSIVE transmit mode");
   return Send (packet, dest, protocolNumber);
 }
 

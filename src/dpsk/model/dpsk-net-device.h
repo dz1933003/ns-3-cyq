@@ -153,6 +153,11 @@ public:
   void TriggerTransmit ();
 
   /**
+   * Pause transmit process.
+   */
+  void PauseTransmit ();
+
+  /**
    * Callback type for transmiting. Returns the pointer of a Packet and
    * takes no arguments.
    */
@@ -187,6 +192,28 @@ public:
    * Clean the receiving post-process callback.
    */
   void ResetReceivePostProcessHandler ();
+
+  /**
+   * Enumeration of the transmit node of the net device.
+   */
+  enum TxMode {
+    ACTIVE, /**< The transmitter send via self scheduling */
+    PASSIVE /**< The transmitter send via upper layers' invoking */
+  };
+
+  /**
+   * Get Transmit mode.
+   *
+   * \return transmit mode
+   */
+  TxMode GetTxMode (void) const;
+
+  /**
+   * Set Transmit mode.
+   *
+   * \param mode transmit mode
+   */
+  void SetTxMode (const TxMode &mode);
 
   // The remaining methods are documented in ns3::NetDevice*
 
@@ -311,6 +338,11 @@ private:
    * It calls also the linkChange callback.
    */
   void NotifyLinkUp (void);
+
+  /**
+   * The transmit mode of the Net Device.
+   */
+  TxMode m_txMode;
 
   /**
    * Keep transmit state
