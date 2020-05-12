@@ -91,6 +91,13 @@ protected:
    */
   virtual bool Rx (Ptr<Packet> p);
 
+  /**
+   * \brief Dispose of the object
+   */
+  virtual void DoDispose (void);
+
+  Ptr<DpskNetDevice> m_dev; //!< Attached DpskNetDevice
+
 private:
   /**
    * \brief Assign operator
@@ -110,14 +117,6 @@ private:
    * \param o Other DpskNetDeviceImpl
    */
   DpskNetDeviceImpl (const DpskNetDeviceImpl &o);
-
-protected:
-  /**
-   * \brief Dispose of the object
-   */
-  virtual void DoDispose (void);
-
-  Ptr<DpskNetDevice> m_dev; //!< Attached DpskNetDevice
 };
 
 } // namespace ns3
