@@ -158,40 +158,55 @@ public:
   void PauseTransmit ();
 
   /**
-   * Callback type for transmiting. Returns the pointer of a Packet and
-   * takes no arguments.
+   * Callback type of transmiting.
    */
-  typedef Callback<Ptr<Packet>> TransmitRequestHandler;
+  typedef Callback<Ptr<Packet>> TransmitInterceptor;
+
+  /**
+   * Set the transmiting callback.
+   *
+   * \param h the transmiting handler
+   */
+  void SetTransmitInterceptor (TransmitInterceptor h);
+
+  /**
+   * Clean the transmiting callback.
+   */
+  void ResetTransmitInterceptor ();
+
+  /**
+   * Callback type of sending.
+   */
+  typedef Callback<bool, Ptr<Packet>, const Address &, const Address &, uint16_t> SendInterceptor;
 
   /**
    * Set the sending callback.
    *
-   * \param the sending handler
+   * \param h the sending handler
    */
-  void SetTransmitRequestHandler (TransmitRequestHandler h);
+  void SetSendInterceptor (SendInterceptor h);
 
   /**
    * Clean the sending callback.
    */
-  void ResetTransmitRequestHandler ();
+  void ResetSendInterceptor ();
 
   /**
-   * Callback type for receiving. Takes a pointer of a Packet to do
-   * post-process after get the Packet from Node.
+   * Callback type for receiving.
    */
-  typedef Callback<bool, Ptr<Packet>> ReceivePostProcessHandler;
+  typedef Callback<bool, Ptr<Packet>> ReceiveInterceptor;
 
   /**
    * Set the receiving post-process callback.
    *
-   * \param the sending handler
+   * \param h the receiving handler
    */
-  void SetReceivePostProcessHandler (ReceivePostProcessHandler h);
+  void SetReceiveInterceptor (ReceiveInterceptor h);
 
   /**
    * Clean the receiving post-process callback.
    */
-  void ResetReceivePostProcessHandler ();
+  void ResetReceiveInterceptor ();
 
   /**
    * Enumeration of the transmit node of the net device.
@@ -349,8 +364,9 @@ private:
    */
   bool m_keepTransmit;
 
-  TransmitRequestHandler m_txCallback; //!< transmit callback
-  ReceivePostProcessHandler m_rxPostProcessingCallback; //!< receive post-process callback
+  TransmitInterceptor m_txInterceptor; //!< device self-drive transmit callback
+  SendInterceptor m_sendInterceptor; //!< node notified transmit callback
+  ReceiveInterceptor m_rxInterceptor; //!< receive post-process callback
 
   /**
    * Enumeration of the states of the transmit machine of the net device.

@@ -58,7 +58,22 @@ protected:
    *
    * \return Ptr to the packet.
    */
-  virtual Ptr<Packet> Tx ();
+  virtual Ptr<Packet> Transmit ();
+
+  /**
+   * \param packet packet sent from above down to Network Device
+   * \param source source mac address (so called "MAC spoofing")
+   * \param dest mac address of the destination (already resolved)
+   * \param protocolNumber identifies the type of payload contained in
+   *        this packet. Used to call the right L3Protocol when the packet
+   *        is received.
+   *
+   *  Called by Switch Node.
+   *
+   * \return whether the Send operation succeeded
+   */
+  virtual bool Send (Ptr<Packet> packet, const Address &source, const Address &dest,
+                     uint16_t protocolNumber);
 
   /**
    * PFC switch port receiving logic.
@@ -66,7 +81,7 @@ protected:
    * \param p Ptr to the received packet.
    * \return whether need to forward up.
    */
-  virtual bool Rx (Ptr<Packet> p);
+  virtual bool Receive (Ptr<Packet> p);
 
   /**
    * \brief Dispose of the object

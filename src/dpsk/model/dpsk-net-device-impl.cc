@@ -65,13 +65,13 @@ DpskNetDeviceImpl::Attach (Ptr<DpskNetDevice> device)
 {
   NS_LOG_FUNCTION (this << &device);
 
+  Detach ();
+
   m_dev = device;
 
-  m_dev->ResetTransmitRequestHandler ();
-  m_dev->ResetReceivePostProcessHandler ();
-
-  m_dev->SetTransmitRequestHandler (MakeCallback (&DpskNetDeviceImpl::Tx, this));
-  m_dev->SetReceivePostProcessHandler (MakeCallback (&DpskNetDeviceImpl::Rx, this));
+  m_dev->SetTransmitInterceptor (MakeCallback (&DpskNetDeviceImpl::Transmit, this));
+  m_dev->SetSendInterceptor (MakeCallback (&DpskNetDeviceImpl::Send, this));
+  m_dev->SetReceiveInterceptor (MakeCallback (&DpskNetDeviceImpl::Receive, this));
 
   return true;
 }
@@ -80,23 +80,32 @@ void
 DpskNetDeviceImpl::Detach ()
 {
   NS_LOG_FUNCTION_NOARGS ();
-  m_dev->ResetTransmitRequestHandler ();
-  m_dev->ResetReceivePostProcessHandler ();
+  m_dev->ResetTransmitInterceptor ();
+  m_dev->ResetSendInterceptor ();
+  m_dev->ResetReceiveInterceptor ();
   m_dev = 0;
 }
 
 Ptr<Packet>
-DpskNetDeviceImpl::Tx ()
+DpskNetDeviceImpl::Transmit ()
 {
   // User's transmitting implementation
   return 0;
 }
 
 bool
-DpskNetDeviceImpl::Rx (Ptr<Packet> p)
+DpskNetDeviceImpl::Send (Ptr<Packet> packet, const Address &source, const Address &dest,
+                         uint16_t protocolNumber)
+{
+  // User's sending implementation
+  return false;
+}
+
+bool
+DpskNetDeviceImpl::Receive (Ptr<Packet> p)
 {
   // User's receiving post-process implementation
-  return true;
+  return false;
 }
 
 } // namespace ns3

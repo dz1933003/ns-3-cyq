@@ -23,6 +23,9 @@
 #include "ns3/log.h"
 #include "ns3/uinteger.h"
 #include "ns3/pointer.h"
+#include "ns3/ethernet-header.h"
+#include "ns3/ipv4-header.h"
+#include "ns3/pfc-header.h"
 #include "ns3/dpsk-net-device.h"
 
 namespace ns3 {
@@ -52,7 +55,7 @@ PfcSwitchPort::~PfcSwitchPort ()
 }
 
 Ptr<Packet>
-PfcSwitchPort::Tx ()
+PfcSwitchPort::Transmit ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
@@ -61,31 +64,96 @@ PfcSwitchPort::Tx ()
   if (p == 0)
     return 0;
 
-  // TODO cyq: Add L2 header with protocol by tag
-  // TODO cyq: notify dequeue
+  // TODO cyq: notify switch dequeue event (dev, queue)
 
   return p;
 }
 
 bool
-PfcSwitchPort::Rx (Ptr<Packet> p)
+PfcSwitchPort::Send (Ptr<Packet> packet, const Address &source, const Address &dest,
+                     uint16_t protocolNumber)
+{
+  // Assembly Ethernet header
+  EthernetHeader ethHeader;
+  ethHeader.SetSource (Mac48Address::ConvertFrom (source));
+  ethHeader.SetDestination (Mac48Address::ConvertFrom (dest));
+  ethHeader.SetLengthType (protocolNumber);
+
+  if (protocolNumber == 0x8808) // PFC protocol number
+    {
+      // Add Ethernet header
+      packet->AddHeader (ethHeader);
+      // Enqueue control queue
+      m_controlQueue.push (packet);
+    }
+  else // Not PFC
+    {
+      // Get queue index
+      Ipv4Header ipHeader;
+      packet->PeekHeader (ipHeader);
+      auto dscp = ipHeader.GetDscp ();
+      // Add Ethernet header
+      packet->AddHeader (ethHeader);
+      // Enqueue
+      m_queues[dscp].push (packet);
+    }
+
+  return true; // Enqueue packet successfully
+}
+
+bool
+PfcSwitchPort::Receive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  // TODO cyq: Pop L2 header
-  /**
-   * if (is PFC)
-   *   if (is Pause)
-   *     update paused state or control paused
-   *   if (is Resume)
-   *     update paused state or control paused
-   *     do Resume process
-   *   trace PFC
-   * else
-   *   send to upper layer
-   */
+  // Pop Ethernet header
+  EthernetHeader ethHeader;
+  p->RemoveHeader (ethHeader);
 
-  return true;
+  if (ethHeader.GetLengthType () == 0x8808) // PFC protocol number
+    {
+      // Pop PFC header
+      PfcHeader pfcHeader;
+      p->RemoveHeader (pfcHeader);
+
+      if (pfcHeader.GetType () == PfcHeader::Pause) // PFC Pause
+        {
+          // Update paused state
+          if (pfcHeader.GetQIndex () >= m_nQueues)
+            {
+              m_controlPaused = true;
+            }
+          else
+            {
+              m_pausedStates[pfcHeader.GetQIndex ()] = true;
+            }
+          return false; // Do not forward up to node
+        }
+      else if (pfcHeader.GetType () == PfcHeader::Resume) // PFC Resume
+        {
+          // Update paused state
+          if (pfcHeader.GetQIndex () >= m_nQueues)
+            {
+              m_controlPaused = false;
+            }
+          else
+            {
+              m_pausedStates[pfcHeader.GetQIndex ()] = false;
+            }
+          m_dev->TriggerTransmit (); // Trigger device transmitting
+          return false; // Do not forward up to node
+        }
+      else
+        {
+          NS_ASSERT_MSG (false, "PfcSwitchPort::Rx: Invalid PFC type");
+          return false; // Drop this packet
+        }
+      // TODO cyq: trace PFC
+    }
+  else // Not PFC
+    {
+      return true; // Forward up to node
+    }
 }
 
 Ptr<Packet>
