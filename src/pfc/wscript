@@ -12,6 +12,9 @@ def build(bld):
     module.source = [
         'model/pfc.cc',
         'model/pfc-switch-port.cc',
+        'model/pfc-switch.cc',
+        'model/pfc-switch-tag.cc',
+        'model/switch-mmu.cc',
         'model/pfc-header.cc',
         'helper/pfc-helper.cc',
     ]
@@ -26,6 +29,9 @@ def build(bld):
     headers.source = [
         'model/pfc.h',
         'model/pfc-switch-port.h',
+        'model/pfc-switch.h',
+        'model/pfc-switch-tag.h',
+        'model/switch-mmu.h',
         'model/pfc-header.h',
         'helper/pfc-helper.h',
     ]

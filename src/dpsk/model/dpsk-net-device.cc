@@ -29,6 +29,7 @@
 #include "ns3/uinteger.h"
 #include "ns3/pointer.h"
 #include "dpsk-net-device.h"
+#include "dpsk-net-device-impl.h"
 #include "dpsk-channel.h"
 
 namespace ns3 {
@@ -220,6 +221,35 @@ DpskNetDevice::SetTxMode (const TxMode &mode)
 {
   NS_LOG_FUNCTION (this << mode);
   m_txMode = mode;
+}
+
+void
+DpskNetDevice::SetImplementation (Ptr<DpskNetDeviceImpl> impl)
+{
+  NS_LOG_FUNCTION (impl);
+  m_impl = impl;
+  m_impl->m_dev = this;
+  SetTransmitInterceptor (MakeCallback (&DpskNetDeviceImpl::Transmit, m_impl));
+  SetSendInterceptor (MakeCallback (&DpskNetDeviceImpl::Send, m_impl));
+  SetReceiveInterceptor (MakeCallback (&DpskNetDeviceImpl::Receive, m_impl));
+}
+
+Ptr<DpskNetDeviceImpl>
+DpskNetDevice::GetImplementation ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_impl;
+}
+
+void
+DpskNetDevice::ResetImplementation ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  m_impl = 0;
+  m_impl->m_dev = 0;
+  ResetTransmitInterceptor ();
+  ResetSendInterceptor ();
+  ResetReceiveInterceptor ();
 }
 
 void

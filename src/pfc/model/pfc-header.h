@@ -85,6 +85,8 @@ public:
    */
   enum PfcType { Pause, Resume };
 
+  const static uint16_t PROT_NUM = 0x8808;
+
   /**
    * Get string of PFC type
    *

@@ -131,19 +131,19 @@ public:
    * \brief Install the upper layer.
    * \param layer the layer to install
    */
-  void InstallUpperLayer (Ptr<DpskLayer> layer);
+  virtual void InstallUpperLayer (Ptr<DpskLayer> layer);
 
   /**
    * \brief Install the lower layer.
    * \param layer the layer to install
    */
-  void InstallLowerLayer (Ptr<DpskLayer> layer);
+  virtual void InstallLowerLayer (Ptr<DpskLayer> layer);
 
   /**
    * \brief Install DPSK to handle packets directly.
    * \param dpsk the DPSK framework
    */
-  void InstallDpsk (Ptr<Dpsk> dpsk);
+  virtual void InstallDpsk (Ptr<Dpsk> dpsk);
 
 protected:
   /**

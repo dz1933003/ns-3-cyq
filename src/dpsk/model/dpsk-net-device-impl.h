@@ -62,20 +62,13 @@ public:
    */
   virtual ~DpskNetDeviceImpl ();
 
-  /**
-   * Attach the implementation to a device.
-   *
-   * \param device Ptr to the device to which this object is being attached.
-   * \return true if the operation was successful (always true actually)
-   */
-  virtual bool Attach (Ptr<DpskNetDevice> device);
-
-  /**
-   * Detach the implementation from the device.
-   */
-  virtual void Detach ();
-
 protected:
+  /**
+   * Make protected functions of this class and its subclasses public to
+   * DpskNetDevice.
+   */
+  friend class DpskNetDevice;
+
   /**
    * Transmit process
    *

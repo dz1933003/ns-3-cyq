@@ -27,6 +27,7 @@
 #include "ns3/ipv4-header.h"
 #include "ns3/pfc-header.h"
 #include "ns3/dpsk-net-device.h"
+#include "pfc-switch-tag.h"
 
 namespace ns3 {
 
@@ -54,17 +55,53 @@ PfcSwitchPort::~PfcSwitchPort ()
   NS_LOG_FUNCTION (this);
 }
 
+void
+PfcSwitchPort::SetupQueues (uint32_t n)
+{
+  NS_LOG_FUNCTION (n);
+  CleanQueues ();
+  m_nQueues = n;
+  for (uint32_t i = 0; i <= m_nQueues; i++) // with another control queue
+    {
+      m_queues.push_back (std::queue<Ptr<Packet>> ());
+      m_pausedStates.push_back (false);
+      m_inQueueBytesList.push_back (0);
+      m_inQueuePacketsList.push_back (0);
+    }
+}
+
+void
+PfcSwitchPort::CleanQueues ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  m_queues.clear ();
+  m_pausedStates.clear ();
+  m_inQueueBytesList.clear ();
+  m_inQueuePacketsList.clear ();
+}
+
+void
+PfcSwitchPort::SetDeviceDequeueHandler (DeviceDequeueNotifier h)
+{
+  m_mmuCallback = h;
+}
+
 Ptr<Packet>
 PfcSwitchPort::Transmit ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  Ptr<Packet> p = Dequeue ();
+  uint32_t qIndex = m_nQueues + 1; // bigger than number of queues is invalid
+  Ptr<Packet> p = Dequeue (qIndex);
 
   if (p == 0)
     return 0;
 
-  // TODO cyq: notify switch dequeue event (dev, queue)
+  PfcSwitchTag tag;
+  p->RemovePacketTag (tag);
+
+  // Notify switch dequeue event
+  m_mmuCallback (m_dev, p, qIndex);
 
   return p;
 }
@@ -79,12 +116,14 @@ PfcSwitchPort::Send (Ptr<Packet> packet, const Address &source, const Address &d
   ethHeader.SetDestination (Mac48Address::ConvertFrom (dest));
   ethHeader.SetLengthType (protocolNumber);
 
-  if (protocolNumber == 0x8808) // PFC protocol number
+  if (protocolNumber == PfcHeader::PROT_NUM) // PFC protocol number
     {
       // Add Ethernet header
       packet->AddHeader (ethHeader);
       // Enqueue control queue
-      m_controlQueue.push (packet);
+      m_queues[m_nQueues].push (packet);
+      m_inQueueBytesList[m_nQueues] += packet->GetSize ();
+      m_inQueuePacketsList[m_nQueues]++;
     }
   else // Not PFC
     {
@@ -96,7 +135,12 @@ PfcSwitchPort::Send (Ptr<Packet> packet, const Address &source, const Address &d
       packet->AddHeader (ethHeader);
       // Enqueue
       m_queues[dscp].push (packet);
+      m_inQueueBytesList[dscp] += packet->GetSize ();
+      m_inQueuePacketsList[dscp]++;
     }
+
+  m_nInQueueBytes += packet->GetSize ();
+  m_nInQueuePackets++;
 
   return true; // Enqueue packet successfully
 }
@@ -106,11 +150,14 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
+  PfcSwitchTag tag (m_dev);
+  p->AddPacketTag (tag); // Add tag for tracing input device when dequeue in the net device
+
   // Pop Ethernet header
   EthernetHeader ethHeader;
   p->RemoveHeader (ethHeader);
 
-  if (ethHeader.GetLengthType () == 0x8808) // PFC protocol number
+  if (ethHeader.GetLengthType () == PfcHeader::PROT_NUM) // PFC protocol number
     {
       // Pop PFC header
       PfcHeader pfcHeader;
@@ -119,27 +166,17 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
       if (pfcHeader.GetType () == PfcHeader::Pause) // PFC Pause
         {
           // Update paused state
-          if (pfcHeader.GetQIndex () >= m_nQueues)
-            {
-              m_controlPaused = true;
-            }
-          else
-            {
-              m_pausedStates[pfcHeader.GetQIndex ()] = true;
-            }
+          uint32_t pfcQIndex = pfcHeader.GetQIndex ();
+          uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
+          m_pausedStates[qIndex] = true;
           return false; // Do not forward up to node
         }
       else if (pfcHeader.GetType () == PfcHeader::Resume) // PFC Resume
         {
           // Update paused state
-          if (pfcHeader.GetQIndex () >= m_nQueues)
-            {
-              m_controlPaused = false;
-            }
-          else
-            {
-              m_pausedStates[pfcHeader.GetQIndex ()] = false;
-            }
+          uint32_t pfcQIndex = pfcHeader.GetQIndex ();
+          uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
+          m_pausedStates[qIndex] = false;
           m_dev->TriggerTransmit (); // Trigger device transmitting
           return false; // Do not forward up to node
         }
@@ -157,7 +194,7 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
 }
 
 Ptr<Packet>
-PfcSwitchPort::DequeueRoundRobin ()
+PfcSwitchPort::DequeueRoundRobin (uint32_t &qIndex)
 {
   NS_LOG_FUNCTION_NOARGS ();
   if (m_nInQueuePackets == 0 || m_nQueues == 0)
@@ -170,18 +207,18 @@ PfcSwitchPort::DequeueRoundRobin ()
       for (uint32_t i = 0; i < m_nQueues; i++)
         {
           uint32_t qIdx = (m_lastQueueIdx + i) % m_nQueues;
-          if (m_pausedStates[qIdx] == false && m_inQueueNPacketsList[qIdx] > 0)
+          if (m_pausedStates[qIdx] == false && m_inQueuePacketsList[qIdx] > 0)
             {
               Ptr<Packet> p = m_queues[qIdx].front ();
               m_queues[qIdx].pop ();
 
               m_nInQueueBytes -= p->GetSize ();
               m_nInQueuePackets--;
-
-              m_inQueueNBytesList[qIdx] -= p->GetSize ();
-              m_inQueueNPacketsList[qIdx]--;
+              m_inQueueBytesList[qIdx] -= p->GetSize ();
+              m_inQueuePacketsList[qIdx]--;
 
               m_lastQueueIdx = qIdx;
+              qIndex = qIdx;
 
               return p;
             }
@@ -191,22 +228,25 @@ PfcSwitchPort::DequeueRoundRobin ()
 }
 
 Ptr<Packet>
-PfcSwitchPort::Dequeue ()
+PfcSwitchPort::Dequeue (uint32_t &qIndex)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  if (m_nInControlQueuePackets == 0 || m_controlPaused)
+  if (m_inQueuePacketsList[m_nQueues] == 0 || m_pausedStates[m_nQueues]) // No control packets
     {
-      return DequeueRoundRobin ();
+      return DequeueRoundRobin (qIndex);
     }
-  else
+  else // Dequeue control packets
     {
-      Ptr<Packet> p = m_controlQueue.front ();
-      m_controlQueue.pop ();
+      Ptr<Packet> p = m_queues[m_nQueues].front ();
+      m_queues[m_nQueues].pop ();
 
-      m_nInControlQueueBytes -= p->GetSize ();
-      m_nInControlQueuePackets--;
+      m_nInQueueBytes -= p->GetSize ();
+      m_nInQueuePackets--;
+      m_inQueueBytesList[m_nQueues] -= p->GetSize ();
+      m_inQueuePacketsList[m_nQueues]--;
 
+      qIndex = m_nQueues;
       return p;
     }
 }
@@ -215,8 +255,6 @@ void
 PfcSwitchPort::DoDispose ()
 {
   NS_LOG_FUNCTION (this);
-  while (m_controlQueue.empty () == false)
-    m_controlQueue.pop ();
   m_queues.clear ();
   DpskNetDeviceImpl::DoDispose ();
 }

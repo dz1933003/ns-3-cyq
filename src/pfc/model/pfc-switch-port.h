@@ -52,6 +52,35 @@ public:
    */
   virtual ~PfcSwitchPort ();
 
+  /**
+   * Setup queues.
+   *
+   * \param n queue number
+   */
+  void SetupQueues (uint32_t n);
+
+  /**
+   * Clean up queues.
+   */
+  void CleanQueues ();
+
+  /**
+   * Transmit callback to notify mmu
+   *
+   * \param output device
+   * \param output packet
+   * \param output queue index
+   * \return void
+   */
+  typedef Callback<void, Ptr<NetDevice>, Ptr<Packet>, uint32_t> DeviceDequeueNotifier;
+
+  /**
+   * Setup dequeue event notifier
+   *
+   * \param h callback
+   */
+  void SetDeviceDequeueHandler (DeviceDequeueNotifier h);
+
 protected:
   /**
    * PFC switch port transmitting logic.
@@ -93,36 +122,36 @@ private:
    * Dequeue by round robin for queues of the port
    * except the control queue.
    *
+   * \param qIndex dequeue queue index (output)
    * \return Ptr to the dequeued packet
    */
-  Ptr<Packet> DequeueRoundRobin ();
+  Ptr<Packet> DequeueRoundRobin (uint32_t &qIndex);
 
   /**
    * Dequeue a packet for queues with the control queue.
    *
+   * \param qIndex dequeue queue index (output)
    * \return Ptr to the dequeued packet
    */
-  Ptr<Packet> Dequeue ();
+  Ptr<Packet> Dequeue (uint32_t &qIndex);
 
   uint32_t m_nQueues; //!< queue count of the port (control queue not included)
-  std::queue<Ptr<Packet>> m_controlQueue; //!< highest priority queue
-  std::vector<std::queue<Ptr<Packet>>> m_queues; //!< queues of the port
+  std::vector<std::queue<Ptr<Packet>>> m_queues; //!< queues of the port (with control queue)
 
-  bool m_controlPaused; //!< paused state of the control queue
   std::vector<bool> m_pausedStates; //!< paused state of queues
 
-  uint32_t m_lastQueueIdx; //!< last dequeue queue index
+  uint32_t m_lastQueueIdx; //!< last dequeue queue index (control queue excluded)
+
+  DeviceDequeueNotifier m_mmuCallback; //!< callback to notify mmu
 
 public:
   /// Statistics
 
-  uint64_t m_nInControlQueueBytes; //!< control queue in-queue byte
-  uint64_t m_nInQueueBytes; //!< total in-queue byte (control queue excluded)
-  std::vector<uint64_t> m_inQueueNBytesList; //!< other in-queue byte
+  uint64_t m_nInQueueBytes; //!< total in-queue byte (control queue included)
+  std::vector<uint64_t> m_inQueueBytesList; //!< other in-queue byte
 
-  uint32_t m_nInControlQueuePackets; //!< control queue in-queue packet count
-  uint32_t m_nInQueuePackets; //!< total in-queue packet count (control queue excluded)
-  std::vector<uint32_t> m_inQueueNPacketsList; //!< other in-queue packet count
+  uint32_t m_nInQueuePackets; //!< total in-queue packet count (control queue included)
+  std::vector<uint32_t> m_inQueuePacketsList; //!< other in-queue packet count
 
 private:
   /**

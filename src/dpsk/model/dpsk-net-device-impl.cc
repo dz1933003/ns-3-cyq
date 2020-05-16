@@ -60,32 +60,6 @@ DpskNetDeviceImpl::DoDispose ()
   Object::DoDispose ();
 }
 
-bool
-DpskNetDeviceImpl::Attach (Ptr<DpskNetDevice> device)
-{
-  NS_LOG_FUNCTION (this << &device);
-
-  Detach ();
-
-  m_dev = device;
-
-  m_dev->SetTransmitInterceptor (MakeCallback (&DpskNetDeviceImpl::Transmit, this));
-  m_dev->SetSendInterceptor (MakeCallback (&DpskNetDeviceImpl::Send, this));
-  m_dev->SetReceiveInterceptor (MakeCallback (&DpskNetDeviceImpl::Receive, this));
-
-  return true;
-}
-
-void
-DpskNetDeviceImpl::Detach ()
-{
-  NS_LOG_FUNCTION_NOARGS ();
-  m_dev->ResetTransmitInterceptor ();
-  m_dev->ResetSendInterceptor ();
-  m_dev->ResetReceiveInterceptor ();
-  m_dev = 0;
-}
-
 Ptr<Packet>
 DpskNetDeviceImpl::Transmit ()
 {
