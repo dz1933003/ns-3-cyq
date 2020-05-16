@@ -1,6 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2007, 2008 University of Washington
+ * Copyright (c) 2020 Nanjing University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -39,6 +40,7 @@ template <typename Item>
 class Queue;
 class DpskChannel;
 class ErrorModel;
+class DpskNetDeviceImpl;
 
 /**
  * \ingroup dpsk
@@ -152,40 +154,101 @@ public:
   void TriggerTransmit ();
 
   /**
-   * Callback type for transmiting. Returns the pointer of a Packet and
-   * takes no arguments.
+   * Pause transmit process.
    */
-  typedef Callback<Ptr<Packet>> TransmitRequestHandler;
+  void PauseTransmit ();
+
+  /**
+   * Set the implementation.
+   *
+   * \param impl the implementation of net device
+   */
+  void SetImplementation (Ptr<DpskNetDeviceImpl> impl);
+
+  /**
+   * Get the implementation.
+   *
+   * \return the implementation of net device
+   */
+  Ptr<DpskNetDeviceImpl> GetImplementation ();
+
+  /**
+   * Clean the implementation.
+   */
+  void ResetImplementation ();
+
+  /**
+   * Callback type of transmiting.
+   */
+  typedef Callback<Ptr<Packet>> TransmitInterceptor;
+
+  /**
+   * Set the transmiting callback.
+   *
+   * \param h the transmiting handler
+   */
+  void SetTransmitInterceptor (TransmitInterceptor h);
+
+  /**
+   * Clean the transmiting callback.
+   */
+  void ResetTransmitInterceptor ();
+
+  /**
+   * Callback type of sending.
+   */
+  typedef Callback<bool, Ptr<Packet>, const Address &, const Address &, uint16_t> SendInterceptor;
 
   /**
    * Set the sending callback.
    *
-   * \param the sending handler
+   * \param h the sending handler
    */
-  void SetTransmitRequestHandler (TransmitRequestHandler h);
+  void SetSendInterceptor (SendInterceptor h);
 
   /**
    * Clean the sending callback.
    */
-  void ResetTransmitRequestHandler ();
+  void ResetSendInterceptor ();
 
   /**
-   * Callback type for receiving. Takes a pointer of a Packet to do
-   * post-process after get the Packet from Node.
+   * Callback type for receiving.
    */
-  typedef Callback<void, Ptr<Packet>> ReceivePostProcessHandler;
+  typedef Callback<bool, Ptr<Packet>> ReceiveInterceptor;
 
   /**
    * Set the receiving post-process callback.
    *
-   * \param the sending handler
+   * \param h the receiving handler
    */
-  void SetReceivePostProcessHandler (ReceivePostProcessHandler h);
+  void SetReceiveInterceptor (ReceiveInterceptor h);
 
   /**
    * Clean the receiving post-process callback.
    */
-  void ResetReceivePostProcessHandler ();
+  void ResetReceiveInterceptor ();
+
+  /**
+   * Enumeration of the transmit node of the net device.
+   */
+  enum TxMode {
+    ACTIVE, /**< The transmitter send via self scheduling */
+    PASSIVE /**< The transmitter send via upper layers' invoking */
+  };
+
+  /**
+   * Get Transmit mode.
+   *
+   * \return transmit mode
+   */
+  TxMode GetTxMode (void) const;
+
+  /**
+   * Set Transmit mode.
+   *
+   * \param mode transmit mode
+   */
+  void SetTxMode (const TxMode &mode);
 
   // The remaining methods are documented in ns3::NetDevice*
 
@@ -229,6 +292,12 @@ public:
   virtual void SetPromiscReceiveCallback (PromiscReceiveCallback cb);
   virtual bool SupportsSendFrom (void) const;
 
+  /**
+   * \returns the address of the remote device connected to this device
+   * through the Dpsk channel.
+   */
+  Address GetRemote (void) const;
+
 protected:
   /**
    * \brief Handler for MPI receive event
@@ -263,12 +332,6 @@ private:
   virtual void DoDispose (void);
 
 private:
-  /**
-   * \returns the address of the remote device connected to this device
-   * through the Dpsk channel.
-   */
-  Address GetRemote (void) const;
-
   /**
    * Start Sending a Packet Down the Wire.
    *
@@ -312,12 +375,20 @@ private:
   void NotifyLinkUp (void);
 
   /**
+   * The transmit mode of the Net Device.
+   */
+  TxMode m_txMode;
+
+  /**
    * Keep transmit state
    */
   bool m_keepTransmit;
 
-  TransmitRequestHandler m_txCallback; //!< transmit callback
-  ReceivePostProcessHandler m_rxPostProcessingCallback; //!< receive post-process callback
+  TransmitInterceptor m_txInterceptor; //!< device self-drive transmit callback
+  SendInterceptor m_sendInterceptor; //!< node notified transmit callback
+  ReceiveInterceptor m_rxInterceptor; //!< receive post-process callback
+
+  Ptr<DpskNetDeviceImpl> m_impl; //!< net device implementation
 
   /**
    * Enumeration of the states of the transmit machine of the net device.

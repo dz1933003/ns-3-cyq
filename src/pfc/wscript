@@ -1,0 +1,42 @@
+# -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+# def options(opt):
+#     pass
+
+# def configure(conf):
+#     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
+
+
+def build(bld):
+    module = bld.create_ns3_module('pfc', ['core', 'dpsk'])
+    module.source = [
+        'model/pfc.cc',
+        'model/pfc-switch-port.cc',
+        'model/pfc-switch.cc',
+        'model/pfc-switch-tag.cc',
+        'model/switch-mmu.cc',
+        'model/pfc-header.cc',
+        'helper/pfc-helper.cc',
+    ]
+
+    module_test = bld.create_ns3_module_test_library('pfc')
+    module_test.source = [
+        'test/pfc-test-suite.cc',
+    ]
+
+    headers = bld(features='ns3header')
+    headers.module = 'pfc'
+    headers.source = [
+        'model/pfc.h',
+        'model/pfc-switch-port.h',
+        'model/pfc-switch.h',
+        'model/pfc-switch-tag.h',
+        'model/switch-mmu.h',
+        'model/pfc-header.h',
+        'helper/pfc-helper.h',
+    ]
+
+    if bld.env.ENABLE_EXAMPLES:
+        bld.recurse('examples')
+
+    # bld.ns3_python_bindings()

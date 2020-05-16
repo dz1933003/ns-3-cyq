@@ -1,6 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2007, 2008 University of Washington
+ * Copyright (c) 2020 Nanjing University
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -28,6 +29,7 @@
 #include "ns3/uinteger.h"
 #include "ns3/pointer.h"
 #include "dpsk-net-device.h"
+#include "dpsk-net-device-impl.h"
 #include "dpsk-channel.h"
 
 namespace ns3 {
@@ -62,6 +64,9 @@ DpskNetDevice::GetTypeId (void)
           .AddAttribute ("InterframeGap", "The time to wait between packet (frame) transmissions",
                          TimeValue (Seconds (0.0)),
                          MakeTimeAccessor (&DpskNetDevice::m_tInterframeGap), MakeTimeChecker ())
+          .AddAttribute ("TxMode", "The mode of transmitting, passive or active",
+                         EnumValue (PASSIVE), MakeEnumAccessor (&DpskNetDevice::m_txMode),
+                         MakeEnumChecker (PASSIVE, "Passive", ACTIVE, "Active"))
 
           //
           // Transmit queueing discipline for the device which includes its own set
@@ -204,35 +209,113 @@ DpskNetDevice::SetInterframeGap (Time t)
   m_tInterframeGap = t;
 }
 
-void
-DpskNetDevice::SetTransmitRequestHandler (TransmitRequestHandler h)
+DpskNetDevice::TxMode
+DpskNetDevice::GetTxMode (void) const
 {
-  m_txCallback = h;
+  NS_LOG_FUNCTION (this);
+  return m_txMode;
 }
 
 void
-DpskNetDevice::ResetTransmitRequestHandler ()
+DpskNetDevice::SetTxMode (const TxMode &mode)
 {
-  m_txCallback.Nullify ();
+  NS_LOG_FUNCTION (this << mode);
+  m_txMode = mode;
 }
 
 void
-DpskNetDevice::SetReceivePostProcessHandler (ReceivePostProcessHandler h)
+DpskNetDevice::SetImplementation (Ptr<DpskNetDeviceImpl> impl)
 {
-  m_rxPostProcessingCallback = h;
+  NS_LOG_FUNCTION (impl);
+  m_impl = impl;
+  m_impl->m_dev = this;
+  SetTransmitInterceptor (MakeCallback (&DpskNetDeviceImpl::Transmit, m_impl));
+  SetSendInterceptor (MakeCallback (&DpskNetDeviceImpl::Send, m_impl));
+  SetReceiveInterceptor (MakeCallback (&DpskNetDeviceImpl::Receive, m_impl));
+}
+
+Ptr<DpskNetDeviceImpl>
+DpskNetDevice::GetImplementation ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_impl;
 }
 
 void
-DpskNetDevice::ResetReceivePostProcessHandler ()
+DpskNetDevice::ResetImplementation ()
 {
-  m_rxPostProcessingCallback.Nullify ();
+  NS_LOG_FUNCTION_NOARGS ();
+  m_impl = 0;
+  m_impl->m_dev = 0;
+  ResetTransmitInterceptor ();
+  ResetSendInterceptor ();
+  ResetReceiveInterceptor ();
+}
+
+void
+DpskNetDevice::SetTransmitInterceptor (TransmitInterceptor h)
+{
+  NS_LOG_FUNCTION (&h);
+  m_txInterceptor = h;
+}
+
+void
+DpskNetDevice::ResetTransmitInterceptor ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  m_txInterceptor.Nullify ();
+}
+
+void
+DpskNetDevice::SetSendInterceptor (SendInterceptor h)
+{
+  NS_LOG_FUNCTION (&h);
+  m_sendInterceptor = h;
+}
+
+void
+DpskNetDevice::ResetSendInterceptor ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  m_sendInterceptor.Nullify ();
+}
+
+void
+DpskNetDevice::SetReceiveInterceptor (ReceiveInterceptor h)
+{
+  NS_LOG_FUNCTION (&h);
+  m_rxInterceptor = h;
+}
+
+void
+DpskNetDevice::ResetReceiveInterceptor ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  m_rxInterceptor.Nullify ();
 }
 
 void
 DpskNetDevice::TriggerTransmit ()
 {
-  m_keepTransmit = true;
-  TransmitRequest ();
+  NS_LOG_FUNCTION_NOARGS ();
+  NS_ASSERT_MSG (m_txMode == ACTIVE, "Must be ACTIVE transmit mode");
+
+  if (m_keepTransmit == false && m_txMode == ACTIVE)
+    {
+      m_keepTransmit = true;
+      TransmitRequest ();
+    }
+  // otherwise this device is still transmitting
+}
+
+void
+DpskNetDevice::PauseTransmit ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  NS_ASSERT_MSG (m_txMode == ACTIVE, "Must be ACTIVE transmit mode");
+
+  if (m_txMode == ACTIVE)
+    m_keepTransmit = false;
 }
 
 bool
@@ -270,7 +353,7 @@ DpskNetDevice::TransmitRequest ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  Ptr<Packet> p = m_txCallback ();
+  Ptr<Packet> p = m_txInterceptor ();
   if (p == 0)
     {
       m_keepTransmit = false;
@@ -303,24 +386,34 @@ DpskNetDevice::TransmitComplete (void)
   m_phyTxEndTrace (m_currentPkt);
   m_currentPkt = 0;
 
-  Ptr<Packet> p = m_queue->Dequeue ();
-  if (p == 0)
+  if (m_txMode == PASSIVE)
     {
-      NS_LOG_LOGIC ("No pending packets in device queue after tx complete");
+      Ptr<Packet> p = m_queue->Dequeue ();
+      if (p == 0)
+        {
+          NS_LOG_LOGIC ("No pending packets in device queue after tx complete");
+          return;
+        }
+
+      //
+      // Got another packet off of the queue, so start the transmit process again.
+      //
+      m_snifferTrace (p);
+      m_promiscSnifferTrace (p);
+      TransmitStart (p);
+    }
+  else if (m_txMode == ACTIVE)
+    {
       if (m_keepTransmit)
         {
           NS_LOG_LOGIC ("Request transmiting");
           TransmitRequest ();
         }
-      return;
     }
-
-  //
-  // Got another packet off of the queue, so start the transmit process again.
-  //
-  m_snifferTrace (p);
-  m_promiscSnifferTrace (p);
-  TransmitStart (p);
+  else
+    {
+      NS_ASSERT_MSG (false, "DpskNetDevice::TransmitComplete(): m_txMode outbound");
+    }
 }
 
 bool
@@ -395,8 +488,8 @@ DpskNetDevice::Receive (Ptr<Packet> packet)
 
       m_macRxTrace (originalPacket);
 
-      m_rxPostProcessingCallback (packet);
-      m_rxCallback (this, packet, protocol, GetRemote ());
+      if (m_rxInterceptor (packet))
+        m_rxCallback (this, packet, protocol, GetRemote ());
     }
 }
 
@@ -529,6 +622,14 @@ bool
 DpskNetDevice::Send (Ptr<Packet> packet, const Address &dest, uint16_t protocolNumber)
 {
   NS_LOG_FUNCTION (this << packet << dest << protocolNumber);
+  return SendFrom (packet, m_address, dest, protocolNumber);
+}
+
+bool
+DpskNetDevice::SendFrom (Ptr<Packet> packet, const Address &source, const Address &dest,
+                         uint16_t protocolNumber)
+{
+  NS_LOG_FUNCTION (this << packet << source << dest << protocolNumber);
   NS_LOG_LOGIC ("p=" << packet << ", dest=" << &dest);
   NS_LOG_LOGIC ("UID is " << packet->GetUid ());
 
@@ -544,37 +645,43 @@ DpskNetDevice::Send (Ptr<Packet> packet, const Address &dest, uint16_t protocolN
 
   m_macTxTrace (packet);
 
-  //
-  // We should enqueue and dequeue the packet to hit the tracing hooks.
-  //
-  if (m_queue->Enqueue (packet))
+  if (m_txMode == PASSIVE)
     {
       //
-      // If the channel is ready for transition we send the packet right now
+      // We should enqueue and dequeue the packet to hit the tracing hooks.
       //
-      if (m_txMachineState == READY)
+      if (m_queue->Enqueue (packet))
         {
-          packet = m_queue->Dequeue ();
-          m_snifferTrace (packet);
-          m_promiscSnifferTrace (packet);
-          bool ret = TransmitStart (packet);
-          return ret;
+          //
+          // If the channel is ready for transition we send the packet right now
+          //
+          if (m_txMachineState == READY)
+            {
+              packet = m_queue->Dequeue ();
+              m_snifferTrace (packet);
+              m_promiscSnifferTrace (packet);
+              bool ret = TransmitStart (packet);
+              return ret;
+            }
+          return true;
         }
-      return true;
+
+      // Enqueue may fail (overflow)
+
+      m_macTxDropTrace (packet);
+      return false;
     }
-
-  // Enqueue may fail (overflow)
-
-  m_macTxDropTrace (packet);
-  return false;
-}
-
-bool
-DpskNetDevice::SendFrom (Ptr<Packet> packet, const Address &source, const Address &dest,
-                         uint16_t protocolNumber)
-{
-  NS_LOG_FUNCTION (this << packet << source << dest << protocolNumber);
-  return Send (packet, dest, protocolNumber);
+  else if (m_txMode == ACTIVE)
+    {
+      bool status = m_sendInterceptor (packet, source, dest, protocolNumber);
+      if (status == false)
+        m_macTxDropTrace (packet);
+      return status;
+    }
+  else
+    {
+      NS_ASSERT_MSG (false, "DpskNetDevice::SendFrom(): m_txMode outbound");
+    }
 }
 
 Ptr<Node>
