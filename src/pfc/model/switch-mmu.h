@@ -26,6 +26,7 @@
 namespace ns3 {
 
 class Packet;
+class UniformRandomVariable;
 
 /**
  * \ingroup pfc
@@ -280,6 +281,8 @@ private:
 
   // Map from Ptr to net device to a vector of queue PFC paused states.
   std::map<Ptr<NetDevice>, std::vector<bool>> m_pausedStates;
+
+  Ptr<UniformRandomVariable> uniRand;
 
   /**
    * \brief Copy constructor

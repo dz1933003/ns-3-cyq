@@ -41,6 +41,7 @@ SwitchMmu::GetTypeId (void)
 SwitchMmu::SwitchMmu (void) : m_bufferConfig (0), m_nQueues (0)
 {
   NS_LOG_FUNCTION_NOARGS ();
+  uniRand = CreateObject<UniformRandomVariable> ();
 }
 
 SwitchMmu::~SwitchMmu (void)
@@ -206,7 +207,7 @@ SwitchMmu::CheckShouldSetEcn (Ptr<NetDevice> port, uint32_t qIndex)
   if (qLen > kMin)
     {
       double p = pMax * double (qLen - kMin) / double (kMax - kMin);
-      if (CreateObject<UniformRandomVariable> ()->GetValue (0, 1) < p)
+      if (uniRand->GetValue (0, 1) < p)
         return true;
     }
   return false;
