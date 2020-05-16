@@ -16,6 +16,7 @@ def build(bld):
         'model/dpsk-net-device.cc',
         'model/dpsk-net-device-impl.cc',
         'helper/dpsk-helper.cc',
+        'helper/dpsk-net-device-helper.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('dpsk')
@@ -33,6 +34,7 @@ def build(bld):
         'model/dpsk-net-device.h',
         'model/dpsk-net-device-impl.h',
         'helper/dpsk-helper.h',
+        'helper/dpsk-net-device-helper.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:
