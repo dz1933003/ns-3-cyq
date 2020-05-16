@@ -27,6 +27,7 @@
 #include "ns3/udp-header.h"
 #include "pfc-header.h"
 #include "pfc-switch-tag.h"
+#include "pfc-switch-port.h"
 
 namespace ns3 {
 
@@ -136,8 +137,8 @@ PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
   for (const auto &dev : m_devices)
     {
       const auto &dpskDevImpl = DynamicCast<DpskNetDevice> (dev)->GetImplementation ();
-      const auto &pfcPortImpl = DynamicCast<PfcSwitch> (dpskDevImpl);
-      // TODO cyq: hook dequeue to this dequeue handler
+      const auto &pfcPortImpl = DynamicCast<PfcSwitchPort> (dpskDevImpl);
+      pfcPortImpl->SetDeviceDequeueHandler (MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
     }
 }
 
