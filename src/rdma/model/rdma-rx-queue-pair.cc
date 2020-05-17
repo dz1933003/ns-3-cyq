@@ -18,54 +18,53 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#include "rdma-tx-queue-pair.h"
+#include "rdma-rx-queue-pair.h"
 
 #include "ns3/hash.h"
 #include "ns3/log.h"
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("RdmaTxQueuePair");
+NS_LOG_COMPONENT_DEFINE ("RdmaRxQueuePair");
 
-NS_OBJECT_ENSURE_REGISTERED (RdmaTxQueuePair);
+NS_OBJECT_ENSURE_REGISTERED (RdmaRxQueuePair);
 
 TypeId
-RdmaTxQueuePair::GetTypeId (void)
+RdmaRxQueuePair::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::RdmaTxQueuePair")
+  static TypeId tid = TypeId ("ns3::RdmaRxQueuePair")
                           .SetParent<Object> ()
                           .SetGroupName ("Rdma")
-                          .AddConstructor<RdmaTxQueuePair> ();
+                          .AddConstructor<RdmaRxQueuePair> ();
   return tid;
 }
 
-RdmaTxQueuePair::RdmaTxQueuePair ()
+RdmaRxQueuePair::RdmaRxQueuePair ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
 
-RdmaTxQueuePair::RdmaTxQueuePair (Time startTime, Ipv4Address sIp, Ipv4Address dIp, uint16_t sPort,
-                                  uint16_t dPort, uint64_t size, uint16_t priority)
-    : m_startTime (startTime),
-      m_sIp (sIp),
+RdmaRxQueuePair::RdmaRxQueuePair (Ipv4Address sIp, Ipv4Address dIp, uint16_t sPort, uint16_t dPort,
+                                  uint64_t size, uint16_t priority)
+    : m_sIp (sIp),
       m_dIp (dIp),
       m_sPort (sPort),
       m_dPort (dPort),
       m_size (size),
       m_priority (priority),
-      m_sentSize (0)
+      m_receivedSize (0)
 {
-  NS_LOG_FUNCTION (this << startTime << sIp << dIp << sPort << dPort << size << priority);
+  NS_LOG_FUNCTION (this << sIp << dIp << sPort << dPort << size << priority);
 }
 
 uint64_t
-RdmaTxQueuePair::GetRemainBytes ()
+RdmaRxQueuePair::GetRemainBytes ()
 {
-  return (m_size >= m_sentSize) ? m_size - m_sentSize : 0;
+  return (m_size >= m_receivedSize) ? m_size - m_receivedSize : 0;
 }
 
 uint32_t
-RdmaTxQueuePair::GetHash (void)
+RdmaRxQueuePair::GetHash (void)
 {
   union {
     struct
@@ -85,9 +84,9 @@ RdmaTxQueuePair::GetHash (void)
 }
 
 bool
-RdmaTxQueuePair::IsFinished ()
+RdmaRxQueuePair::IsFinished ()
 {
-  return m_sentSize >= m_size;
+  return m_receivedSize >= m_size;
 }
 
 } // namespace ns3
