@@ -353,7 +353,7 @@ DpskNetDevice::TransmitRequest ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  Ptr<Packet> p = m_txInterceptor ();
+  Ptr<Packet> p = m_txInterceptor (); // DPSK transmit process
   if (p == 0)
     {
       m_keepTransmit = false;
@@ -489,7 +489,7 @@ DpskNetDevice::Receive (Ptr<Packet> packet)
       m_macRxTrace (originalPacket);
 
       if (m_rxInterceptor (packet))
-        m_rxCallback (this, packet, protocol, GetRemote ());
+        m_rxCallback (this, packet, protocol, GetRemote ()); // DPSK receive process
     }
 }
 
@@ -673,10 +673,17 @@ DpskNetDevice::SendFrom (Ptr<Packet> packet, const Address &source, const Addres
     }
   else if (m_txMode == ACTIVE)
     {
-      bool status = m_sendInterceptor (packet, source, dest, protocolNumber);
+      bool status = m_sendInterceptor (packet, source, dest, protocolNumber); // DPSK send process
       if (status == false)
-        m_macTxDropTrace (packet);
-      return status;
+        {
+          m_macTxDropTrace (packet);
+          return false;
+        }
+      else
+        {
+          TriggerTransmit ();
+          return status;
+        }
     }
   else
     {
