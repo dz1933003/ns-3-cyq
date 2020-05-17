@@ -11,6 +11,7 @@ def build(bld):
     module.source = [
         'model/rdma.cc',
         'model/rdma-tx-queue-pair.cc',
+        'model/rdma-rx-queue-pair.cc',
         'helper/rdma-helper.cc',
         ]
 
@@ -24,6 +25,7 @@ def build(bld):
     headers.source = [
         'model/rdma.h',
         'model/rdma-tx-queue-pair.h',
+        'model/rdma-rx-queue-pair.h',
         'helper/rdma-helper.h',
         ]
 
