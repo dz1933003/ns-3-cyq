@@ -44,6 +44,8 @@ public:
 
   uint64_t GetRemainBytes ();
   uint32_t GetHash (void);
+  static uint32_t GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const uint16_t &sPort,
+                           const uint16_t &dPort);
   bool IsFinished ();
 };
 

@@ -26,6 +26,7 @@
 #include "ns3/rdma-rx-queue-pair.h"
 #include <vector>
 #include <queue>
+#include <map>
 
 namespace ns3 {
 
@@ -54,24 +55,24 @@ public:
    */
   virtual ~PfcHostPort ();
 
-  // /**
-  //  * Setup queues.
-  //  *
-  //  * \param n queue number
-  //  */
-  // void SetupQueues (uint32_t n);
-
-  // /**
-  //  * Clean up queues.
-  //  */
-  // void CleanQueues ();
+  /**
+   * Setup queues.
+   *
+   * \param n queue number
+   */
+  void SetupQueues (uint32_t n);
 
   /**
-   * Add RDMA queue pair
+   * Clean up queues.
+   */
+  void CleanQueues ();
+
+  /**
+   * Add RDMA queue pair for transmitting
    *
    * \param qp queue pair to send
    */
-  void AddRdmaQueuePair (Ptr<RdmaTxQueuePair> qp);
+  void AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp);
 
 protected:
   /**
@@ -110,9 +111,19 @@ protected:
   virtual void DoDispose (void);
 
 private:
+  uint32_t m_nQueues; //!< queue count of the port (control queue not included)
+
   std::vector<bool> m_pausedStates; //!< paused state of queues
+
+  std::queue<Ptr<Packet>> m_controlQueue; //!< control queue
+
   std::vector<Ptr<RdmaTxQueuePair>> m_txQueuePairs; //!< transmit queue pairs
-  std::vector<Ptr<RdmaRxQueuePair>> m_rxQueuePairs; //!< received queue pairs
+  std::map<uint32_t, Ptr<RdmaRxQueuePair>> m_rxQueuePairs; //!< hash and received queue pairs
+
+  uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
+
+  // TODO cyq: comment
+  Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp);
 
 public:
   /// Statistics

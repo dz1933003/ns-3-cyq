@@ -66,6 +66,13 @@ RdmaRxQueuePair::GetRemainBytes ()
 uint32_t
 RdmaRxQueuePair::GetHash (void)
 {
+  return GetHash (m_sIp, m_dIp, m_sPort, m_dPort);
+}
+
+uint32_t
+RdmaRxQueuePair::GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const uint16_t &sPort,
+                          const uint16_t &dPort)
+{
   union {
     struct
     {
@@ -76,10 +83,10 @@ RdmaRxQueuePair::GetHash (void)
     };
     char bytes[12];
   } buf;
-  buf.sIp = m_sIp.Get ();
-  buf.dIp = m_dIp.Get ();
-  buf.sPort = m_sPort;
-  buf.dPort = m_dPort;
+  buf.sIp = sIp.Get ();
+  buf.dIp = dIp.Get ();
+  buf.sPort = sPort;
+  buf.dPort = dPort;
   return Hash32 (buf.bytes, sizeof (buf));
 }
 
