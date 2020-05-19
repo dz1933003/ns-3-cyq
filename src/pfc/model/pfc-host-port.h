@@ -24,6 +24,7 @@
 #include "ns3/dpsk-net-device-impl.h"
 #include "ns3/rdma-tx-queue-pair.h"
 #include "ns3/rdma-rx-queue-pair.h"
+#include "pfc-host.h"
 #include <vector>
 #include <queue>
 #include <map>
@@ -110,6 +111,9 @@ protected:
    */
   virtual void DoDispose (void);
 
+  // Admission to PfcHost
+  friend class PfcHost;
+
 private:
   uint32_t m_nQueues; //!< queue count of the port (control queue not included)
 
@@ -122,7 +126,12 @@ private:
 
   uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
 
-  // TODO cyq: comment
+  /**
+   * Generate data packet of target transmitting queue pair
+   *
+   * \param qp queue pair
+   * \return data packet
+   */
   Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp);
 
 public:

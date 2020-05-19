@@ -117,7 +117,7 @@ bool
 PfcHostPort::Send (Ptr<Packet> packet, const Address &source, const Address &dest,
                    uint16_t protocolNumber)
 {
-  // TODO cyq: No active send now
+  // XXX cyq: No active send now
   return false;
 }
 

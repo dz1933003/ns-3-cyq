@@ -16,6 +16,7 @@ def build(bld):
         'model/pfc-switch-tag.cc',
         'model/switch-mmu.cc',
         'model/pfc-host-port.cc',
+        'model/pfc-host.cc',
         'model/pfc-header.cc',
         'helper/pfc-helper.cc',
     ]
@@ -34,6 +35,7 @@ def build(bld):
         'model/pfc-switch-tag.h',
         'model/switch-mmu.h',
         'model/pfc-host-port.h',
+        'model/pfc-host.h',
         'model/pfc-header.h',
         'helper/pfc-helper.h',
     ]
