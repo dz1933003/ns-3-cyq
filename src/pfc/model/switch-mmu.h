@@ -47,16 +47,20 @@ public:
   SwitchMmu ();
   ~SwitchMmu ();
 
-  // TODO cyq: Aggregate Device move into the pfc switch DPSK layer? of set it private
-
 private:
   /**
    * Add devices need to be managed to the mmu
    *
-   * \param devs devices.
-   * \param n number of queues
+   * \param dev device.
    */
-  void AggregateDevices (const std::vector<Ptr<NetDevice>> &devs, const uint32_t &n);
+  void AggregateDevice (Ptr<NetDevice> dev);
+
+  /**
+   * Configurate queue number of the switch
+   *
+   * \param n queue number
+   */
+  void ConfigNQueue (uint32_t n);
 
 public:
   /**

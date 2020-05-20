@@ -50,30 +50,29 @@ SwitchMmu::~SwitchMmu (void)
 }
 
 void
-SwitchMmu::AggregateDevices (const std::vector<Ptr<NetDevice>> &devs, const uint32_t &n)
+SwitchMmu::AggregateDevice (Ptr<NetDevice> dev)
 {
-  NS_LOG_FUNCTION (devs);
-
-  m_devices = devs;
-  m_nQueues = n;
-
-  // Initialize with the default configuration
-  for (const auto &dev : m_devices)
+  NS_LOG_FUNCTION (dev);
+  for (uint32_t i = 0; i <= m_nQueues; i++) // with one control queue
     {
-      for (uint32_t i = 0; i <= m_nQueues; i++) // with one control queue
-        {
-          m_headroomConfig[dev].push_back (0);
-          m_reserveConfig[dev].push_back (0);
-          m_resumeOffsetConfig[dev].push_back (0);
-          m_ecnConfig[dev].push_back ({0, 0, 0., false});
+      m_headroomConfig[dev].push_back (0);
+      m_reserveConfig[dev].push_back (0);
+      m_resumeOffsetConfig[dev].push_back (0);
+      m_ecnConfig[dev].push_back ({0, 0, 0., false});
 
-          m_headroomUsed[dev].push_back (0);
-          m_ingressUsed[dev].push_back (0);
-          m_egressUsed[dev].push_back (0);
+      m_headroomUsed[dev].push_back (0);
+      m_ingressUsed[dev].push_back (0);
+      m_egressUsed[dev].push_back (0);
 
-          m_pausedStates[dev].push_back (false);
-        }
+      m_pausedStates[dev].push_back (false);
     }
+}
+
+void
+SwitchMmu::ConfigNQueue (uint32_t n)
+{
+  NS_LOG_FUNCTION (n);
+  m_nQueues = n;
 }
 
 void

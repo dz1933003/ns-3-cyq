@@ -155,7 +155,9 @@ private:
   uint32_t m_ecmpSeed; //!< ECMP seed
 
   uint32_t m_nDevices; //!< device number
-  std::vector<Ptr<NetDevice>> m_devices; //!< devices managed by installed Dpsk
+
+  // devices managed by installed Dpsk with index
+  std::unordered_map<uint32_t, Ptr<NetDevice>> m_devices;
 
   uint32_t m_nQueues; //!< queues of every devices
 

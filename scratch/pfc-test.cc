@@ -83,8 +83,9 @@ main (int argc, char *argv[])
   auto host1_pfc = CreateObject<PfcHost> ();
   auto host2_pfc = CreateObject<PfcHost> ();
   sw1_pfc->InstallDpsk (sw1_dpsk);
-  host1_pfc->InstallDpsk (host1_dpsk);
-  host2_pfc->InstallDpsk (host2_dpsk);
+  sw1_pfc->SetEcmpSeed (1);
+  sw1_pfc->SetNQueues (1);
+  sw1_pfc->AddRouteTableEntry ("10.0.0.2", sw1_host2_dev);
 
   auto sw1_mmu = CreateObject<SwitchMmu> ();
   sw1_mmu->ConfigBufferSize (12 * 1024 * 1024);
@@ -93,12 +94,12 @@ main (int argc, char *argv[])
   sw1_mmu->ConfigReserve (1024 * 1024);
   sw1_pfc->InstallMmu (sw1_mmu);
 
-  sw1_pfc->SetEcmpSeed (1);
-  sw1_pfc->SetNQueues (1);
-  sw1_pfc->AddRouteTableEntry ("10.0.0.2", sw1_host2_dev);
 
+  host1_pfc->InstallDpsk (host1_dpsk);
   host1_pfc->AddRouteTableEntry ("10.0.0.2", host1_sw1_dev);
   host1_pfc->AddRdmaTxQueuePair (qp1);
+
+  host2_pfc->InstallDpsk (host2_dpsk);
 
   Simulator::Run ();
   Simulator::Destroy ();
