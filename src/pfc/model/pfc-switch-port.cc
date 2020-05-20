@@ -150,15 +150,17 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  PfcSwitchTag tag (m_dev);
+  PfcSwitchTag tag (m_dev->GetIfIndex ());
   p->AddPacketTag (tag); // Add tag for tracing input device when dequeue in the net device
 
-  // Pop Ethernet header
+  // Get Ethernet header
   EthernetHeader ethHeader;
-  p->RemoveHeader (ethHeader);
+  p->PeekHeader (ethHeader);
 
   if (ethHeader.GetLengthType () == PfcHeader::PROT_NUM) // PFC protocol number
     {
+      // Pop Ethernet header
+      p->RemoveHeader (ethHeader);
       // Pop PFC header
       PfcHeader pfcHeader;
       p->RemoveHeader (pfcHeader);
@@ -189,7 +191,7 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
     }
   else // Not PFC
     {
-      return true; // Forward up to node
+      return true; // Forward up to node without any change
     }
 }
 

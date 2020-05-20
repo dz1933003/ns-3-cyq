@@ -31,6 +31,10 @@ namespace ns3 {
  * \ingroup pfc
  * \class PfcSwitchPort
  * \brief The Priority Flow Control Net Device Logic Implementation.
+ *
+ * Attention: No data packet modify on the port when receive (for mmu statics). Only
+ * handle PFC frames.
+ * Add Ethenet header when transmit.
  */
 class PfcSwitchPort : public DpskNetDeviceImpl
 {

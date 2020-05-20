@@ -35,24 +35,26 @@ class PfcSwitchTag : public Tag
 public:
   PfcSwitchTag ();
 
+  // TODO cyq: rename and refactor
+
   /**
    * Constructs a PfcSwitchTag with the given device
    *
-   * \param device Ptr to the device
+   * \param ifIdx device index
    */
-  PfcSwitchTag (Ptr<NetDevice> device);
+  PfcSwitchTag (uint32_t ifIdx);
 
   /**
    * Sets the device for the tag
-   * \param device Ptr to the device
+   * \param ifIdx device index
    */
-  void SetInDev (Ptr<NetDevice> device);
+  void SetInDev (uint32_t ifIdx);
 
   /**
    * Gets the device for the tag
-   * \return device Ptr to the device
+   * \return index to the device
    */
-  Ptr<NetDevice> GetInDev (void) const;
+  uint32_t GetInDev (void) const;
 
   /// Inherit from parent class
 
@@ -64,7 +66,7 @@ public:
   virtual void Print (std::ostream &os) const;
 
 private:
-  Ptr<NetDevice> m_inDev; //!< input device
+  uint32_t m_inDev; //!< input device index
 };
 
 } // namespace ns3

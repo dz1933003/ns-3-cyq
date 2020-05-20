@@ -47,6 +47,8 @@ public:
   SwitchMmu ();
   ~SwitchMmu ();
 
+  // TODO cyq: Aggregate Device move into the pfc switch DPSK layer? of set it private
+
   /**
    * Add devices need to be managed to the mmu
    *
@@ -62,6 +64,8 @@ public:
    */
   void ConfigBufferSize (uint64_t size);
 
+  // TODO cyq: add batch config ECN
+
   /**
    * Configurate ECN parameters
    *
@@ -73,6 +77,8 @@ public:
    */
   void ConfigEcn (Ptr<NetDevice> port, uint32_t qIndex, uint64_t kMin, uint64_t kMax, double pMax);
 
+  // TODO cyq: add batch config headroom
+
   /**
    * Configurate headroom
    *
@@ -81,6 +87,8 @@ public:
    * \param size headroom size by byte
    */
   void ConfigHeadroom (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size);
+
+  // TODO cyq: add config reserve and its batch config overload
 
   /**
    * Check the admission of target ingress

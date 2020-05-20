@@ -80,15 +80,20 @@ PfcSwitch::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, u
 {
   NS_LOG_FUNCTION (device << packet << protocol << &source << &destination << packetType);
   // TODO cyq: trace packet
+  // Remove Ethernet header
+  Ptr<Packet> p = packet->Copy ();
+  EthernetHeader ethHeader;
+  p->RemoveHeader (ethHeader);
+
   Ptr<DpskNetDevice> inDev = DynamicCast<DpskNetDevice> (device);
-  Ptr<DpskNetDevice> outDev = DynamicCast<DpskNetDevice> (GetOutDev (packet));
+  Ptr<DpskNetDevice> outDev = DynamicCast<DpskNetDevice> (GetOutDev (p));
   if (outDev == 0)
     return; // Drop packet
 
   NS_ASSERT_MSG (outDev->IsLinkUp (), "The routing table look up should return link that is up");
 
   Ipv4Header ipHeader;
-  packet->PeekHeader (ipHeader);
+  p->PeekHeader (ipHeader);
 
   uint32_t pSize = packet->GetSize ();
   auto dscp = ipHeader.GetDscp ();
@@ -121,7 +126,7 @@ PfcSwitch::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, u
         }
     }
 
-  SendFromDevice (outDev, packet, protocol, outDev->GetAddress (), outDev->GetRemote ());
+  SendFromDevice (outDev, p, protocol, outDev->GetAddress (), outDev->GetRemote ());
 }
 
 void
@@ -272,9 +277,13 @@ PfcSwitch::CalcEcmpHash (const uint8_t *key, size_t len)
 void
 PfcSwitch::DeviceDequeueHandler (Ptr<NetDevice> outDev, Ptr<Packet> packet, uint32_t qIndex)
 {
+  Ptr<DpskNetDevice> inDev;
   PfcSwitchTag tag;
   packet->PeekPacketTag (tag);
-  Ptr<DpskNetDevice> inDev = DynamicCast<DpskNetDevice> (tag.GetInDev ());
+  uint32_t inDevIdx = tag.GetInDev ();
+  for (size_t i = 0; i < m_devices.size (); i++)
+    if (m_devices[i]->GetIfIndex () == inDevIdx)
+      inDev = DynamicCast<DpskNetDevice> (m_devices[i]);
   uint32_t pSize = packet->GetSize ();
 
   if (qIndex == m_nQueues) // control queue

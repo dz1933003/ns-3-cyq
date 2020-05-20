@@ -55,26 +55,14 @@ void
 PfcSwitchTag::Serialize (TagBuffer buf) const
 {
   NS_LOG_FUNCTION (this << &buf);
-#if __WORDSIZE == 64
-  buf.WriteU64 ((uint64_t) & (*m_inDev));
-#elif __WORDSIZE == 32
-  buf.WriteU32 ((uint32_t) & (*m_inDev));
-#else
-  NS_ASSERT_MSG (false, "Unrecognized machine word length");
-#endif
+  buf.WriteU32 (m_inDev);
 }
 
 void
 PfcSwitchTag::Deserialize (TagBuffer buf)
 {
   NS_LOG_FUNCTION (this << &buf);
-#if __WORDSIZE == 64
-  m_inDev = (NetDevice *) buf.ReadU64 ();
-#elif __WORDSIZE == 32
-  m_inDev = (NetDevice *) buf.ReadU32 ();
-#else
-  NS_ASSERT_MSG (false, "Unrecognized machine word length");
-#endif
+  m_inDev = buf.ReadU32 ();
 }
 
 void
@@ -89,19 +77,19 @@ PfcSwitchTag::PfcSwitchTag () : Tag (), m_inDev (0)
   NS_LOG_FUNCTION (this);
 }
 
-PfcSwitchTag::PfcSwitchTag (Ptr<NetDevice> device) : Tag (), m_inDev (device)
+PfcSwitchTag::PfcSwitchTag (uint32_t device) : Tag (), m_inDev (device)
 {
   NS_LOG_FUNCTION (this << device);
 }
 
 void
-PfcSwitchTag::SetInDev (Ptr<NetDevice> device)
+PfcSwitchTag::SetInDev (uint32_t device)
 {
   NS_LOG_FUNCTION (this << device);
   m_inDev = device;
 }
 
-Ptr<NetDevice>
+uint32_t
 PfcSwitchTag::GetInDev (void) const
 {
   NS_LOG_FUNCTION (this);

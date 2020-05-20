@@ -479,17 +479,19 @@ DpskNetDevice::Receive (Ptr<Packet> packet)
       //
       Ptr<Packet> originalPacket = packet->Copy ();
 
-      if (!m_promiscCallback.IsNull ())
-        {
-          m_macPromiscRxTrace (originalPacket);
-          m_promiscCallback (this, packet, protocol, GetRemote (), GetAddress (),
-                             NetDevice::PACKET_HOST);
-        }
-
-      m_macRxTrace (originalPacket);
-
       if (m_rxInterceptor (packet))
-        m_rxCallback (this, packet, protocol, GetRemote ()); // DPSK receive process
+        {
+          if (!m_promiscCallback.IsNull ())
+            {
+              m_macPromiscRxTrace (originalPacket);
+              m_promiscCallback (this, packet, protocol, GetRemote (), GetAddress (),
+                                 NetDevice::PACKET_HOST); // DPSK receive process
+            }
+
+          m_macRxTrace (originalPacket);
+
+          m_rxCallback (this, packet, protocol, GetRemote ()); // Other protocols
+        }
     }
 }
 
@@ -727,7 +729,7 @@ bool
 DpskNetDevice::SupportsSendFrom (void) const
 {
   NS_LOG_FUNCTION (this);
-  return false;
+  return true;
 }
 
 void

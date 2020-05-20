@@ -176,15 +176,16 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
       uint32_t key = RdmaRxQueuePair::GetHash (sIp, dIp, sPort, dPort);
       auto qpItr = m_rxQueuePairs.find (key);
+      Ptr<RdmaRxQueuePair> qp;
       if (qpItr == m_rxQueuePairs.end ()) // new flow
         {
-          auto qp = CreateObject<RdmaRxQueuePair> (sIp, dIp, sPort, dPort, 0, dscp);
+          qp = CreateObject<RdmaRxQueuePair> (sIp, dIp, sPort, dPort, 0, dscp);
           qp->m_receivedSize += payloadSize;
           m_rxQueuePairs.insert ({key, qp});
         }
       else // existed flow
         {
-          auto qp = qpItr->second;
+          qp = qpItr->second;
           qp->m_receivedSize += payloadSize;
         }
       return true; // Forward up to node

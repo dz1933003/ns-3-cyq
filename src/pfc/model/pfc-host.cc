@@ -128,7 +128,7 @@ PfcHost::GetOutDev (Ptr<RdmaTxQueuePair> qp)
   if (nextHops.empty () == false)
     {
       uint32_t key = qp->GetHash ();
-      return nextHops[key];
+      return nextHops[key % nextHops.size ()];
     }
   NS_ASSERT_MSG (false, "PfcHost::GetOutDev: No next hops");
   return 0;
