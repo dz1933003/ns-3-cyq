@@ -280,7 +280,7 @@ PfcSwitch::DeviceDequeueHandler (Ptr<NetDevice> outDev, Ptr<Packet> packet, uint
   Ptr<DpskNetDevice> inDev;
   PfcSwitchTag tag;
   packet->PeekPacketTag (tag);
-  uint32_t inDevIdx = tag.GetInDev ();
+  uint32_t inDevIdx = tag.GetInDevIdx ();
   for (size_t i = 0; i < m_devices.size (); i++)
     if (m_devices[i]->GetIfIndex () == inDevIdx)
       inDev = DynamicCast<DpskNetDevice> (m_devices[i]);

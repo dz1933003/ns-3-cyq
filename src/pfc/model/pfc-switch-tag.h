@@ -35,8 +35,6 @@ class PfcSwitchTag : public Tag
 public:
   PfcSwitchTag ();
 
-  // TODO cyq: rename and refactor
-
   /**
    * Constructs a PfcSwitchTag with the given device
    *
@@ -54,7 +52,7 @@ public:
    * Gets the device for the tag
    * \return index to the device
    */
-  uint32_t GetInDev (void) const;
+  uint32_t GetInDevIdx (void) const;
 
   /// Inherit from parent class
 
@@ -66,7 +64,7 @@ public:
   virtual void Print (std::ostream &os) const;
 
 private:
-  uint32_t m_inDev; //!< input device index
+  uint32_t m_inDevIdx; //!< input device index
 };
 
 } // namespace ns3

@@ -48,52 +48,52 @@ uint32_t
 PfcSwitchTag::GetSerializedSize (void) const
 {
   NS_LOG_FUNCTION (this);
-  return sizeof (m_inDev);
+  return sizeof (m_inDevIdx);
 }
 
 void
 PfcSwitchTag::Serialize (TagBuffer buf) const
 {
   NS_LOG_FUNCTION (this << &buf);
-  buf.WriteU32 (m_inDev);
+  buf.WriteU32 (m_inDevIdx);
 }
 
 void
 PfcSwitchTag::Deserialize (TagBuffer buf)
 {
   NS_LOG_FUNCTION (this << &buf);
-  m_inDev = buf.ReadU32 ();
+  m_inDevIdx = buf.ReadU32 ();
 }
 
 void
 PfcSwitchTag::Print (std::ostream &os) const
 {
   NS_LOG_FUNCTION (this << &os);
-  os << "Input Device: " << m_inDev;
+  os << "Input device index: " << m_inDevIdx;
 }
 
-PfcSwitchTag::PfcSwitchTag () : Tag (), m_inDev (0)
+PfcSwitchTag::PfcSwitchTag () : Tag (), m_inDevIdx (0)
 {
   NS_LOG_FUNCTION (this);
 }
 
-PfcSwitchTag::PfcSwitchTag (uint32_t device) : Tag (), m_inDev (device)
+PfcSwitchTag::PfcSwitchTag (uint32_t ifIdx) : Tag (), m_inDevIdx (ifIdx)
 {
-  NS_LOG_FUNCTION (this << device);
+  NS_LOG_FUNCTION (this << ifIdx);
 }
 
 void
-PfcSwitchTag::SetInDev (uint32_t device)
+PfcSwitchTag::SetInDev (uint32_t ifIdx)
 {
-  NS_LOG_FUNCTION (this << device);
-  m_inDev = device;
+  NS_LOG_FUNCTION (this << ifIdx);
+  m_inDevIdx = ifIdx;
 }
 
 uint32_t
-PfcSwitchTag::GetInDev (void) const
+PfcSwitchTag::GetInDevIdx (void) const
 {
   NS_LOG_FUNCTION (this);
-  return m_inDev;
+  return m_inDevIdx;
 }
 
 } // namespace ns3
