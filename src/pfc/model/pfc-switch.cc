@@ -137,7 +137,6 @@ PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
   m_dpsk->RegisterReceiveFromDeviceHandler (MakeCallback (&PfcSwitch::ReceiveFromDevice, this));
   m_devices = m_dpsk->GetDevices ();
   m_nDevices = m_devices.size ();
-  m_nQueues = 0;
 
   for (const auto &dev : m_devices)
     {
@@ -152,6 +151,12 @@ PfcSwitch::InstallMmu (Ptr<SwitchMmu> mmu)
 {
   m_mmu = mmu;
   m_mmu->AggregateDevices (m_devices, m_nQueues);
+}
+
+Ptr<SwitchMmu>
+PfcSwitch::GetMmu (void)
+{
+  return m_mmu;
 }
 
 void

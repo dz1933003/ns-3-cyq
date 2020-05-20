@@ -38,7 +38,7 @@ SwitchMmu::GetTypeId (void)
   return tid;
 }
 
-SwitchMmu::SwitchMmu (void) : m_bufferConfig (0), m_nQueues (0)
+SwitchMmu::SwitchMmu (void) : m_bufferConfig (12 * 1024 * 1024), m_nQueues (0)
 {
   NS_LOG_FUNCTION_NOARGS ();
   uniRand = CreateObject<UniformRandomVariable> ();
@@ -57,9 +57,10 @@ SwitchMmu::AggregateDevices (const std::vector<Ptr<NetDevice>> &devs, const uint
   m_devices = devs;
   m_nQueues = n;
 
+  // Initialize with the default configuration
   for (const auto &dev : m_devices)
     {
-      for (uint32_t i = 0; i <= m_nQueues; i++) // with control queue
+      for (uint32_t i = 0; i <= m_nQueues; i++) // with one control queue
         {
           m_headroomConfig[dev].push_back (0);
           m_reserveConfig[dev].push_back (0);
@@ -260,8 +261,11 @@ SwitchMmu::CheckShouldSetEcn (Ptr<NetDevice> port, uint32_t qIndex)
   uint64_t kMin = m_ecnConfig[port][qIndex].kMin;
   uint64_t kMax = m_ecnConfig[port][qIndex].kMax;
   double pMax = m_ecnConfig[port][qIndex].pMax;
+  bool enable = m_ecnConfig[port][qIndex].enable;
   uint64_t qLen = m_egressUsed[port][qIndex];
 
+  if (!enable)
+    return false; // ECN not enabled
   if (qLen > kMax)
     return true;
   if (qLen > kMin)
@@ -296,6 +300,34 @@ uint64_t
 SwitchMmu::GetBufferSize ()
 {
   return m_bufferConfig;
+}
+
+uint64_t
+SwitchMmu::GetHeadroomSize (Ptr<NetDevice> port, uint32_t qIndex)
+{
+  return m_headroomConfig[port][qIndex];
+}
+
+uint64_t
+SwitchMmu::GetHeadroomSize (Ptr<NetDevice> port)
+{
+  uint64_t size = 0;
+  for (uint32_t i = 0; i <= m_nQueues; i++)
+    {
+      size += GetHeadroomSize (port, i);
+    }
+  return size;
+}
+
+uint64_t
+SwitchMmu::GetHeadroomSize ()
+{
+  uint64_t size = 0;
+  for (const auto &dev : m_devices)
+    {
+      size += GetHeadroomSize (dev);
+    }
+  return size;
 }
 
 uint64_t

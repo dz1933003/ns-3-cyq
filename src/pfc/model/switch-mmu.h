@@ -49,6 +49,7 @@ public:
 
   // TODO cyq: Aggregate Device move into the pfc switch DPSK layer? of set it private
 
+private:
   /**
    * Add devices need to be managed to the mmu
    *
@@ -57,6 +58,7 @@ public:
    */
   void AggregateDevices (const std::vector<Ptr<NetDevice>> &devs, const uint32_t &n);
 
+public:
   /**
    * Configurate buffer size
    *
@@ -255,6 +257,30 @@ public:
   uint64_t GetBufferSize ();
 
   /**
+   * Get headroom size
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return headroom by byte
+   */
+  uint64_t GetHeadroomSize (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Get headroom size
+   *
+   * \param port target port
+   * \return headroom by byte
+   */
+  uint64_t GetHeadroomSize (Ptr<NetDevice> port);
+
+  /**
+   * Get headroom size
+   *
+   * \return headroom by byte
+   */
+  uint64_t GetHeadroomSize ();
+
+  /**
    * Get shared buffer size
    *
    * \return shared buffer size by byte
@@ -298,6 +324,8 @@ protected:
    * cycles in reference counted objects held by the device.
    */
   virtual void DoDispose (void);
+
+  friend class PfcSwitch;
 
 private:
   uint64_t m_bufferConfig; //!< configuration of buffer size

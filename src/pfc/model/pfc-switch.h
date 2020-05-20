@@ -83,6 +83,13 @@ public:
   void InstallMmu (Ptr<SwitchMmu> mmu);
 
   /**
+   * Get MMU of this switch
+   *
+   * \return mmu of this switch
+   */
+  Ptr<SwitchMmu> GetMmu (void);
+
+  /**
    * Set ECMP seed
    *
    * \param s seed
