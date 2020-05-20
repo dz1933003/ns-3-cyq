@@ -64,7 +64,7 @@ SwitchMmu::AggregateDevices (const std::vector<Ptr<NetDevice>> &devs, const uint
           m_headroomConfig[dev].push_back (0);
           m_reserveConfig[dev].push_back (0);
           m_resumeOffsetConfig[dev].push_back (0);
-          m_ecnConfig[dev].push_back ({0, 0, 0.});
+          m_ecnConfig[dev].push_back ({0, 0, 0., false});
 
           m_headroomUsed[dev].push_back (0);
           m_ingressUsed[dev].push_back (0);
@@ -85,13 +85,73 @@ void
 SwitchMmu::ConfigEcn (Ptr<NetDevice> port, uint32_t qIndex, uint64_t kMin, uint64_t kMax,
                       double pMax)
 {
-  m_ecnConfig[port][qIndex] = {kMin, kMax, pMax};
+  m_ecnConfig[port][qIndex] = {kMin, kMax, pMax, true};
+}
+
+void
+SwitchMmu::ConfigEcn (Ptr<NetDevice> port, uint64_t kMin, uint64_t kMax, double pMax)
+{
+  for (uint32_t i = 0; i <= m_nQueues; i++)
+    {
+      ConfigEcn (port, i, kMin, kMax, pMax);
+    }
+}
+
+void
+SwitchMmu::ConfigEcn (uint64_t kMin, uint64_t kMax, double pMax)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigEcn (dev, kMin, kMax, pMax);
+    }
 }
 
 void
 SwitchMmu::ConfigHeadroom (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size)
 {
   m_headroomConfig[port][qIndex] = size;
+}
+
+void
+SwitchMmu::ConfigHeadroom (Ptr<NetDevice> port, uint64_t size)
+{
+  for (uint32_t i = 0; i <= m_nQueues; i++)
+    {
+      ConfigHeadroom (port, i, size);
+    }
+}
+
+void
+SwitchMmu::ConfigHeadroom (uint64_t size)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigHeadroom (dev, size);
+    }
+}
+
+void
+SwitchMmu::ConfigReserve (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size)
+{
+  m_reserveConfig[port][qIndex] = size;
+}
+
+void
+SwitchMmu::ConfigReserve (Ptr<NetDevice> port, uint64_t size)
+{
+  for (uint32_t i = 0; i <= m_nQueues; i++)
+    {
+      ConfigReserve (port, i, size);
+    }
+}
+
+void
+SwitchMmu::ConfigReserve (uint64_t size)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigReserve (dev, size);
+    }
 }
 
 bool

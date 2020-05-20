@@ -64,10 +64,8 @@ public:
    */
   void ConfigBufferSize (uint64_t size);
 
-  // TODO cyq: add batch config ECN
-
   /**
-   * Configurate ECN parameters
+   * Configurate ECN parameters on one queue
    *
    * \param port target port
    * \param qIndex target queue index
@@ -77,10 +75,27 @@ public:
    */
   void ConfigEcn (Ptr<NetDevice> port, uint32_t qIndex, uint64_t kMin, uint64_t kMax, double pMax);
 
-  // TODO cyq: add batch config headroom
+  /**
+   * Configurate ECN parameters on all queues of the port
+   *
+   * \param port target port
+   * \param kMin kMin
+   * \param kMax kMax
+   * \param pMax pMax
+   */
+  void ConfigEcn (Ptr<NetDevice> port, uint64_t kMin, uint64_t kMax, double pMax);
 
   /**
-   * Configurate headroom
+   * Configurate ECN parameters on all ports in the switch
+   *
+   * \param kMin kMin
+   * \param kMax kMax
+   * \param pMax pMax
+   */
+  void ConfigEcn (uint64_t kMin, uint64_t kMax, double pMax);
+
+  /**
+   * Configurate headroom on one queue
    *
    * \param port target port
    * \param qIndex target queue index
@@ -88,7 +103,44 @@ public:
    */
   void ConfigHeadroom (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size);
 
-  // TODO cyq: add config reserve and its batch config overload
+  /**
+   * Configurate headroom on all queues of the port
+   *
+   * \param port target port
+   * \param size headroom size by byte
+   */
+  void ConfigHeadroom (Ptr<NetDevice> port, uint64_t size);
+
+  /**
+   * Configurate headroom on all ports in the switch
+   *
+   * \param size headroom size by byte
+   */
+  void ConfigHeadroom (uint64_t size);
+
+  /**
+   * Configurate reserved buffer on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param size reserved size by byte
+   */
+  void ConfigReserve (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate reserve on all queues of the port
+   *
+   * \param port target port
+   * \param size reserve size by byte
+   */
+  void ConfigReserve (Ptr<NetDevice> port, uint64_t size);
+
+  /**
+   * Configurate reserve on all ports in the switch
+   *
+   * \param size reserve size by byte
+   */
+  void ConfigReserve (uint64_t size);
 
   /**
    * Check the admission of target ingress
@@ -264,6 +316,7 @@ private:
     uint64_t kMin;
     uint64_t kMax;
     double pMax;
+    bool enable;
   };
 
   // Map from Ptr to net device to the queue configuration of ECN
@@ -290,7 +343,7 @@ private:
   // Map from Ptr to net device to a vector of queue PFC paused states.
   std::map<Ptr<NetDevice>, std::vector<bool>> m_pausedStates;
 
-  Ptr<UniformRandomVariable> uniRand;
+  Ptr<UniformRandomVariable> uniRand; //!< random var stream
 
   /**
    * \brief Copy constructor
