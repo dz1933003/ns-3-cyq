@@ -83,15 +83,6 @@ public:
   virtual void InstallDpsk (Ptr<Dpsk> dpsk);
 
   /**
-   * Set Queue count.
-   * It is not checked by this method that every net device have the same number of queues.
-   * So do not use different net devices in one topology.
-   *
-   * \param n number of queues
-   */
-  void SetNQueues (uint32_t n);
-
-  /**
    * Add a route rule to the route table
    *
    * \param dest the IPv4 address of the destination
