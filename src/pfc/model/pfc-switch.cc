@@ -109,7 +109,9 @@ PfcSwitch::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, u
           m_mmu->UpdateEgressAdmission (outDev, dscp, pSize);
         }
       else
-        return; // Drop packet
+        {
+          return; // Drop packet
+        }
 
       // Check and send PFC
       if (m_mmu->CheckShouldSendPfcPause (inDev, qIndex))

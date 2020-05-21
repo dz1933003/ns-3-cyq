@@ -53,6 +53,7 @@ void
 SwitchMmu::AggregateDevice (Ptr<NetDevice> dev)
 {
   NS_LOG_FUNCTION (dev);
+  m_devices.push_back (dev);
   for (uint32_t i = 0; i <= m_nQueues; i++) // with one control queue
     {
       m_headroomConfig[dev].push_back (0);

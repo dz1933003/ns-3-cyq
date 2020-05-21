@@ -88,12 +88,11 @@ main (int argc, char *argv[])
   sw1_pfc->AddRouteTableEntry ("10.0.0.2", sw1_host2_dev);
 
   auto sw1_mmu = CreateObject<SwitchMmu> ();
+  sw1_pfc->InstallMmu (sw1_mmu);
   sw1_mmu->ConfigBufferSize (12 * 1024 * 1024);
   sw1_mmu->ConfigEcn (10 * 1024 * 1024, 12 * 1024 * 1024, 1.);
   sw1_mmu->ConfigHeadroom (1024 * 1024);
   sw1_mmu->ConfigReserve (1024 * 1024);
-  sw1_pfc->InstallMmu (sw1_mmu);
-
 
   host1_pfc->InstallDpsk (host1_dpsk);
   host1_pfc->AddRouteTableEntry ("10.0.0.2", host1_sw1_dev);
