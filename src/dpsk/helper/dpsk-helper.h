@@ -50,6 +50,14 @@ public:
   void SetDeviceAttribute (std::string n1, const AttributeValue &v1);
 
   /**
+   * Install DPSK on the node with all of its interfaces
+   *
+   * \param node The node to install the Dpsk in
+   * \returns The Dpsk virtual device
+   */
+  Ptr<Dpsk> Install (Ptr<Node> node);
+
+  /**
    * This method creates an ns3::Dpsk with the attributes
    * configured by DpskHelper::SetDeviceAttribute, adds the device
    * to the node, and attaches the given NetDevices as ports of the

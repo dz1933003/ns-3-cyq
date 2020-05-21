@@ -33,10 +33,6 @@ main (int argc, char *argv[])
    * host 1 --- sw 1 --- host 2
    */
 
-  auto qp1 =
-      CreateObject<RdmaTxQueuePair> (Time::FromInteger (1, Time::Unit::S), Ipv4Address ("10.0.0.1"),
-                                     Ipv4Address ("10.0.0.2"), 1, 1, 1024 * 1024, 0);
-
   NodeContainer host;
   host.Add (CreateObject<Node> ());
   host.Add (CreateObject<Node> ());
@@ -70,23 +66,13 @@ main (int argc, char *argv[])
   sw1_host2_dev_impl->SetupQueues (1);
 
   DpskHelper dpskHelper;
-  NetDeviceContainer sw1_devs;
-  for (size_t i = 0; i < sw1->GetNDevices (); i++)
-    {
-      sw1_devs.Add (sw1->GetDevice (i));
-    }
-  auto sw1_dpsk = dpskHelper.Install (sw1, sw1_devs);
-  auto host1_dpsk = dpskHelper.Install (host1, NetDeviceContainer (host1_sw1_dev));
-  auto host2_dpsk = dpskHelper.Install (host2, NetDeviceContainer (host2_sw1_dev));
 
+  auto sw1_dpsk = dpskHelper.Install (sw1);
   auto sw1_pfc = CreateObject<PfcSwitch> ();
-  auto host1_pfc = CreateObject<PfcHost> ();
-  auto host2_pfc = CreateObject<PfcHost> ();
   sw1_pfc->InstallDpsk (sw1_dpsk);
   sw1_pfc->SetEcmpSeed (1);
   sw1_pfc->SetNQueues (1);
   sw1_pfc->AddRouteTableEntry ("10.0.0.2", sw1_host2_dev);
-
   auto sw1_mmu = CreateObject<SwitchMmu> ();
   sw1_pfc->InstallMmu (sw1_mmu);
   sw1_mmu->ConfigBufferSize (12 * 1024 * 1024);
@@ -94,10 +80,17 @@ main (int argc, char *argv[])
   sw1_mmu->ConfigHeadroom (1024 * 1024);
   sw1_mmu->ConfigReserve (1024 * 1024);
 
+  auto host1_dpsk = dpskHelper.Install (host1);
+  auto host1_pfc = CreateObject<PfcHost> ();
   host1_pfc->InstallDpsk (host1_dpsk);
   host1_pfc->AddRouteTableEntry ("10.0.0.2", host1_sw1_dev);
+  auto qp1 =
+      CreateObject<RdmaTxQueuePair> (Time::FromInteger (1, Time::Unit::S), Ipv4Address ("10.0.0.1"),
+                                     Ipv4Address ("10.0.0.2"), 1, 1, 32 * 1024 * 1024, 0);
   host1_pfc->AddRdmaTxQueuePair (qp1);
 
+  auto host2_dpsk = dpskHelper.Install (host2);
+  auto host2_pfc = CreateObject<PfcHost> ();
   host2_pfc->InstallDpsk (host2_dpsk);
 
   Simulator::Run ();
