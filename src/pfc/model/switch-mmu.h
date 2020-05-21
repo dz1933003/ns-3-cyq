@@ -149,6 +149,30 @@ public:
   void ConfigReserve (uint64_t size);
 
   /**
+   * Configurate resume offset on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param size resume offset size by byte
+   */
+  void ConfigResumeOffset (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate resume offset on all queues of the port
+   *
+   * \param port target port
+   * \param size resume offset size by byte
+   */
+  void ConfigResumeOffset (Ptr<NetDevice> port, uint64_t size);
+
+  /**
+   * Configurate resume offset on all ports in the switch
+   *
+   * \param size resume offset size by byte
+   */
+  void ConfigResumeOffset (uint64_t size);
+
+  /**
    * Check the admission of target ingress
    *
    * \param port target port
@@ -371,6 +395,8 @@ private:
 
   uint32_t m_nQueues; //!< queue number of each device
   std::vector<Ptr<NetDevice>> m_devices; //!< devices managed by this mmu
+
+  bool m_dynamicThreshold; //!< if enabled dynamic PFC threshold
 
   // Map from Ptr to net device to a vector of queue PFC paused states.
   std::map<Ptr<NetDevice>, std::vector<bool>> m_pausedStates;

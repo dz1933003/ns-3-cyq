@@ -30,7 +30,7 @@ main (int argc, char *argv[])
   NS_LOG_UNCOND ("Scratch Simulator");
 
   /**
-   * host 1 --- sw 1 --- host 2
+   * host 1 --100Gbps-- sw 1 --1bps-- host 2
    */
 
   NodeContainer host;
@@ -53,6 +53,7 @@ main (int argc, char *argv[])
   host1_sw1_dev->SetImplementation (host1_sw1_dev_impl);
   auto sw1_host1_dev_impl = CreateObject<PfcSwitchPort> ();
   sw1_host1_dev->SetImplementation (sw1_host1_dev_impl);
+  dpskNetDeviceHelper.SetDeviceAttribute ("DataRate", DataRateValue (DataRate ("1bps")));
   devResult = dpskNetDeviceHelper.Install (host2, sw1);
   auto host2_sw1_dev = DynamicCast<DpskNetDevice> (devResult.Get (0));
   auto sw1_host2_dev = DynamicCast<DpskNetDevice> (devResult.Get (1));
@@ -79,6 +80,7 @@ main (int argc, char *argv[])
   sw1_mmu->ConfigEcn (10 * 1024 * 1024, 12 * 1024 * 1024, 1.);
   sw1_mmu->ConfigHeadroom (1024 * 1024);
   sw1_mmu->ConfigReserve (1024 * 1024);
+  sw1_mmu->ConfigResumeOffset (1024 * 1024);
 
   auto host1_dpsk = dpskHelper.Install (host1);
   auto host1_pfc = CreateObject<PfcHost> ();

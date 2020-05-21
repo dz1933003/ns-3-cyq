@@ -91,7 +91,7 @@ PfcSwitchPort::Transmit ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  uint32_t qIndex = m_nQueues + 1; // bigger than number of queues is invalid
+  uint32_t qIndex;
   Ptr<Packet> p = Dequeue (qIndex);
 
   if (p == 0)

@@ -38,7 +38,8 @@ SwitchMmu::GetTypeId (void)
   return tid;
 }
 
-SwitchMmu::SwitchMmu (void) : m_bufferConfig (12 * 1024 * 1024), m_nQueues (0)
+SwitchMmu::SwitchMmu (void)
+    : m_bufferConfig (12 * 1024 * 1024), m_nQueues (0), m_dynamicThreshold (false)
 {
   NS_LOG_FUNCTION_NOARGS ();
   uniRand = CreateObject<UniformRandomVariable> ();
@@ -155,17 +156,53 @@ SwitchMmu::ConfigReserve (uint64_t size)
     }
 }
 
+void
+SwitchMmu::ConfigResumeOffset (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size)
+{
+  m_resumeOffsetConfig[port][qIndex] = size;
+}
+
+void
+SwitchMmu::ConfigResumeOffset (Ptr<NetDevice> port, uint64_t size)
+{
+  for (uint32_t i = 0; i <= m_nQueues; i++)
+    {
+      ConfigResumeOffset (port, i, size);
+    }
+}
+
+void
+SwitchMmu::ConfigResumeOffset (uint64_t size)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigResumeOffset (dev, size);
+    }
+}
+
 bool
 SwitchMmu::CheckIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t pSize)
 {
   NS_LOG_FUNCTION (port << qIndex << pSize);
   // Can not use shared buffer and headroom is full
-  if (pSize + GetSharedBufferUsed (port, qIndex) > GetPfcThreshold (port, qIndex) &&
-      pSize + m_headroomUsed[port][qIndex] > m_headroomConfig[port][qIndex])
+  if (m_dynamicThreshold)
     {
-      return false;
+      if (pSize + GetSharedBufferUsed (port, qIndex) > GetPfcThreshold (port, qIndex) &&
+          pSize + m_headroomUsed[port][qIndex] > m_headroomConfig[port][qIndex])
+        {
+          return false;
+        }
+      return true;
     }
-  return true;
+  else
+    {
+      if (pSize + GetSharedBufferUsed () > GetSharedBufferSize () &&
+          pSize + m_headroomUsed[port][qIndex] > m_headroomConfig[port][qIndex])
+        {
+          return false;
+        }
+      return true;
+    }
 }
 
 bool
@@ -189,7 +226,12 @@ SwitchMmu::UpdateIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_
     }
   else
     {
-      uint64_t threshold = GetPfcThreshold (port, qIndex);
+      uint64_t threshold;
+      if (m_dynamicThreshold)
+        threshold = GetPfcThreshold (port, qIndex);
+      else
+        threshold = GetSharedBufferSize ();
+
       uint64_t newSharedBufferUsed = newIngressUsed - reserve;
       if (newSharedBufferUsed > threshold) // using headroom
         {
@@ -231,9 +273,12 @@ SwitchMmu::CheckShouldSendPfcPause (Ptr<NetDevice> port, uint32_t qIndex)
 {
   NS_LOG_FUNCTION (port << qIndex);
 
-  return (m_pausedStates[port][qIndex] == false) &&
-         (m_headroomUsed[port][qIndex] > 0 ||
-          GetSharedBufferUsed (port, qIndex) >= GetPfcThreshold (port, qIndex));
+  if (m_dynamicThreshold)
+    return (m_pausedStates[port][qIndex] == false) &&
+           (m_headroomUsed[port][qIndex] > 0 ||
+            GetSharedBufferUsed (port, qIndex) >= GetPfcThreshold (port, qIndex));
+  else
+    return m_pausedStates[port][qIndex] == false && m_headroomUsed[port][qIndex] > 0;
 }
 
 bool
@@ -245,9 +290,14 @@ SwitchMmu::CheckShouldSendPfcResume (Ptr<NetDevice> port, uint32_t qIndex)
     return false;
 
   uint64_t sharedBufferUsed = GetSharedBufferUsed (port, qIndex);
-  return (m_headroomUsed[port][qIndex] == 0) &&
-         (sharedBufferUsed == 0 ||
-          sharedBufferUsed + m_resumeOffsetConfig[port][qIndex] <= GetPfcThreshold (port, qIndex));
+  if (m_dynamicThreshold)
+    return (m_headroomUsed[port][qIndex] == 0) &&
+           (sharedBufferUsed == 0 || sharedBufferUsed + m_resumeOffsetConfig[port][qIndex] <=
+                                         GetPfcThreshold (port, qIndex));
+  else
+    return (m_headroomUsed[port][qIndex] == 0) &&
+           (sharedBufferUsed == 0 ||
+            GetSharedBufferUsed () + m_resumeOffsetConfig[port][qIndex] <= GetSharedBufferSize ());
 }
 
 bool
@@ -293,7 +343,7 @@ uint64_t
 SwitchMmu::GetPfcThreshold (Ptr<NetDevice> port, uint32_t qIndex)
 {
   // XXX cyq: add dynamic PFC threshold choice if needed
-  return GetSharedBufferSize ();
+  return 0;
 }
 
 uint64_t
@@ -336,7 +386,7 @@ SwitchMmu::GetSharedBufferSize ()
   uint64_t size = m_bufferConfig;
   for (const auto &dev : m_devices)
     {
-      for (uint32_t i = 0; i < m_nQueues; i++)
+      for (uint32_t i = 0; i <= m_nQueues; i++)
         {
           size -= m_headroomConfig[dev][i];
           size -= m_reserveConfig[dev][i];
@@ -363,7 +413,7 @@ uint64_t
 SwitchMmu::GetSharedBufferUsed (Ptr<NetDevice> port)
 {
   uint64_t sum = 0;
-  for (uint i = 0; i < m_nQueues; i++)
+  for (uint i = 0; i <= m_nQueues; i++)
     sum += GetSharedBufferUsed (port, i);
   return sum;
 }
