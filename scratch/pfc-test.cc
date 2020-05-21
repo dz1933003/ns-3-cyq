@@ -22,12 +22,12 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE ("ScratchSimulator");
+NS_LOG_COMPONENT_DEFINE ("PFC Test");
 
 int
 main (int argc, char *argv[])
 {
-  NS_LOG_UNCOND ("Scratch Simulator");
+  NS_LOG_UNCOND ("PFC Test");
 
   /**
    * host 1 --100Gbps-- sw 1 --1bps-- host 2
