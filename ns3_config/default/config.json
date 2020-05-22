@@ -1,0 +1,43 @@
+{
+  "Global": {
+    "QueueNumber": 1,
+    "EcmpSeed": 1
+  },
+  "Host": [
+    {
+      "Name": "h1",
+      "Port": [
+        {
+          "Index": 0
+        }
+      ]
+    },
+    {
+      "Name": "h2",
+      "Port": [
+        {
+          "Index": 0
+        }
+      ]
+    }
+  ],
+  "Switch": [
+    {
+      "Name": "s1",
+      "Port": [
+        {
+          "Index": 0
+        },
+        {
+          "Index": 1
+        }
+      ],
+      "Config": {
+        "Buffer": "12MiB",
+        "ConfigFile": "ns3_config/default/switch-port.json"
+      }
+    }
+  ],
+  "LinkConfigFile": "ns3_config/default/link.csv",
+  "FlowConfigFile": "ns3_config/default/flow.csv"
+}
