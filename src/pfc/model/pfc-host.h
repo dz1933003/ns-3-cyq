@@ -88,7 +88,7 @@ public:
    * \param dest the IPv4 address of the destination
    * \param dev output device
    */
-  void AddRouteTableEntry (const Ipv4Address &dest, Ptr<NetDevice> dev);
+  void AddRouteTableEntry (const Ipv4Address &dest, Ptr<DpskNetDevice> dev);
 
   /**
    * Clear route table
@@ -116,7 +116,7 @@ private:
    * \param qp transimitted queue pair
    * \return target net device
    */
-  Ptr<NetDevice> GetOutDev (Ptr<RdmaTxQueuePair> qp);
+  Ptr<DpskNetDevice> GetOutDev (Ptr<RdmaTxQueuePair> qp);
 
   uint32_t m_nDevices; //!< device number
   std::map<Ptr<DpskNetDevice>, Ptr<PfcHostPort>> m_devices; //!< devices managed by installed Dpsk
@@ -125,7 +125,7 @@ private:
    * Map from the value of destination IPv4 address to the vector of avaliable target
    * devices.
    */
-  std::unordered_map<uint32_t, std::vector<Ptr<NetDevice>>> m_routeTable;
+  std::unordered_map<uint32_t, std::vector<Ptr<DpskNetDevice>>> m_routeTable;
 
   /**
    * \brief Copy constructor

@@ -91,9 +91,11 @@ PfcHost::InstallDpsk (Ptr<Dpsk> dpsk)
 }
 
 void
-PfcHost::AddRouteTableEntry (const Ipv4Address &dest, Ptr<NetDevice> dev)
+PfcHost::AddRouteTableEntry (const Ipv4Address &dest, Ptr<DpskNetDevice> dev)
 {
   NS_LOG_FUNCTION (dest << dev);
+  NS_ASSERT_MSG (m_devices.find (dev) != m_devices.end (),
+                 "PfcHost::AddRouteTableEntry: No such device");
   uint32_t destVal = dest.Get ();
   m_routeTable[destVal].push_back (dev);
 }
@@ -110,7 +112,7 @@ PfcHost::AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp)
 {
   NS_LOG_FUNCTION (qp);
 
-  auto outDev = DynamicCast<DpskNetDevice> (GetOutDev (qp));
+  auto outDev = GetOutDev (qp);
   if (outDev == 0)
     {
       NS_ASSERT_MSG (false, "PfcHost::AddRdmaTxQueuePair: Find no output device");
@@ -119,7 +121,7 @@ PfcHost::AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp)
   m_devices[outDev]->AddRdmaTxQueuePair (qp);
 }
 
-Ptr<NetDevice>
+Ptr<DpskNetDevice>
 PfcHost::GetOutDev (Ptr<RdmaTxQueuePair> qp)
 {
   NS_LOG_FUNCTION (qp);

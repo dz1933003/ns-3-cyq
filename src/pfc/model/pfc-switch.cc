@@ -143,8 +143,9 @@ PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
 
   for (const auto &dev : devices)
     {
-      m_devices.insert ({dev->GetIfIndex (), dev});
-      const auto &dpskDevImpl = DynamicCast<DpskNetDevice> (dev)->GetImplementation ();
+      const auto &dpskDev = DynamicCast<DpskNetDevice> (dev);
+      m_devices.insert ({dev->GetIfIndex (), dpskDev});
+      const auto &dpskDevImpl = dpskDev->GetImplementation ();
       const auto &pfcPortImpl = DynamicCast<PfcSwitchPort> (dpskDevImpl);
       pfcPortImpl->SetDeviceDequeueHandler (MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
     }
@@ -185,9 +186,21 @@ PfcSwitch::SetNQueues (uint32_t n)
 }
 
 void
-PfcSwitch::AddRouteTableEntry (const Ipv4Address &dest, Ptr<NetDevice> dev)
+PfcSwitch::AddRouteTableEntry (const Ipv4Address &dest, Ptr<DpskNetDevice> dev)
 {
   NS_LOG_FUNCTION (dest << dev);
+
+  bool find = false;
+  for (const auto &entry : m_devices)
+    {
+      if (entry.second == dev)
+        {
+          find = true;
+          break;
+        }
+    }
+  NS_ASSERT_MSG (find, "PfcSwitch::AddRouteTableEntry: No such device");
+
   uint32_t destVal = dest.Get ();
   m_routeTable[destVal].push_back (dev);
 }
@@ -199,7 +212,7 @@ PfcSwitch::ClearRouteTable ()
   m_routeTable.clear ();
 }
 
-Ptr<NetDevice>
+Ptr<DpskNetDevice>
 PfcSwitch::GetOutDev (Ptr<const Packet> p)
 {
   NS_LOG_FUNCTION (p);

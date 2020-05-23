@@ -97,7 +97,7 @@ main (int argc, char *argv[])
           const Ptr<Node> node = CreateObject<Node> ();
           hostNodes.insert (node);
           allNodes[name] = node;
-          // TODO cyq: add ipv4 address
+          allIpv4Addresses[node] = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.0.0.0"));
           // Install ports
           for (size_t i = 0; i < host["PortNumber"]; i++)
             {
@@ -115,9 +115,8 @@ main (int argc, char *argv[])
           const auto dpsk = dpskHelper.Install (node);
           // Install PFC host DPSK layer
           auto pfcHost = CreateObject<PfcHost> ();
+          node->AggregateObject (pfcHost);
           pfcHost->InstallDpsk (dpsk);
-          // TODO cyq: add route
-          // TODO cyq: add flows
         }
     }
 
@@ -158,7 +157,6 @@ main (int argc, char *argv[])
           const uint64_t buffer = cyq::DataSize::GetBytes (sw["Config"]["Buffer"]);
           mmu->ConfigBufferSize (buffer);
           ConfigMmuPort (node, mmu, sw["Config"]["ConfigFile"]);
-          // TODO cyq: add route
           NS_LOG_DEBUG (mmu->Dump ());
         }
     }
@@ -187,17 +185,46 @@ main (int argc, char *argv[])
       channel->SetAttribute ("Delay", TimeValue (delay));
       s_dev->Attach (channel);
       d_dev->Attach (channel);
-      nbr2if[s_node][d_node] = {.device = d_dev, .delay = delay, .bandwidth = dataRate};
-      nbr2if[d_node][s_node] = {.device = s_dev, .delay = delay, .bandwidth = dataRate};
+      nbr2if[s_node][d_node] = {.device = s_dev, .delay = delay, .bandwidth = dataRate};
+      nbr2if[d_node][s_node] = {.device = d_dev, .delay = delay, .bandwidth = dataRate};
     }
 
+  NS_LOG_UNCOND ("====Route====");
   CalculateRoute ();
   SetRoutingEntries ();
 
-  // TODO cyq: complete read configuration
+  NS_LOG_UNCOND ("====Flow====");
+  io::CSVReader<7> flowConfig (conf["FlowConfigFile"]);
+  flowConfig.read_header (io::ignore_no_column, "StartTime", "FromNode", "ToNode", "SourcePort",
+                          "DestinationPort", "Size", "Priority");
+  while (true)
+    {
+      std::string startInput;
+      std::string fromNode, toNode;
+      uint16_t sourcePort, destinationPort;
+      std::string sizeInput;
+      uint16_t priority;
+      if (!flowConfig.read_row (startInput, fromNode, toNode, sourcePort, destinationPort,
+                                sizeInput, priority))
+        break;
+      const auto startTime = Time (startInput);
+      const auto sourceIp = allIpv4Addresses[allNodes[fromNode]];
+      const auto destinationIp = allIpv4Addresses[allNodes[toNode]];
+      const uint64_t size = cyq::DataSize::GetBytes (sizeInput);
+      auto qp = CreateObject<RdmaTxQueuePair> (startTime, sourceIp, destinationIp,
+                                                     sourcePort, destinationPort, size, priority);
+      auto dpskLayer = allNodes[fromNode]->GetObject<PfcHost> ();
+      dpskLayer->AddRdmaTxQueuePair (qp);
+    }
 
+  // TODO cyq: add trace and logs
+
+  NS_LOG_UNCOND ("====Simulate====");
   Simulator::Run ();
   Simulator::Destroy ();
+
+  NS_LOG_UNCOND ("====Log====");
+  NS_LOG_UNCOND ("====Done====");
 }
 
 void
@@ -409,31 +436,35 @@ CalculateRoute (Ptr<Node> host)
 
 void
 SetRoutingEntries ()
-{ // TODO cyq: implement this function
+{
   // For each node.
-  // for (auto i = nextHop.begin (); i != nextHop.end (); i++)
-  //   {
-  //     Ptr<Node> node = i->first;
-  //     auto &table = i->second;
-  //     for (auto j = table.begin (); j != table.end (); j++)
-  //       {
-  //         // The destination node.
-  //         Ptr<Node> dst = j->first;
-  //         // The IP address of the dst.
-  //         Ipv4Address dstAddr = dst->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal ();
-  //         // The next hops towards the dst.
-  //         vector<Ptr<Node>> nexts = j->second;
-  //         for (int k = 0; k < (int) nexts.size (); k++)
-  //           {
-  //             Ptr<Node> next = nexts[k];
-  //             uint32_t interface = nbr2if[node][next].idx;
-  //             if (node->GetNodeType () == 1)
-  //               DynamicCast<SwitchNode> (node)->AddTableEntry (dstAddr, interface);
-  //             else
-  //               {
-  //                 node->GetObject<RdmaDriver> ()->m_rdma->AddTableEntry (dstAddr, interface);
-  //               }
-  //           }
-  //       }
-  //   }
+  for (auto i = nextHop.begin (); i != nextHop.end (); i++)
+    {
+      Ptr<Node> node = i->first;
+      auto &table = i->second;
+      for (auto j = table.begin (); j != table.end (); j++)
+        {
+          // The destination node.
+          Ptr<Node> dst = j->first;
+          // The IP address of the dst.
+          Ipv4Address dstAddr = allIpv4Addresses[dst];
+          // The next hops towards the dst.
+          std::vector<Ptr<Node>> nexts = j->second;
+          for (int k = 0; k < (int) nexts.size (); k++)
+            {
+              Ptr<Node> next = nexts[k];
+              auto interface = nbr2if[node][next].device;
+              if (switchNodes.find (node) != switchNodes.end ())
+                {
+                  auto dpskLayer = node->GetObject<PfcSwitch> ();
+                  dpskLayer->AddRouteTableEntry (dstAddr, interface);
+                }
+              else
+                {
+                  auto dpskLayer = node->GetObject<PfcHost> ();
+                  dpskLayer->AddRouteTableEntry (dstAddr, interface);
+                }
+            }
+        }
+    }
 }

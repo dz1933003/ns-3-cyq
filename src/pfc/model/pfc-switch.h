@@ -21,7 +21,7 @@
 
 #include "ns3/dpsk-layer.h"
 #include "ns3/object.h"
-#include "ns3/net-device.h"
+#include "ns3/dpsk-net-device.h"
 #include "switch-mmu.h"
 #include <unordered_map>
 
@@ -111,7 +111,7 @@ public:
    * \param dest the IPv4 address of the destination
    * \param dev output device
    */
-  void AddRouteTableEntry (const Ipv4Address &dest, Ptr<NetDevice> dev);
+  void AddRouteTableEntry (const Ipv4Address &dest, Ptr<DpskNetDevice> dev);
 
   /**
    * Clear route table
@@ -132,7 +132,7 @@ private:
    * \param p received packet
    * \return target net device
    */
-  Ptr<NetDevice> GetOutDev (Ptr<const Packet> p);
+  Ptr<DpskNetDevice> GetOutDev (Ptr<const Packet> p);
 
   /**
    * Calculate ECMP Hash
@@ -157,7 +157,7 @@ private:
   uint32_t m_nDevices; //!< device number
 
   // devices managed by installed Dpsk with index
-  std::unordered_map<uint32_t, Ptr<NetDevice>> m_devices;
+  std::unordered_map<uint32_t, Ptr<DpskNetDevice>> m_devices;
 
   uint32_t m_nQueues; //!< queues of every devices
 
@@ -165,7 +165,7 @@ private:
    * Map from the value of destination IPv4 address to the vector of avaliable target
    * devices.
    */
-  std::unordered_map<uint32_t, std::vector<Ptr<NetDevice>>> m_routeTable;
+  std::unordered_map<uint32_t, std::vector<Ptr<DpskNetDevice>>> m_routeTable;
 
   Ptr<SwitchMmu> m_mmu; //!< mmu of this switch
 
