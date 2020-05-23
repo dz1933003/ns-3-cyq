@@ -22,6 +22,7 @@
 #include <ns3/node.h>
 #include <vector>
 #include <map>
+#include <sstream>
 
 namespace ns3 {
 
@@ -46,6 +47,8 @@ public:
    */
   SwitchMmu ();
   ~SwitchMmu ();
+
+  std::string Dump();
 
 private:
   /**
@@ -92,6 +95,16 @@ public:
   void ConfigEcn (Ptr<NetDevice> port, uint64_t kMin, uint64_t kMax, double pMax);
 
   /**
+   * Configurate ECN parameters on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param kMin kMin
+   * \param kMax kMax
+   * \param pMax pMax
+   */
+  void ConfigEcn (uint32_t qIndex, uint64_t kMin, uint64_t kMax, double pMax);
+
+  /**
    * Configurate ECN parameters on all ports in the switch
    *
    * \param kMin kMin
@@ -118,6 +131,14 @@ public:
   void ConfigHeadroom (Ptr<NetDevice> port, uint64_t size);
 
   /**
+   * Configurate headroom on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param size headroom size by byte
+   */
+  void ConfigHeadroom (uint32_t qIndex, uint64_t size);
+
+  /**
    * Configurate headroom on all ports in the switch
    *
    * \param size headroom size by byte
@@ -142,6 +163,14 @@ public:
   void ConfigReserve (Ptr<NetDevice> port, uint64_t size);
 
   /**
+   * Configurate reserved buffer on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param size reserved size by byte
+   */
+  void ConfigReserve (uint32_t qIndex, uint64_t size);
+
+  /**
    * Configurate reserve on all ports in the switch
    *
    * \param size reserve size by byte
@@ -164,6 +193,14 @@ public:
    * \param size resume offset size by byte
    */
   void ConfigResumeOffset (Ptr<NetDevice> port, uint64_t size);
+
+  /**
+   * Configurate resume offset on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param size resume offset size by byte
+   */
+  void ConfigResumeOffset (uint32_t qIndex, uint64_t size);
 
   /**
    * Configurate resume offset on all ports in the switch

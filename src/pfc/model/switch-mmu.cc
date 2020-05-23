@@ -100,6 +100,15 @@ SwitchMmu::ConfigEcn (Ptr<NetDevice> port, uint64_t kMin, uint64_t kMax, double 
 }
 
 void
+SwitchMmu::ConfigEcn (uint32_t qIndex, uint64_t kMin, uint64_t kMax, double pMax)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigEcn (dev, qIndex, kMin, kMax, pMax);
+    }
+}
+
+void
 SwitchMmu::ConfigEcn (uint64_t kMin, uint64_t kMax, double pMax)
 {
   for (const auto &dev : m_devices)
@@ -120,6 +129,15 @@ SwitchMmu::ConfigHeadroom (Ptr<NetDevice> port, uint64_t size)
   for (uint32_t i = 0; i <= m_nQueues; i++)
     {
       ConfigHeadroom (port, i, size);
+    }
+}
+
+void
+SwitchMmu::ConfigHeadroom (uint32_t qIndex, uint64_t size)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigHeadroom (dev, qIndex, size);
     }
 }
 
@@ -148,6 +166,15 @@ SwitchMmu::ConfigReserve (Ptr<NetDevice> port, uint64_t size)
 }
 
 void
+SwitchMmu::ConfigReserve (uint32_t qIndex, uint64_t size)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigReserve (dev, qIndex, size);
+    }
+}
+
+void
 SwitchMmu::ConfigReserve (uint64_t size)
 {
   for (const auto &dev : m_devices)
@@ -168,6 +195,15 @@ SwitchMmu::ConfigResumeOffset (Ptr<NetDevice> port, uint64_t size)
   for (uint32_t i = 0; i <= m_nQueues; i++)
     {
       ConfigResumeOffset (port, i, size);
+    }
+}
+
+void
+SwitchMmu::ConfigResumeOffset (uint32_t qIndex, uint64_t size)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigResumeOffset (dev, qIndex, size);
     }
 }
 
@@ -425,6 +461,28 @@ SwitchMmu::GetSharedBufferUsed ()
   for (const auto &dev : m_devices)
     sum += GetSharedBufferUsed (dev);
   return sum;
+}
+
+std::string
+SwitchMmu::Dump ()
+{
+  std::stringstream ss;
+  for (const auto &dev : m_devices)
+    {
+      for (uint32_t i; i <= m_nQueues; i++)
+        {
+          ss << "Dev: " << dev << " Queue: " << i << '\n';
+          ss << "Headroom: " << m_headroomConfig[dev][i] << '\n';
+          ss << "Reserve: " << m_reserveConfig[dev][i] << '\n';
+          ss << "ResumeOffset: " << m_resumeOffsetConfig[dev][i] << '\n';
+          if (m_ecnConfig[dev][i].enable)
+            {
+              ss << "EcnConfig: " << m_ecnConfig[dev][i].kMin << ' ' << m_ecnConfig[dev][i].kMax
+                 << ' ' << m_ecnConfig[dev][i].pMax << '\n';
+            }
+        }
+    }
+  return ss.str ();
 }
 
 void

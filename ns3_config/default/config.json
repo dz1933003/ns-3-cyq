@@ -5,33 +5,19 @@
   },
   "Host": [
     {
-      "Name": "h1",
-      "Port": [
-        {
-          "Index": 0
-        }
-      ]
-    },
-    {
-      "Name": "h2",
-      "Port": [
-        {
-          "Index": 0
-        }
-      ]
+      "Name": [
+        "h1",
+        "h2"
+      ],
+      "PortNumber": 1
     }
   ],
   "Switch": [
     {
-      "Name": "s1",
-      "Port": [
-        {
-          "Index": 0
-        },
-        {
-          "Index": 1
-        }
+      "Name": [
+        "s1"
       ],
+      "PortNumber": 2,
       "Config": {
         "Buffer": "12MiB",
         "ConfigFile": "ns3_config/default/switch-port.json"

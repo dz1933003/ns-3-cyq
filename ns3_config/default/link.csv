@@ -1,3 +1,3 @@
-FromNode,FromPort,ToNode,ToPort,DataRate,TxMode
-s1,1,h1,1,100Gbps,Active
-s1,2,h2,1,1bps,Active
+FromNode,FromPort,ToNode,ToPort,DataRate,Delay
+s1,0,h1,0,100Gbps,1us
+s1,1,h2,0,1bps,1us
