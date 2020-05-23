@@ -31,6 +31,7 @@
 using namespace ns3;
 using json = nlohmann::json;
 
+static const uint32_t CYQ_MTU = 1500;
 static DpskHelper dpskHelper;
 
 uint32_t nQueue;
@@ -38,27 +39,33 @@ uint32_t ecmpSeed;
 DpskNetDevice::TxMode portTxMode;
 std::map<std::string, Ptr<Node>> allNodes;
 std::map<Ptr<Node>, std::vector<Ptr<DpskNetDevice>>> allPorts;
+std::map<Ptr<Node>, Ipv4Address> allIpv4Addresses;
 std::set<Ptr<Node>> hostNodes;
 std::set<Ptr<Node>> switchNodes;
 
 struct Interface
 {
   Ptr<DpskNetDevice> device;
-  std::string delay;
-  std::string bandwidth;
+  Time delay;
+  DataRate bandwidth;
 };
 std::map<Ptr<Node>, std::map<Ptr<Node>, Interface>> nbr2if;
 std::map<Ptr<Node>, std::map<Ptr<Node>, std::vector<Ptr<Node>>>> nextHop;
-std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t>> pairDelay;
-std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t>> pairTxDelay;
-std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t>> pairBw;
-std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t>> pairBdp;
-std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t>> pairRtt;
+std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairDelay;
+std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairTxDelay;
+std::map<Ptr<Node>, std::map<Ptr<Node>, DataRate>> pairBw;
+std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t>> pairBdp; // byte
+std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairRtt;
 
 void ConfigMmuPort (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile);
 void ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile);
 void ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                      const std::string &configFile);
+
+void CalculateRoute ();
+void CalculateRoute (Ptr<Node> host);
+
+void SetRoutingEntries ();
 
 NS_LOG_COMPONENT_DEFINE ("PFC HW");
 
@@ -90,6 +97,7 @@ main (int argc, char *argv[])
           const Ptr<Node> node = CreateObject<Node> ();
           hostNodes.insert (node);
           allNodes[name] = node;
+          // TODO cyq: add ipv4 address
           // Install ports
           for (size_t i = 0; i < host["PortNumber"]; i++)
             {
@@ -163,23 +171,28 @@ main (int argc, char *argv[])
     {
       std::string fromNode, toNode;
       size_t fromPort, toPort;
-      std::string dataRate;
-      std::string delay;
-      if (!linkConfig.read_row (fromNode, fromPort, toNode, toPort, dataRate, delay))
+      std::string dataRateInput;
+      std::string delayInput;
+      if (!linkConfig.read_row (fromNode, fromPort, toNode, toPort, dataRateInput, delayInput))
         break;
+      const auto dataRate = DataRate (dataRateInput);
+      const auto delay = Time (delayInput);
       const auto s_node = allNodes[fromNode];
       const auto d_node = allNodes[toNode];
       const auto s_dev = allPorts[s_node][fromPort];
       const auto d_dev = allPorts[d_node][toPort];
       const Ptr<DpskChannel> channel = CreateObject<DpskChannel> ();
-      s_dev->SetAttribute ("DataRate", DataRateValue (DataRate (dataRate)));
-      d_dev->SetAttribute ("DataRate", DataRateValue (DataRate (dataRate)));
-      channel->SetAttribute ("Delay", TimeValue (Time (delay)));
+      s_dev->SetAttribute ("DataRate", DataRateValue (dataRate));
+      d_dev->SetAttribute ("DataRate", DataRateValue (dataRate));
+      channel->SetAttribute ("Delay", TimeValue (delay));
       s_dev->Attach (channel);
       d_dev->Attach (channel);
       nbr2if[s_node][d_node] = {.device = d_dev, .delay = delay, .bandwidth = dataRate};
       nbr2if[d_node][s_node] = {.device = s_dev, .delay = delay, .bandwidth = dataRate};
     }
+
+  CalculateRoute ();
+  SetRoutingEntries ();
 
   // TODO cyq: complete read configuration
 
@@ -333,4 +346,94 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
             }
         }
     }
+}
+
+void
+CalculateRoute ()
+{
+  for (const auto &host : hostNodes)
+    {
+      CalculateRoute (host);
+    }
+}
+
+void
+CalculateRoute (Ptr<Node> host)
+{
+  // queue for the BFS.
+  std::vector<Ptr<Node>> q;
+  // Distance from the host to each node.
+  std::map<Ptr<Node>, int> dis;
+  std::map<Ptr<Node>, Time> delay;
+  std::map<Ptr<Node>, Time> txDelay;
+  std::map<Ptr<Node>, DataRate> bw;
+  // init BFS.
+  q.push_back (host);
+  dis[host] = 0;
+  delay[host] = Time (0);
+  txDelay[host] = Time (0);
+  bw[host] = DataRate (UINT64_MAX);
+  // BFS.
+  for (int i = 0; i < (int) q.size (); i++)
+    {
+      Ptr<Node> now = q[i];
+      int d = dis[now];
+      for (auto it = nbr2if[now].begin (); it != nbr2if[now].end (); it++)
+        {
+          Ptr<Node> next = it->first;
+          // If 'next' have not been visited.
+          if (dis.find (next) == dis.end ())
+            {
+              dis[next] = d + 1;
+              delay[next] = delay[now] + it->second.delay;
+              txDelay[next] = txDelay[now] + it->second.bandwidth.CalculateBytesTxTime (CYQ_MTU);
+              bw[next] = std::min (bw[now], it->second.bandwidth);
+              // we only enqueue switch, because we do not want packets to go through host as middle point
+              if (switchNodes.find (next) != switchNodes.end ())
+                q.push_back (next);
+            }
+          // if 'now' is on the shortest path from 'next' to 'host'.
+          if (d + 1 == dis[next])
+            {
+              nextHop[next][host].push_back (now);
+            }
+        }
+    }
+  for (auto it : delay)
+    pairDelay[it.first][host] = it.second;
+  for (auto it : txDelay)
+    pairTxDelay[it.first][host] = it.second;
+  for (auto it : bw)
+    pairBw[it.first][host] = it.second;
+}
+
+void
+SetRoutingEntries ()
+{ // TODO cyq: implement this function
+  // For each node.
+  // for (auto i = nextHop.begin (); i != nextHop.end (); i++)
+  //   {
+  //     Ptr<Node> node = i->first;
+  //     auto &table = i->second;
+  //     for (auto j = table.begin (); j != table.end (); j++)
+  //       {
+  //         // The destination node.
+  //         Ptr<Node> dst = j->first;
+  //         // The IP address of the dst.
+  //         Ipv4Address dstAddr = dst->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal ();
+  //         // The next hops towards the dst.
+  //         vector<Ptr<Node>> nexts = j->second;
+  //         for (int k = 0; k < (int) nexts.size (); k++)
+  //           {
+  //             Ptr<Node> next = nexts[k];
+  //             uint32_t interface = nbr2if[node][next].idx;
+  //             if (node->GetNodeType () == 1)
+  //               DynamicCast<SwitchNode> (node)->AddTableEntry (dstAddr, interface);
+  //             else
+  //               {
+  //                 node->GetObject<RdmaDriver> ()->m_rdma->AddTableEntry (dstAddr, interface);
+  //               }
+  //           }
+  //       }
+  //   }
 }
