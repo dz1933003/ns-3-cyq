@@ -149,12 +149,15 @@ PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
       const auto &pfcPortImpl = DynamicCast<PfcSwitchPort> (dpskDevImpl);
       pfcPortImpl->SetDeviceDequeueHandler (MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
     }
+
+  AggregateObject (m_dpsk->GetNode ());
 }
 
 void
 PfcSwitch::InstallMmu (Ptr<SwitchMmu> mmu)
 {
   NS_LOG_FUNCTION (mmu);
+
   m_mmu = mmu;
   m_mmu->ConfigNQueue (m_nQueues);
   for (const auto &entry : m_devices)
@@ -162,6 +165,8 @@ PfcSwitch::InstallMmu (Ptr<SwitchMmu> mmu)
       const auto &dev = entry.second;
       m_mmu->AggregateDevice (dev);
     }
+
+  AggregateObject (mmu);
 }
 
 Ptr<SwitchMmu>

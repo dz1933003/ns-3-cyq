@@ -88,6 +88,8 @@ PfcHost::InstallDpsk (Ptr<Dpsk> dpsk)
     }
 
   m_nDevices = m_devices.size ();
+
+  AggregateObject (m_dpsk->GetNode ());
 }
 
 void

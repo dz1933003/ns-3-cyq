@@ -232,6 +232,7 @@ DpskNetDevice::SetImplementation (Ptr<DpskNetDeviceImpl> impl)
   SetTransmitInterceptor (MakeCallback (&DpskNetDeviceImpl::Transmit, m_impl));
   SetSendInterceptor (MakeCallback (&DpskNetDeviceImpl::Send, m_impl));
   SetReceiveInterceptor (MakeCallback (&DpskNetDeviceImpl::Receive, m_impl));
+  AggregateObject(m_impl);
 }
 
 Ptr<DpskNetDeviceImpl>

@@ -110,7 +110,6 @@ main (int argc, char *argv[])
               node->AddDevice (dev);
               const Ptr<PfcHostPort> impl = CreateObject<PfcHostPort> ();
               dev->SetImplementation (impl);
-              dev->AggregateObject (impl);
               impl->SetupQueues (nQueue);
               allPorts[node].push_back (dev);
             }
@@ -118,7 +117,6 @@ main (int argc, char *argv[])
           const auto dpsk = dpskHelper.Install (node);
           // Install PFC host DPSK layer
           auto pfcHost = CreateObject<PfcHost> ();
-          node->AggregateObject (pfcHost);
           pfcHost->InstallDpsk (dpsk);
         }
     }
@@ -141,7 +139,6 @@ main (int argc, char *argv[])
               node->AddDevice (dev);
               const Ptr<PfcSwitchPort> impl = CreateObject<PfcSwitchPort> ();
               dev->SetImplementation (impl);
-              dev->AggregateObject (impl);
               impl->SetupQueues (nQueue);
               allPorts[node].push_back (dev);
             }
@@ -149,14 +146,12 @@ main (int argc, char *argv[])
           const auto dpsk = dpskHelper.Install (node);
           // Install PFC switch DPSK layer
           const auto pfcSwitch = CreateObject<PfcSwitch> ();
-          node->AggregateObject (pfcSwitch);
           pfcSwitch->InstallDpsk (dpsk);
           pfcSwitch->SetEcmpSeed (ecmpSeed);
           pfcSwitch->SetNQueues (nQueue);
           // Install switch MMU
           const auto mmu = CreateObject<SwitchMmu> ();
           pfcSwitch->InstallMmu (mmu);
-          pfcSwitch->AggregateObject (mmu);
           const uint64_t buffer = cyq::DataSize::GetBytes (sw["Config"]["Buffer"]);
           mmu->ConfigBufferSize (buffer);
           ConfigMmuPort (node, mmu, sw["Config"]["ConfigFile"]);
