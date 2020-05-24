@@ -16,14 +16,17 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#ifndef DATA_SIZE_H
-#define DATA_SIZE_H
+#ifndef CYQ_UTILS_H
+#define CYQ_UTILS_H
 
 #include <string>
 #include <sstream>
 #include <exception>
+#include <ctime>
+#include <iomanip>
 
 namespace cyq {
+
 class DataSize
 {
 public:
@@ -98,6 +101,20 @@ private:
     return true;
   }
 };
+
+class Time
+{
+public:
+  static std::string
+  GetCurrTimeStr (const char *fmt)
+  {
+    std::stringstream ss;
+    auto currTime = time (NULL);
+    ss << std::put_time (std::localtime (&currTime), fmt);
+    return ss.str ();
+  }
+};
+
 } // namespace cyq
 
-#endif /* DATA_SIZE_H */
+#endif /* CYQ_UTILS_H */

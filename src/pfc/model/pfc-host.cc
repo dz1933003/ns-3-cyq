@@ -100,6 +100,13 @@ PfcHost::AddRouteTableEntry (const Ipv4Address &dest, Ptr<DpskNetDevice> dev)
   m_routeTable[destVal].push_back (dev);
 }
 
+std::unordered_map<uint32_t, std::vector<Ptr<DpskNetDevice>>>
+PfcHost::GetRouteTable ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_routeTable;
+}
+
 void
 PfcHost::ClearRouteTable ()
 {
@@ -145,6 +152,20 @@ PfcHost::GetRdmaRxQueuePairs ()
       result.insert (temp.begin (), temp.end ());
     }
   return result;
+}
+
+void
+PfcHost::AddRdmaRxQueuePairSize (uint32_t key, uint64_t size)
+{
+  NS_LOG_FUNCTION (key << size);
+  m_rxQueuePairSize[key] = size;
+}
+
+uint64_t
+PfcHost::GetRdmaRxQueuePairSize (uint32_t key)
+{
+  NS_LOG_FUNCTION (key);
+  return m_rxQueuePairSize[key];
 }
 
 Ptr<DpskNetDevice>

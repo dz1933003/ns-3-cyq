@@ -100,14 +100,6 @@ PfcHostPort::GetRdmaTxQueuePairs ()
   return m_txQueuePairs;
 }
 
-void
-PfcHostPort::AddRdmaRxQueuePair (Ptr<RdmaRxQueuePair> qp)
-{
-  NS_LOG_FUNCTION (qp);
-  uint32_t key = qp->GetHash ();
-  m_rxQueuePairs[key] = qp;
-}
-
 std::map<uint32_t, Ptr<RdmaRxQueuePair>>
 PfcHostPort::GetRdmaRxQueuePairs ()
 {
@@ -213,8 +205,9 @@ PfcHostPort::Receive (Ptr<Packet> p)
       Ptr<RdmaRxQueuePair> qp;
       if (qpItr == m_rxQueuePairs.end ()) // new flow
         {
-          // cyq: init rx qp with definite size
-          qp = CreateObject<RdmaRxQueuePair> (sIp, dIp, sPort, dPort, UINT64_MAX, dscp);
+          const auto dpskLayer = m_dev->GetNode ()->GetObject<PfcHost> ();
+          const auto size = dpskLayer->GetRdmaRxQueuePairSize (key);
+          qp = CreateObject<RdmaRxQueuePair> (sIp, dIp, sPort, dPort, size, dscp);
           qp->m_receivedSize += payloadSize;
           m_rxQueuePairs.insert ({key, qp});
         }

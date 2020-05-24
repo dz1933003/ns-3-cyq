@@ -1,0 +1,6 @@
+{
+  "OutputFolder": "ns3_config/default",
+  "Flow": {
+    "Enable": true
+  }
+}

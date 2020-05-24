@@ -106,11 +106,11 @@ PfcSwitchPort::Transmit ()
   if (p == 0)
     return 0;
 
-  PfcSwitchTag tag;
-  p->RemovePacketTag (tag);
-
   // Notify switch dequeue event
   m_mmuCallback (m_dev, p, qIndex);
+
+  PfcSwitchTag tag;
+  p->RemovePacketTag (tag);
 
   m_nTxBytes += p->GetSize();
 

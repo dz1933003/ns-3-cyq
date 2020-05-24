@@ -26,7 +26,7 @@
 
 #include "json.hpp"
 #include "csv.hpp"
-#include "data-size.hpp"
+#include "cyq-utils.hpp"
 
 using namespace ns3;
 using json = nlohmann::json;
@@ -42,6 +42,8 @@ std::map<Ptr<Node>, std::vector<Ptr<DpskNetDevice>>> allPorts;
 std::map<Ptr<Node>, Ipv4Address> allIpv4Addresses;
 std::set<Ptr<Node>> hostNodes;
 std::set<Ptr<Node>> switchNodes;
+std::set<Ptr<RdmaTxQueuePair>> allTxQueuePairs;
+std::map<uint32_t, Ptr<RdmaRxQueuePair>> allRxQueuePairs;
 
 uint64_t maxBdp = 0;
 Time maxRtt (0);
@@ -69,6 +71,8 @@ void CalculateRoute ();
 void CalculateRoute (Ptr<Node> host);
 void SetRoutingEntries ();
 void CalculateRttBdp ();
+
+void DoTrace (const std::string &configFile);
 
 NS_LOG_COMPONENT_DEFINE ("PFC HW");
 
@@ -212,19 +216,25 @@ main (int argc, char *argv[])
       const auto sourceIp = allIpv4Addresses[allNodes[fromNode]];
       const auto destinationIp = allIpv4Addresses[allNodes[toNode]];
       const uint64_t size = cyq::DataSize::GetBytes (sizeInput);
-      auto qp = CreateObject<RdmaTxQueuePair> (startTime, sourceIp, destinationIp, sourcePort,
-                                               destinationPort, size, priority);
-      auto dpskLayer = allNodes[fromNode]->GetObject<PfcHost> ();
-      dpskLayer->AddRdmaTxQueuePair (qp);
+      auto txQp = CreateObject<RdmaTxQueuePair> (startTime, sourceIp, destinationIp, sourcePort,
+                                                 destinationPort, size, priority);
+      auto sendDpskLayer = allNodes[fromNode]->GetObject<PfcHost> ();
+      sendDpskLayer->AddRdmaTxQueuePair (txQp);
+      auto receiveDpskLayer = allNodes[toNode]->GetObject<PfcHost> ();
+      receiveDpskLayer->AddRdmaRxQueuePairSize (txQp->GetHash (), size);
+      allTxQueuePairs.insert (txQp);
     }
 
   // TODO cyq: add trace and logs
+  NS_LOG_UNCOND ("====Trace====");
 
   NS_LOG_UNCOND ("====Simulate====");
   Simulator::Run ();
   Simulator::Destroy ();
 
-  NS_LOG_UNCOND ("====Log====");
+  NS_LOG_UNCOND ("====Output====");
+  DoTrace (conf["TraceConfigFile"]);
+
   NS_LOG_UNCOND ("====Done====");
 }
 
@@ -489,4 +499,46 @@ CalculateRttBdp ()
             }
         }
     }
+}
+
+/*******************
+ * Trace Functions *
+ *******************/
+
+std::string outputFolder;
+
+void TraceFlow ();
+
+void
+DoTrace (const std::string &configFile)
+{
+  std::ifstream file (configFile);
+  json conf = json::parse (file);
+
+  outputFolder = conf["OutputFolder"];
+
+  if (conf["Flow"]["Enable"] == true)
+    {
+      TraceFlow ();
+    }
+}
+
+void
+TraceFlow ()
+{
+  // std::string outputFileName =
+  //     outputFolder + "/flow_" + cyq::Time::GetCurrTimeStr ("%Y%m%d%H%M%S") + ".log";
+  // std::ofstream file (outputFileName);
+
+  // for (const auto &host : hostNodes)
+  //   {
+  //     const auto dpskLayer = host->GetObject<PfcHost> ();
+  //     const auto queuePairs = dpskLayer->GetRdmaRxQueuePairs ();
+  //     allRxQueuePairs.insert (queuePairs.begin (), queuePairs.end ());
+  //   }
+  // for (const auto &txQp : allTxQueuePairs)
+  //   {
+  //     const auto rxQp = allRxQueuePairs[txQp->GetHash ()];
+  //     file << rxQp->
+  //   }
 }

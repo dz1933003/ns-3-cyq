@@ -92,6 +92,13 @@ public:
   void AddRouteTableEntry (const Ipv4Address &dest, Ptr<DpskNetDevice> dev);
 
   /**
+   * Get route table
+   *
+   * \return route table
+   */
+  std::unordered_map<uint32_t, std::vector<Ptr<DpskNetDevice>>> GetRouteTable ();
+
+  /**
    * Clear route table
    */
   void ClearRouteTable ();
@@ -117,6 +124,22 @@ public:
    */
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> GetRdmaRxQueuePairs ();
 
+  /**
+   * Add RDMA queue pair size for receiving port
+   *
+   * \param key hash key of the queue pair
+   * \param size size of the queue pair
+   */
+  void AddRdmaRxQueuePairSize (uint32_t key, uint64_t size);
+
+  /**
+   * Get RDMA queue pair size for receiving port
+   *
+   * \param key hash key of the queue pair
+   * \return size of the queue pair
+   */
+  uint64_t GetRdmaRxQueuePairSize (uint32_t key);
+
 protected:
   /**
    * Perform any object release functionality required to break reference
@@ -141,6 +164,8 @@ private:
    * devices.
    */
   std::unordered_map<uint32_t, std::vector<Ptr<DpskNetDevice>>> m_routeTable;
+
+  std::map<uint32_t, uint64_t> m_rxQueuePairSize; //!< hash and received queue pair size
 
   /**
    * \brief Copy constructor

@@ -85,13 +85,6 @@ public:
   std::vector<Ptr<RdmaTxQueuePair>> GetRdmaTxQueuePairs ();
 
   /**
-   * Add RDMA queue pair for receiving
-   *
-   * \param qp queue pair to receive
-   */
-  void AddRdmaRxQueuePair (Ptr<RdmaRxQueuePair> qp);
-
-  /**
    * Get RDMA queue pair for receiving
    *
    * \return queue pairs to receive

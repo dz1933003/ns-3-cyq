@@ -114,6 +114,13 @@ public:
   void AddRouteTableEntry (const Ipv4Address &dest, Ptr<DpskNetDevice> dev);
 
   /**
+   * Get route table
+   *
+   * \return route table
+   */
+  std::unordered_map<uint32_t, std::vector<Ptr<DpskNetDevice>>> GetRouteTable ();
+
+  /**
    * Clear route table
    */
   void ClearRouteTable ();

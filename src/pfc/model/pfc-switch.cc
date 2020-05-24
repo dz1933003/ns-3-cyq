@@ -210,6 +210,13 @@ PfcSwitch::AddRouteTableEntry (const Ipv4Address &dest, Ptr<DpskNetDevice> dev)
   m_routeTable[destVal].push_back (dev);
 }
 
+std::unordered_map<uint32_t, std::vector<Ptr<DpskNetDevice>>>
+PfcSwitch::GetRouteTable ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_routeTable;
+}
+
 void
 PfcSwitch::ClearRouteTable ()
 {
