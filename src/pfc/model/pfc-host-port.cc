@@ -151,7 +151,7 @@ bool
 PfcHostPort::Send (Ptr<Packet> packet, const Address &source, const Address &dest,
                    uint16_t protocolNumber)
 {
-  // XXX cyq: No active send now
+  // cyq: No active send now
   return false;
 }
 
@@ -213,7 +213,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
       Ptr<RdmaRxQueuePair> qp;
       if (qpItr == m_rxQueuePairs.end ()) // new flow
         {
-          // TODO cyq: init rx qp with definite size
+          // cyq: init rx qp with definite size
           qp = CreateObject<RdmaRxQueuePair> (sIp, dIp, sPort, dPort, UINT64_MAX, dscp);
           qp->m_receivedSize += payloadSize;
           m_rxQueuePairs.insert ({key, qp});

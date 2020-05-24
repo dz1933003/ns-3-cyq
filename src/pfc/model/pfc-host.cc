@@ -70,7 +70,7 @@ PfcHost::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, uin
                             NetDevice::PacketType packetType)
 {
   NS_LOG_FUNCTION (device << packet << protocol << &source << &destination << packetType);
-  // XXX cyq: seems no need to handle packet here now
+  // cyq: seems no need to handle packet here now
 }
 
 void

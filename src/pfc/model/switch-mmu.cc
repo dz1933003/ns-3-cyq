@@ -378,7 +378,7 @@ SwitchMmu::SetResume (Ptr<NetDevice> port, uint32_t qIndex)
 uint64_t
 SwitchMmu::GetPfcThreshold (Ptr<NetDevice> port, uint32_t qIndex)
 {
-  // XXX cyq: add dynamic PFC threshold choice if needed
+  // cyq: add dynamic PFC threshold choice if needed
   return 0;
 }
 
