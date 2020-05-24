@@ -22,6 +22,8 @@
 #define PFC_SWITCH_PORT_H
 
 #include "ns3/dpsk-net-device-impl.h"
+#include "ns3/traced-callback.h"
+#include "ns3/pfc-header.h"
 #include <vector>
 #include <queue>
 
@@ -148,14 +150,26 @@ private:
 
   DeviceDequeueNotifier m_mmuCallback; //!< callback to notify mmu
 
+  /**
+   * The trace source fired for received a PFC packet.
+   *
+   * \param PfcType PFC type
+   * \param uint32_t target queue index
+   * \param vector pause state after received
+   */
+  TracedCallback<PfcHeader::PfcType, uint32_t, std::vector<bool>> m_pfcRxTrace;
+
 public:
   /// Statistics
 
-  uint64_t m_nInQueueBytes; //!< total in-queue byte (control queue included)
-  std::vector<uint64_t> m_inQueueBytesList; //!< other in-queue byte
+  uint64_t m_nInQueueBytes; //!< total in-queue bytes (control queue included)
+  std::vector<uint64_t> m_inQueueBytesList; //!< in-queue bytes in every queue
 
   uint32_t m_nInQueuePackets; //!< total in-queue packet count (control queue included)
-  std::vector<uint32_t> m_inQueuePacketsList; //!< other in-queue packet count
+  std::vector<uint32_t> m_inQueuePacketsList; //!< in-queue packet count in every queue
+
+  uint64_t m_nTxBytes; //!< total transmit bytes
+  uint64_t m_nRxBytes; //!< total receive bytes
 
 private:
   /**

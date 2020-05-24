@@ -110,6 +110,7 @@ PfcSwitch::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, u
         }
       else
         {
+          m_nIngressDropPacket[inDev]++;
           return; // Drop packet
         }
 
@@ -143,10 +144,9 @@ PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
 
   for (const auto &dev : devices)
     {
-      const auto &dpskDev = DynamicCast<DpskNetDevice> (dev);
+      const auto dpskDev = DynamicCast<DpskNetDevice> (dev);
       m_devices.insert ({dev->GetIfIndex (), dpskDev});
-      const auto &dpskDevImpl = dpskDev->GetImplementation ();
-      const auto &pfcPortImpl = DynamicCast<PfcSwitchPort> (dpskDevImpl);
+      const auto pfcPortImpl = dpskDev->GetObject<PfcSwitchPort> ();
       pfcPortImpl->SetDeviceDequeueHandler (MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
     }
 

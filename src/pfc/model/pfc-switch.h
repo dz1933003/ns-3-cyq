@@ -169,6 +169,11 @@ private:
 
   Ptr<SwitchMmu> m_mmu; //!< mmu of this switch
 
+public:
+  /// Statistics
+  std::map<Ptr<DpskNetDevice>, uint32_t> m_nIngressDropPacket;
+
+private:
   /**
    * \brief Copy constructor
    *
