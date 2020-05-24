@@ -43,6 +43,9 @@ std::map<Ptr<Node>, Ipv4Address> allIpv4Addresses;
 std::set<Ptr<Node>> hostNodes;
 std::set<Ptr<Node>> switchNodes;
 
+uint64_t maxBdp = 0;
+Time maxRtt (0);
+
 struct Interface
 {
   Ptr<DpskNetDevice> device;
@@ -50,7 +53,7 @@ struct Interface
   DataRate bandwidth;
 };
 std::map<Ptr<Node>, std::map<Ptr<Node>, Interface>> nbr2if;
-std::map<Ptr<Node>, std::map<Ptr<Node>, std::vector<Ptr<Node>>>> nextHop;
+std::map<Ptr<Node>, std::map<Ptr<Node>, std::vector<Ptr<Node>>>> nextHopTable;
 std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairDelay;
 std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairTxDelay;
 std::map<Ptr<Node>, std::map<Ptr<Node>, DataRate>> pairBw;
@@ -64,8 +67,8 @@ void ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
 
 void CalculateRoute ();
 void CalculateRoute (Ptr<Node> host);
-
 void SetRoutingEntries ();
+void CalculateRttBdp ();
 
 NS_LOG_COMPONENT_DEFINE ("PFC HW");
 
@@ -192,6 +195,9 @@ main (int argc, char *argv[])
   NS_LOG_UNCOND ("====Route====");
   CalculateRoute ();
   SetRoutingEntries ();
+  CalculateRttBdp ();
+  NS_LOG_UNCOND ("Max RTT: " << maxRtt);
+  NS_LOG_UNCOND ("Max BDP: " << maxBdp);
 
   NS_LOG_UNCOND ("====Flow====");
   io::CSVReader<7> flowConfig (conf["FlowConfigFile"]);
@@ -211,8 +217,8 @@ main (int argc, char *argv[])
       const auto sourceIp = allIpv4Addresses[allNodes[fromNode]];
       const auto destinationIp = allIpv4Addresses[allNodes[toNode]];
       const uint64_t size = cyq::DataSize::GetBytes (sizeInput);
-      auto qp = CreateObject<RdmaTxQueuePair> (startTime, sourceIp, destinationIp,
-                                                     sourcePort, destinationPort, size, priority);
+      auto qp = CreateObject<RdmaTxQueuePair> (startTime, sourceIp, destinationIp, sourcePort,
+                                               destinationPort, size, priority);
       auto dpskLayer = allNodes[fromNode]->GetObject<PfcHost> ();
       dpskLayer->AddRdmaTxQueuePair (qp);
     }
@@ -387,83 +393,104 @@ CalculateRoute ()
 void
 CalculateRoute (Ptr<Node> host)
 {
-  // queue for the BFS.
-  std::vector<Ptr<Node>> q;
-  // Distance from the host to each node.
-  std::map<Ptr<Node>, int> dis;
-  std::map<Ptr<Node>, Time> delay;
-  std::map<Ptr<Node>, Time> txDelay;
-  std::map<Ptr<Node>, DataRate> bw;
-  // init BFS.
-  q.push_back (host);
-  dis[host] = 0;
-  delay[host] = Time (0);
-  txDelay[host] = Time (0);
-  bw[host] = DataRate (UINT64_MAX);
-  // BFS.
-  for (int i = 0; i < (int) q.size (); i++)
+  std::vector<Ptr<Node>> bfsQueue; // Queue for the BFS
+  std::map<Ptr<Node>, int> distances; // Distance from the host to each node
+  std::map<Ptr<Node>, Time> delays; // Delay from the host to each node
+  std::map<Ptr<Node>, Time> txDelays; // Transmit delay from the host to each node
+  std::map<Ptr<Node>, DataRate> bandwidths; // Bandwidth from the host to each node
+  // Init BFS
+  bfsQueue.push_back (host);
+  distances[host] = 0;
+  delays[host] = Time (0);
+  txDelays[host] = Time (0);
+  bandwidths[host] = DataRate (UINT64_MAX);
+  // Do BFS
+  for (size_t i = 0; i < bfsQueue.size (); i++)
     {
-      Ptr<Node> now = q[i];
-      int d = dis[now];
-      for (auto it = nbr2if[now].begin (); it != nbr2if[now].end (); it++)
+      const auto currNode = bfsQueue[i];
+      for (const auto &next : nbr2if[currNode])
         {
-          Ptr<Node> next = it->first;
-          // If 'next' have not been visited.
-          if (dis.find (next) == dis.end ())
+          const auto nextNode = next.first;
+          const auto nextInterface = next.second;
+          // If 'nextNode' have not been visited.
+          if (distances.find (nextNode) == distances.end ())
             {
-              dis[next] = d + 1;
-              delay[next] = delay[now] + it->second.delay;
-              txDelay[next] = txDelay[now] + it->second.bandwidth.CalculateBytesTxTime (CYQ_MTU);
-              bw[next] = std::min (bw[now], it->second.bandwidth);
-              // we only enqueue switch, because we do not want packets to go through host as middle point
-              if (switchNodes.find (next) != switchNodes.end ())
-                q.push_back (next);
+              distances[nextNode] = distances[currNode] + 1;
+              delays[nextNode] = delays[currNode] + nextInterface.delay;
+              txDelays[nextNode] =
+                  txDelays[currNode] + nextInterface.bandwidth.CalculateBytesTxTime (CYQ_MTU);
+              bandwidths[nextNode] = std::min (bandwidths[currNode], nextInterface.bandwidth);
+              // Only enqueue switch because we do not want packets to go through host as middle point
+              if (switchNodes.find (nextNode) != switchNodes.end ())
+                bfsQueue.push_back (nextNode);
             }
-          // if 'now' is on the shortest path from 'next' to 'host'.
-          if (d + 1 == dis[next])
+          // if 'currNode' is on the shortest path from 'nextNode' to 'host'.
+          if (distances[currNode] + 1 == distances[nextNode])
             {
-              nextHop[next][host].push_back (now);
+              nextHopTable[nextNode][host].push_back (currNode);
             }
         }
     }
-  for (auto it : delay)
+  for (const auto &it : delays)
     pairDelay[it.first][host] = it.second;
-  for (auto it : txDelay)
+  for (const auto &it : txDelays)
     pairTxDelay[it.first][host] = it.second;
-  for (auto it : bw)
+  for (const auto &it : bandwidths)
     pairBw[it.first][host] = it.second;
 }
 
 void
 SetRoutingEntries ()
 {
-  // For each node.
-  for (auto i = nextHop.begin (); i != nextHop.end (); i++)
+  // For each node
+  for (const auto &nextHopEntry : nextHopTable)
     {
-      Ptr<Node> node = i->first;
-      auto &table = i->second;
-      for (auto j = table.begin (); j != table.end (); j++)
+      const auto fromNode = nextHopEntry.first;
+      const auto toNodeTable = nextHopEntry.second;
+      for (const auto &toNodeEntry : toNodeTable)
         {
-          // The destination node.
-          Ptr<Node> dst = j->first;
-          // The IP address of the dst.
-          Ipv4Address dstAddr = allIpv4Addresses[dst];
-          // The next hops towards the dst.
-          std::vector<Ptr<Node>> nexts = j->second;
-          for (int k = 0; k < (int) nexts.size (); k++)
+          // The destination node
+          const auto toNode = toNodeEntry.first;
+          // The next hops towards the destination
+          const auto nextNodeTable = toNodeEntry.second;
+          // The IP address of the destination
+          Ipv4Address dstAddr = allIpv4Addresses[toNode];
+          for (const auto &nextNode : nextNodeTable)
             {
-              Ptr<Node> next = nexts[k];
-              auto interface = nbr2if[node][next].device;
-              if (switchNodes.find (node) != switchNodes.end ())
+              const auto &device = nbr2if[fromNode][nextNode].device;
+              if (switchNodes.find (fromNode) != switchNodes.end ())
                 {
-                  auto dpskLayer = node->GetObject<PfcSwitch> ();
-                  dpskLayer->AddRouteTableEntry (dstAddr, interface);
+                  auto dpskLayer = fromNode->GetObject<PfcSwitch> ();
+                  dpskLayer->AddRouteTableEntry (dstAddr, device);
                 }
-              else
+              else if (hostNodes.find (fromNode) != hostNodes.end ())
                 {
-                  auto dpskLayer = node->GetObject<PfcHost> ();
-                  dpskLayer->AddRouteTableEntry (dstAddr, interface);
+                  auto dpskLayer = fromNode->GetObject<PfcHost> ();
+                  dpskLayer->AddRouteTableEntry (dstAddr, device);
                 }
+            }
+        }
+    }
+}
+
+void
+CalculateRttBdp ()
+{
+  for (const auto &src : hostNodes)
+    {
+      for (const auto &dst : hostNodes)
+        {
+          if (src != dst)
+            {
+              const auto delay = pairDelay[src][dst];
+              const auto txDelay = pairTxDelay[src][dst];
+              const auto rtt = delay + txDelay + delay;
+              const auto bandwidth = pairBw[src][dst];
+              const uint64_t bdp = rtt.GetSeconds () * bandwidth.GetBitRate () / 8;
+              pairRtt[src][dst] = rtt;
+              pairBw[src][dst] = bdp;
+              maxBdp = std::max (bdp, maxBdp);
+              maxRtt = std::max (rtt, maxRtt);
             }
         }
     }

@@ -82,7 +82,7 @@ PfcHost::InstallDpsk (Ptr<Dpsk> dpsk)
   for (const auto &dev : m_dpsk->GetDevices ())
     {
       const auto &dpskDev = DynamicCast<DpskNetDevice> (dev);
-      const auto &dpskDevImpl = dpskDev->GetImplementation ();
+      const auto dpskDevImpl = dpskDev->GetImplementation ();
       const auto &pfcPort = DynamicCast<PfcHostPort> (dpskDevImpl);
       m_devices.insert ({dpskDev, pfcPort});
     }
