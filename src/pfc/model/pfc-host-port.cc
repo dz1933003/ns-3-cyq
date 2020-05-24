@@ -38,10 +38,20 @@ NS_OBJECT_ENSURE_REGISTERED (PfcHostPort);
 TypeId
 PfcHostPort::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::PfcHostPort")
-                          .SetParent<Object> ()
-                          .SetGroupName ("Pfc")
-                          .AddConstructor<PfcHostPort> ();
+  static TypeId tid =
+      TypeId ("ns3::PfcHostPort")
+          .SetParent<Object> ()
+          .SetGroupName ("Pfc")
+          .AddConstructor<PfcHostPort> ()
+          .AddTraceSource ("PfcRx", "Receive a PFC packet",
+                           MakeTraceSourceAccessor (&PfcHostPort::m_pfcRxTrace),
+                           "PfcHeader::PfcType, uint32_t, std::vector<bool>")
+          .AddTraceSource ("QueuePairTxComplete", "Completing sending a queue pair",
+                           MakeTraceSourceAccessor (&PfcHostPort::m_queuePairTxCompleteTrace),
+                           "Ptr<RdmaTxQueuePair>")
+          .AddTraceSource ("QueuePairRxComplete", "Completing receiving a queue pair",
+                           MakeTraceSourceAccessor (&PfcHostPort::m_queuePairRxCompleteTrace),
+                           "Ptr<RdmaRxQueuePair>");
   return tid;
 }
 
@@ -83,6 +93,28 @@ PfcHostPort::AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp)
   Simulator::Schedule (qp->m_startTime, &DpskNetDevice::TriggerTransmit, m_dev);
 }
 
+std::vector<Ptr<RdmaTxQueuePair>>
+PfcHostPort::GetRdmaTxQueuePairs ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_txQueuePairs;
+}
+
+void
+PfcHostPort::AddRdmaRxQueuePair (Ptr<RdmaRxQueuePair> qp)
+{
+  NS_LOG_FUNCTION (qp);
+  uint32_t key = qp->GetHash ();
+  m_rxQueuePairs[key] = qp;
+}
+
+std::map<uint32_t, Ptr<RdmaRxQueuePair>>
+PfcHostPort::GetRdmaRxQueuePairs ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_rxQueuePairs;
+}
+
 Ptr<Packet>
 PfcHostPort::Transmit ()
 {
@@ -105,7 +137,9 @@ PfcHostPort::Transmit ()
         {
           m_lastQpIndex = qIdx;
           auto p = GenData (qp);
-          return p; // TODO cyq: trace complete send queue pair
+          if (qp->IsFinished ())
+            m_queuePairTxCompleteTrace (qp);
+          return p;
         }
     }
 
@@ -142,6 +176,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t pfcQIndex = pfcHeader.GetQIndex ();
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = true;
+          m_pfcRxTrace (PfcHeader::Pause, qIndex, m_pausedStates);
           return false; // Do not forward up to node
         }
       else if (pfcHeader.GetType () == PfcHeader::Resume) // PFC Resume
@@ -150,6 +185,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t pfcQIndex = pfcHeader.GetQIndex ();
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = false;
+          m_pfcRxTrace (PfcHeader::Resume, qIndex, m_pausedStates);
           m_dev->TriggerTransmit (); // Trigger device transmitting
           return false; // Do not forward up to node
         }
@@ -158,11 +194,9 @@ PfcHostPort::Receive (Ptr<Packet> p)
           NS_ASSERT_MSG (false, "PfcSwitchPort::Rx: Invalid PFC type");
           return false; // Drop this packet
         }
-      // TODO cyq: trace PFC
     }
   else // Not PFC
     {
-      // TODO: trace complete received queue pair
       Ipv4Header ip;
       UdpHeader udp;
       p->RemoveHeader (ip);
@@ -179,7 +213,8 @@ PfcHostPort::Receive (Ptr<Packet> p)
       Ptr<RdmaRxQueuePair> qp;
       if (qpItr == m_rxQueuePairs.end ()) // new flow
         {
-          qp = CreateObject<RdmaRxQueuePair> (sIp, dIp, sPort, dPort, 0, dscp);
+          // TODO cyq: init rx qp with definite size
+          qp = CreateObject<RdmaRxQueuePair> (sIp, dIp, sPort, dPort, UINT64_MAX, dscp);
           qp->m_receivedSize += payloadSize;
           m_rxQueuePairs.insert ({key, qp});
         }
@@ -188,6 +223,8 @@ PfcHostPort::Receive (Ptr<Packet> p)
           qp = qpItr->second;
           qp->m_receivedSize += payloadSize;
         }
+      if (qp->IsFinished ())
+        m_queuePairRxCompleteTrace (qp);
       return true; // Forward up to node
     }
 }

@@ -24,6 +24,8 @@
 #include "ns3/dpsk-net-device-impl.h"
 #include "ns3/rdma-tx-queue-pair.h"
 #include "ns3/rdma-rx-queue-pair.h"
+#include "ns3/traced-callback.h"
+#include "pfc-header.h"
 #include "pfc-host.h"
 #include <vector>
 #include <queue>
@@ -74,6 +76,27 @@ public:
    * \param qp queue pair to send
    */
   void AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * Get RDMA queue pair for transmitting
+   *
+   * \return queue pairs to send
+   */
+  std::vector<Ptr<RdmaTxQueuePair>> GetRdmaTxQueuePairs ();
+
+  /**
+   * Add RDMA queue pair for receiving
+   *
+   * \param qp queue pair to receive
+   */
+  void AddRdmaRxQueuePair (Ptr<RdmaRxQueuePair> qp);
+
+  /**
+   * Get RDMA queue pair for receiving
+   *
+   * \return queue pairs to receive
+   */
+  std::map<uint32_t, Ptr<RdmaRxQueuePair>> GetRdmaRxQueuePairs ();
 
 protected:
   /**
@@ -133,6 +156,29 @@ private:
    * \return data packet
    */
   Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * The trace source fired for received a PFC packet.
+   *
+   * \param PfcType PFC type
+   * \param uint32_t target queue index
+   * \param vector pause state after received
+   */
+  TracedCallback<PfcHeader::PfcType, uint32_t, std::vector<bool>> m_pfcRxTrace;
+
+  /**
+   * The trace source fired for completing sending a queue pair.
+   *
+   * \param Ptr pointer of RdmaTxQueuePair
+   */
+  TracedCallback<Ptr<RdmaTxQueuePair>> m_queuePairTxCompleteTrace;
+
+  /**
+   * The trace source fired for completing receiving a queue pair.
+   *
+   * \param Ptr pointer of RdmaRxQueuePair
+   */
+  TracedCallback<Ptr<RdmaRxQueuePair>> m_queuePairRxCompleteTrace;
 
 public:
   /// Statistics
