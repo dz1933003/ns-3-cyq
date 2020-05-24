@@ -81,10 +81,8 @@ PfcHost::InstallDpsk (Ptr<Dpsk> dpsk)
 
   for (const auto &dev : m_dpsk->GetDevices ())
     {
-      const auto &dpskDev = DynamicCast<DpskNetDevice> (dev);
-      const auto dpskDevImpl = dpskDev->GetImplementation ();
-      const auto &pfcPort = DynamicCast<PfcHostPort> (dpskDevImpl);
-      m_devices.insert ({dpskDev, pfcPort});
+      const auto dpskDev = DynamicCast<DpskNetDevice> (dev);
+      m_devices.insert (dpskDev);
     }
 
   m_nDevices = m_devices.size ();
@@ -120,7 +118,33 @@ PfcHost::AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp)
       NS_ASSERT_MSG (false, "PfcHost::AddRdmaTxQueuePair: Find no output device");
       return;
     }
-  m_devices[outDev]->AddRdmaTxQueuePair (qp);
+  outDev->GetObject<PfcHostPort> ()->AddRdmaTxQueuePair (qp);
+}
+
+std::vector<Ptr<RdmaTxQueuePair>>
+PfcHost::GetRdmaTxQueuePairs ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  std::vector<Ptr<RdmaTxQueuePair>> result;
+  for (const auto &dev : m_devices)
+    {
+      const auto temp = dev->GetObject<PfcHostPort> ()->GetRdmaTxQueuePairs ();
+      result.insert (result.end (), temp.begin (), temp.end ());
+    }
+  return result;
+}
+
+std::map<uint32_t, Ptr<RdmaRxQueuePair>>
+PfcHost::GetRdmaRxQueuePairs ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  std::map<uint32_t, Ptr<RdmaRxQueuePair>> result;
+  for (const auto &dev : m_devices)
+    {
+      const auto temp = dev->GetObject<PfcHostPort> ()->GetRdmaRxQueuePairs ();
+      result.insert (temp.begin (), temp.end ());
+    }
+  return result;
 }
 
 Ptr<DpskNetDevice>
@@ -128,6 +152,11 @@ PfcHost::GetOutDev (Ptr<RdmaTxQueuePair> qp)
 {
   NS_LOG_FUNCTION (qp);
 
+  if (m_routeTable.find (qp->m_dIp.Get ()) == m_routeTable.end ())
+    {
+      NS_ASSERT_MSG (false, "PfcHost::GetOutDev: No such route");
+      return 0;
+    }
   auto nextHops = m_routeTable[qp->m_dIp.Get ()];
   if (nextHops.empty () == false)
     {

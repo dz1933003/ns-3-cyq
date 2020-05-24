@@ -28,6 +28,7 @@
 
 #include <unordered_map>
 #include <map>
+#include <set>
 
 namespace ns3 {
 
@@ -102,6 +103,20 @@ public:
    */
   void AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp);
 
+  /**
+   * Get RDMA queue pair for transmitting
+   *
+   * \return queue pairs to send
+   */
+  std::vector<Ptr<RdmaTxQueuePair>> GetRdmaTxQueuePairs ();
+
+  /**
+   * Get RDMA queue pair for receiving
+   *
+   * \return queue pairs to receive
+   */
+  std::map<uint32_t, Ptr<RdmaRxQueuePair>> GetRdmaRxQueuePairs ();
+
 protected:
   /**
    * Perform any object release functionality required to break reference
@@ -119,7 +134,7 @@ private:
   Ptr<DpskNetDevice> GetOutDev (Ptr<RdmaTxQueuePair> qp);
 
   uint32_t m_nDevices; //!< device number
-  std::map<Ptr<DpskNetDevice>, Ptr<PfcHostPort>> m_devices; //!< devices managed by installed Dpsk
+  std::set<Ptr<DpskNetDevice>> m_devices; //!< devices managed by installed Dpsk
 
   /**
    * Map from the value of destination IPv4 address to the vector of avaliable target
