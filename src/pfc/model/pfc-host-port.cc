@@ -55,7 +55,7 @@ PfcHostPort::GetTypeId (void)
   return tid;
 }
 
-PfcHostPort::PfcHostPort ()
+PfcHostPort::PfcHostPort () : m_nTxBytes (0), m_nRxBytes (0)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -117,6 +117,7 @@ PfcHostPort::Transmit ()
     {
       Ptr<Packet> p = m_controlQueue.front ();
       m_controlQueue.pop ();
+      m_nTxBytes += p->GetSize ();
       return p;
     }
 
@@ -131,6 +132,7 @@ PfcHostPort::Transmit ()
           auto p = GenData (qp);
           if (qp->IsFinished ())
             m_queuePairTxCompleteTrace (qp);
+          m_nTxBytes += p->GetSize ();
           return p;
         }
     }
@@ -151,6 +153,8 @@ bool
 PfcHostPort::Receive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (p);
+
+  m_nRxBytes += p->GetSize ();
 
   // Pop Ethernet header
   EthernetHeader ethHeader;

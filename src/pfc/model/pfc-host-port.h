@@ -176,6 +176,9 @@ private:
 public:
   /// Statistics
 
+  uint64_t m_nTxBytes; //!< total transmit bytes
+  uint64_t m_nRxBytes; //!< total receive bytes
+
 private:
   /**
    * Disabled method.

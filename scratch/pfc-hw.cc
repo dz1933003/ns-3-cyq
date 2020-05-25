@@ -24,6 +24,8 @@
 #include <map>
 #include <set>
 
+#include <boost/bimap.hpp>
+
 #include "json.hpp"
 #include "csv.hpp"
 #include "cyq-utils.hpp"
@@ -37,9 +39,9 @@ static DpskHelper dpskHelper;
 uint32_t nQueue;
 uint32_t ecmpSeed;
 DpskNetDevice::TxMode portTxMode;
-std::map<std::string, Ptr<Node>> allNodes;
+boost::bimap<std::string, Ptr<Node>> allNodes;
 std::map<Ptr<Node>, std::vector<Ptr<DpskNetDevice>>> allPorts;
-std::map<Ptr<Node>, Ipv4Address> allIpv4Addresses;
+boost::bimap<Ptr<Node>, Ipv4Address> allIpv4Addresses;
 std::set<Ptr<Node>> hostNodes;
 std::set<Ptr<Node>> switchNodes;
 std::map<uint32_t, Ptr<RdmaTxQueuePair>> allTxQueuePairs;
@@ -106,8 +108,9 @@ main (int argc, char *argv[])
           // Create host node
           const Ptr<Node> node = CreateObject<Node> ();
           hostNodes.insert (node);
-          allNodes[name] = node;
-          allIpv4Addresses[node] = Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.0.0.0"));
+          allNodes.insert ({name, node});
+          allIpv4Addresses.insert (
+              {node, Ipv4AddressGenerator::NextAddress (Ipv4Mask ("255.0.0.0"))});
           // Install ports
           for (size_t i = 0; i < host["PortNumber"]; i++)
             {
@@ -136,7 +139,7 @@ main (int argc, char *argv[])
           // Create switch node
           const Ptr<Node> node = CreateObject<Node> ();
           switchNodes.insert (node);
-          allNodes[name] = node;
+          allNodes.insert ({name, node});
           // Install ports
           for (size_t i = 0; i < sw["PortNumber"]; i++)
             {
@@ -180,8 +183,8 @@ main (int argc, char *argv[])
         break;
       const auto dataRate = DataRate (dataRateInput);
       const auto delay = Time (delayInput);
-      const auto s_node = allNodes[fromNode];
-      const auto d_node = allNodes[toNode];
+      const auto s_node = allNodes.left.at (fromNode);
+      const auto d_node = allNodes.left.at (toNode);
       const auto s_dev = allPorts[s_node][fromPort];
       const auto d_dev = allPorts[d_node][toPort];
       const Ptr<DpskChannel> channel = CreateObject<DpskChannel> ();
@@ -216,14 +219,14 @@ main (int argc, char *argv[])
                                 sizeInput, priority))
         break;
       const auto startTime = Time (startInput);
-      const auto sourceIp = allIpv4Addresses[allNodes[fromNode]];
-      const auto destinationIp = allIpv4Addresses[allNodes[toNode]];
+      const auto sourceIp = allIpv4Addresses.left.at (allNodes.left.at (fromNode));
+      const auto destinationIp = allIpv4Addresses.left.at (allNodes.left.at (toNode));
       const uint64_t size = cyq::DataSize::GetBytes (sizeInput);
       auto txQp = CreateObject<RdmaTxQueuePair> (startTime, sourceIp, destinationIp, sourcePort,
                                                  destinationPort, size, priority);
-      auto sendDpskLayer = allNodes[fromNode]->GetObject<PfcHost> ();
+      auto sendDpskLayer = allNodes.left.at (fromNode)->GetObject<PfcHost> ();
       sendDpskLayer->AddRdmaTxQueuePair (txQp);
-      auto receiveDpskLayer = allNodes[toNode]->GetObject<PfcHost> ();
+      auto receiveDpskLayer = allNodes.left.at (toNode)->GetObject<PfcHost> ();
       receiveDpskLayer->AddRdmaRxQueuePairSize (txQp->GetHash (), size);
       allTxQueuePairs[txQp->GetHash ()] = txQp;
     }
@@ -464,7 +467,7 @@ SetRoutingEntries ()
           // The next hops towards the destination
           const auto nextNodeTable = toNodeEntry.second;
           // The IP address of the destination
-          Ipv4Address dstAddr = allIpv4Addresses[toNode];
+          Ipv4Address dstAddr = allIpv4Addresses.left.at (toNode);
           for (const auto &nextNode : nextNodeTable)
             {
               const auto &device = nbr2if[fromNode][nextNode].device;
@@ -515,6 +518,11 @@ std::map<std::string, std::stringstream> logStreams;
 void TraceFlow ();
 void TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp);
 
+void TraceSwitch (const json &conf);
+void TraceIngressDropPacket (Time interval, Time end);
+
+void TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex);
+
 void
 DoTrace (const std::string &configFile)
 {
@@ -525,13 +533,34 @@ DoTrace (const std::string &configFile)
     {
       TraceFlow ();
     }
+  if (conf["Switch"]["Enable"] == true)
+    {
+      TraceSwitch (conf["Switch"]);
+    }
+  if (conf["TxByte"]["Enable"] == true)
+    {
+      logStreams["TxByte"] << "Time,Node,PortIndex,DropPacket\n";
+      const auto interval = Time (conf["TxByte"]["Interval"].get<std::string> ());
+      const auto start = Time (conf["TxByte"]["Start"].get<std::string> ());
+      const auto end = Time (conf["TxByte"]["End"].get<std::string> ());
+      for (const auto &target : conf["TxByte"]["Target"])
+        {
+          for (const auto &name : target["Name"])
+            {
+              for (const auto &portIndex : target["PortIndex"])
+                {
+                  Simulator::Schedule (start, &TraceTxByte, interval, end, name, portIndex);
+                }
+            }
+        }
+    }
 }
 
 void
 TraceFlow ()
 {
   logStreams["QueuePairRxComplete"]
-      << "SourceIP,DestinationIP,SourcePort,DestinationPort,Size,Priority,StartTime,EndTime\n";
+      << "FromNode,ToNode,SourcePort,DestinationPort,Size,Priority,StartTime,EndTime\n";
   for (const auto &host : hostNodes)
     {
       const auto devs = allPorts[host];
@@ -547,10 +576,61 @@ TraceFlow ()
 void
 TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp)
 {
-  logStreams["QueuePairRxComplete"] << qp->m_sIp << "," << qp->m_dIp << "," << qp->m_sPort << ","
+  const auto fromNode = allNodes.right.at (allIpv4Addresses.right.at (qp->m_sIp));
+  const auto toNode = allNodes.right.at (allIpv4Addresses.right.at (qp->m_dIp));
+  logStreams["QueuePairRxComplete"] << fromNode << "," << toNode << "," << qp->m_sPort << ","
                                     << qp->m_dPort << "," << qp->m_size << "," << qp->m_priority
                                     << "," << allTxQueuePairs[qp->GetHash ()]->m_startTime << ","
                                     << Simulator::Now () << "\n";
+}
+
+void
+TraceSwitch (const json &conf)
+{
+  if (conf["IngressDropPacket"]["Enable"] == true)
+    {
+      logStreams["IngressDropPacket"] << "Time,Node,PortIndex,DropPacket\n";
+      const auto interval = Time (conf["IngressDropPacket"]["Interval"].get<std::string> ());
+      const auto start = Time (conf["IngressDropPacket"]["Start"].get<std::string> ());
+      const auto end = Time (conf["IngressDropPacket"]["End"].get<std::string> ());
+      Simulator::Schedule (start, &TraceIngressDropPacket, interval, end);
+    }
+}
+
+void
+TraceIngressDropPacket (Time interval, Time end)
+{
+  for (const auto &sw : switchNodes)
+    {
+      const auto dpskLayer = sw->GetObject<PfcSwitch> ();
+      const auto dropOfPorts = dpskLayer->m_nIngressDropPacket;
+      for (const auto dropOfPortEntry : dropOfPorts)
+        {
+          const auto dev = dropOfPortEntry.first;
+          const auto drop = dropOfPortEntry.second;
+          logStreams["IngressDropPacket"] << Simulator::Now () << ","
+                                          << allNodes.right.at (dev->GetNode ()) << ","
+                                          << dev->GetIfIndex () << "," << drop << "\n";
+        }
+    }
+  if (Simulator::Now () < end)
+    Simulator::Schedule (interval, &TraceIngressDropPacket, interval, end);
+}
+
+void
+TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex)
+{
+  const auto node = allNodes.left.at (name);
+  const auto port = allPorts[node][portIndex];
+  uint64_t txByte = 0;
+  if (hostNodes.find (node) != hostNodes.end ())
+    txByte = port->GetObject<PfcHostPort> ()->m_nTxBytes;
+  else if (switchNodes.find (node) != switchNodes.end ())
+    txByte = port->GetObject<PfcSwitchPort> ()->m_nTxBytes;
+  logStreams["TxByte"] << Simulator::Now () << "," << name << "," << portIndex << "," << txByte
+                       << "\n";
+  if (Simulator::Now () < end)
+    Simulator::Schedule (interval, &TraceTxByte, interval, end, name, portIndex);
 }
 
 /*****************

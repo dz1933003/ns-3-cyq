@@ -1,5 +1,33 @@
 {
   "Flow": {
     "Enable": true
+  },
+  "Switch": {
+    "Enable": true,
+    "IngressDropPacket": {
+      "Enable": true,
+      "Interval": "1s",
+      "Start": "0s",
+      "End": "3s"
+    }
+  },
+  "TxByte": {
+    "Enable": true,
+    "Interval": "1s",
+    "Start": "0s",
+    "End": "3s",
+    "Target": [
+      {
+        "Name": [
+          "s1"
+        ],
+        "PortIndex": [
+          1
+        ]
+      }
+    ]
+  },
+  "RxByte": {
+    "Enable": false
   }
 }
