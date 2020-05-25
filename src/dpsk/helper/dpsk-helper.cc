@@ -39,6 +39,25 @@ DpskHelper::SetDeviceAttribute (std::string n1, const AttributeValue &v1)
 }
 
 Ptr<Dpsk>
+DpskHelper::Install (Ptr<Node> node)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+
+  Ptr<Dpsk> dpsk = m_deviceFactory.Create<Dpsk> ();
+  node->AddDevice (dpsk);
+
+  uint32_t nDevice = node->GetNDevices ();
+  for (uint32_t i = 0; i < nDevice; i++)
+    {
+      const auto &dev = node->GetDevice (i);
+      if (dev != dpsk)
+        dpsk->AddDevice (dev);
+    }
+
+  return dpsk;
+}
+
+Ptr<Dpsk>
 DpskHelper::Install (Ptr<Node> node, NetDeviceContainer c)
 {
   NS_LOG_FUNCTION_NOARGS ();

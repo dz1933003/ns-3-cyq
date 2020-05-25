@@ -16,22 +16,29 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#ifndef PFC_SWITCH_H
-#define PFC_SWITCH_H
+#ifndef PFC_HOST_H
+#define PFC_HOST_H
+
+#include "pfc-host-port.h"
 
 #include "ns3/dpsk-layer.h"
 #include "ns3/object.h"
-#include "ns3/dpsk-net-device.h"
-#include "switch-mmu.h"
+#include "ns3/net-device.h"
+#include "ns3/rdma-tx-queue-pair.h"
+
 #include <unordered_map>
+#include <map>
+#include <set>
 
 namespace ns3 {
 
+class PfcHostPort;
+
 /**
  * \ingroup pfc
- * \brief PFC switch implementation
+ * \brief PFC host implementation
  */
-class PfcSwitch : public DpskLayer
+class PfcHost : public DpskLayer
 {
 public:
   /**
@@ -41,10 +48,10 @@ public:
   static TypeId GetTypeId (void);
 
   /**
-   * Construct a PfcSwitch
+   * Construct a PfcHost
    */
-  PfcSwitch ();
-  virtual ~PfcSwitch ();
+  PfcHost ();
+  virtual ~PfcHost ();
 
   /**
    * \brief Sends a packet from one device.
@@ -77,35 +84,6 @@ public:
   virtual void InstallDpsk (Ptr<Dpsk> dpsk);
 
   /**
-   * \brief Install MMU to the switch.
-   * \param mmu MMU of the switch
-   */
-  void InstallMmu (Ptr<SwitchMmu> mmu);
-
-  /**
-   * Get MMU of this switch
-   *
-   * \return mmu of this switch
-   */
-  Ptr<SwitchMmu> GetMmu (void);
-
-  /**
-   * Set ECMP seed
-   *
-   * \param s seed
-   */
-  void SetEcmpSeed (uint32_t s);
-
-  /**
-   * Set Queue count.
-   * It is not checked by this method that every net device have the same number of queues.
-   * So do not use different net devices in one topology.
-   *
-   * \param n number of queues
-   */
-  void SetNQueues (uint32_t n);
-
-  /**
    * Add a route rule to the route table
    *
    * \param dest the IPv4 address of the destination
@@ -125,6 +103,43 @@ public:
    */
   void ClearRouteTable ();
 
+  /**
+   * Add RDMA queue pair for transmitting
+   *
+   * \param qp queue pair to send
+   */
+  void AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * Get RDMA queue pair for transmitting
+   *
+   * \return queue pairs to send
+   */
+  std::vector<Ptr<RdmaTxQueuePair>> GetRdmaTxQueuePairs ();
+
+  /**
+   * Get RDMA queue pair for receiving
+   *
+   * \return queue pairs to receive
+   */
+  std::map<uint32_t, Ptr<RdmaRxQueuePair>> GetRdmaRxQueuePairs ();
+
+  /**
+   * Add RDMA queue pair size for receiving port
+   *
+   * \param key hash key of the queue pair
+   * \param size size of the queue pair
+   */
+  void AddRdmaRxQueuePairSize (uint32_t key, uint64_t size);
+
+  /**
+   * Get RDMA queue pair size for receiving port
+   *
+   * \param key hash key of the queue pair
+   * \return size of the queue pair
+   */
+  uint64_t GetRdmaRxQueuePairSize (uint32_t key);
+
 protected:
   /**
    * Perform any object release functionality required to break reference
@@ -136,37 +151,13 @@ private:
   /**
    * Get ouput device by ECMP
    *
-   * \param p received packet
+   * \param qp transimitted queue pair
    * \return target net device
    */
-  Ptr<DpskNetDevice> GetOutDev (Ptr<const Packet> p);
-
-  /**
-   * Calculate ECMP Hash
-   *
-   * \param key array of bytes to calculate
-   * \param len length of the array
-   * \return hash code
-   */
-  uint32_t CalcEcmpHash (const uint8_t *key, size_t len);
-
-  /**
-   * Dequeue callback for each device in the switch.
-   *
-   * \param outDev output device
-   * \param packet output packet
-   * \param qIndex output queue index
-   */
-  void DeviceDequeueHandler (Ptr<NetDevice> outDev, Ptr<Packet> packet, uint32_t qIndex);
-
-  uint32_t m_ecmpSeed; //!< ECMP seed
+  Ptr<DpskNetDevice> GetOutDev (Ptr<RdmaTxQueuePair> qp);
 
   uint32_t m_nDevices; //!< device number
-
-  // devices managed by installed Dpsk with index
-  std::unordered_map<uint32_t, Ptr<DpskNetDevice>> m_devices;
-
-  uint32_t m_nQueues; //!< queues of every devices
+  std::set<Ptr<DpskNetDevice>> m_devices; //!< devices managed by installed Dpsk
 
   /**
    * Map from the value of destination IPv4 address to the vector of avaliable target
@@ -174,19 +165,14 @@ private:
    */
   std::unordered_map<uint32_t, std::vector<Ptr<DpskNetDevice>>> m_routeTable;
 
-  Ptr<SwitchMmu> m_mmu; //!< mmu of this switch
+  std::map<uint32_t, uint64_t> m_rxQueuePairSize; //!< hash and received queue pair size
 
-public:
-  /// Statistics
-  std::map<Ptr<DpskNetDevice>, uint32_t> m_nIngressDropPacket;
-
-private:
   /**
    * \brief Copy constructor
    *
    * Defined and unimplemented to avoid misuse
    */
-  PfcSwitch (const PfcSwitch &);
+  PfcHost (const PfcHost &);
 
   /**
    * \brief Copy constructor
@@ -194,9 +180,9 @@ private:
    * Defined and unimplemented to avoid misuse
    * \returns
    */
-  PfcSwitch &operator= (const PfcSwitch &);
+  PfcHost &operator= (const PfcHost &);
 };
 
 } // namespace ns3
 
-#endif /* PFC_SWITCH_H */
+#endif /* PFC_HOST_H */

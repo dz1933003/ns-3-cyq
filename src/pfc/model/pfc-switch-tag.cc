@@ -48,64 +48,52 @@ uint32_t
 PfcSwitchTag::GetSerializedSize (void) const
 {
   NS_LOG_FUNCTION (this);
-  return sizeof (m_inDev);
+  return sizeof (m_inDevIdx);
 }
 
 void
 PfcSwitchTag::Serialize (TagBuffer buf) const
 {
   NS_LOG_FUNCTION (this << &buf);
-#if __WORDSIZE == 64
-  buf.WriteU64 ((uint64_t) & (*m_inDev));
-#elif __WORDSIZE == 32
-  buf.WriteU32 ((uint32_t) & (*m_inDev));
-#else
-  NS_ASSERT_MSG (false, "Unrecognized machine word length");
-#endif
+  buf.WriteU32 (m_inDevIdx);
 }
 
 void
 PfcSwitchTag::Deserialize (TagBuffer buf)
 {
   NS_LOG_FUNCTION (this << &buf);
-#if __WORDSIZE == 64
-  m_inDev = (NetDevice *) buf.ReadU64 ();
-#elif __WORDSIZE == 32
-  m_inDev = (NetDevice *) buf.ReadU32 ();
-#else
-  NS_ASSERT_MSG (false, "Unrecognized machine word length");
-#endif
+  m_inDevIdx = buf.ReadU32 ();
 }
 
 void
 PfcSwitchTag::Print (std::ostream &os) const
 {
   NS_LOG_FUNCTION (this << &os);
-  os << "Input Device: " << m_inDev;
+  os << "Input device index: " << m_inDevIdx;
 }
 
-PfcSwitchTag::PfcSwitchTag () : Tag (), m_inDev (0)
+PfcSwitchTag::PfcSwitchTag () : Tag (), m_inDevIdx (0)
 {
   NS_LOG_FUNCTION (this);
 }
 
-PfcSwitchTag::PfcSwitchTag (Ptr<NetDevice> device) : Tag (), m_inDev (device)
+PfcSwitchTag::PfcSwitchTag (uint32_t ifIdx) : Tag (), m_inDevIdx (ifIdx)
 {
-  NS_LOG_FUNCTION (this << device);
+  NS_LOG_FUNCTION (this << ifIdx);
 }
 
 void
-PfcSwitchTag::SetInDev (Ptr<NetDevice> device)
+PfcSwitchTag::SetInDev (uint32_t ifIdx)
 {
-  NS_LOG_FUNCTION (this << device);
-  m_inDev = device;
+  NS_LOG_FUNCTION (this << ifIdx);
+  m_inDevIdx = ifIdx;
 }
 
-Ptr<NetDevice>
-PfcSwitchTag::GetInDev (void) const
+uint32_t
+PfcSwitchTag::GetInDevIdx (void) const
 {
   NS_LOG_FUNCTION (this);
-  return m_inDev;
+  return m_inDevIdx;
 }
 
 } // namespace ns3

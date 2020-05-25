@@ -52,6 +52,20 @@ DpskNetDeviceImpl::~DpskNetDeviceImpl ()
   NS_LOG_FUNCTION (this);
 }
 
+std::string
+DpskNetDeviceImpl::GetName () const
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_name;
+}
+
+void
+DpskNetDeviceImpl::SetName (std::string name)
+{
+  NS_LOG_FUNCTION (name);
+  m_name = name;
+}
+
 void
 DpskNetDeviceImpl::DoDispose ()
 {

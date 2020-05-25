@@ -79,16 +79,20 @@ PfcSwitch::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, u
                               NetDevice::PacketType packetType)
 {
   NS_LOG_FUNCTION (device << packet << protocol << &source << &destination << packetType);
-  // TODO cyq: trace packet
+  // Remove Ethernet header
+  Ptr<Packet> p = packet->Copy ();
+  EthernetHeader ethHeader;
+  p->RemoveHeader (ethHeader);
+
   Ptr<DpskNetDevice> inDev = DynamicCast<DpskNetDevice> (device);
-  Ptr<DpskNetDevice> outDev = DynamicCast<DpskNetDevice> (GetOutDev (packet));
+  Ptr<DpskNetDevice> outDev = DynamicCast<DpskNetDevice> (GetOutDev (p));
   if (outDev == 0)
     return; // Drop packet
 
   NS_ASSERT_MSG (outDev->IsLinkUp (), "The routing table look up should return link that is up");
 
   Ipv4Header ipHeader;
-  packet->PeekHeader (ipHeader);
+  p->PeekHeader (ipHeader);
 
   uint32_t pSize = packet->GetSize ();
   auto dscp = ipHeader.GetDscp ();
@@ -105,7 +109,10 @@ PfcSwitch::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, u
           m_mmu->UpdateEgressAdmission (outDev, dscp, pSize);
         }
       else
-        return; // Drop packet
+        {
+          m_nIngressDropPacket[inDev]++;
+          return; // Drop packet
+        }
 
       // Check and send PFC
       if (m_mmu->CheckShouldSendPfcPause (inDev, qIndex))
@@ -121,62 +128,107 @@ PfcSwitch::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, u
         }
     }
 
-  SendFromDevice (outDev, packet, protocol, outDev->GetAddress (), outDev->GetRemote ());
+  SendFromDevice (outDev, p, protocol, outDev->GetAddress (), outDev->GetRemote ());
 }
 
 void
 PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
 {
   NS_LOG_FUNCTION (dpsk);
+
   m_dpsk = dpsk;
   m_dpsk->RegisterReceiveFromDeviceHandler (MakeCallback (&PfcSwitch::ReceiveFromDevice, this));
-  m_devices = m_dpsk->GetDevices ();
-  m_nDevices = m_devices.size ();
-  m_nQueues = 0;
 
-  for (const auto &dev : m_devices)
+  const auto &devices = m_dpsk->GetDevices ();
+  m_nDevices = devices.size ();
+
+  for (const auto &dev : devices)
     {
-      const auto &dpskDevImpl = DynamicCast<DpskNetDevice> (dev)->GetImplementation ();
-      const auto &pfcPortImpl = DynamicCast<PfcSwitchPort> (dpskDevImpl);
+      const auto dpskDev = DynamicCast<DpskNetDevice> (dev);
+      m_devices.insert ({dev->GetIfIndex (), dpskDev});
+      const auto pfcPortImpl = dpskDev->GetObject<PfcSwitchPort> ();
       pfcPortImpl->SetDeviceDequeueHandler (MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
     }
+
+  AggregateObject (m_dpsk->GetNode ());
 }
 
 void
 PfcSwitch::InstallMmu (Ptr<SwitchMmu> mmu)
 {
+  NS_LOG_FUNCTION (mmu);
+
   m_mmu = mmu;
-  m_mmu->AggregateDevices (m_devices, m_nQueues);
+  m_mmu->ConfigNQueue (m_nQueues);
+  for (const auto &entry : m_devices)
+    {
+      const auto &dev = entry.second;
+      m_mmu->AggregateDevice (dev);
+    }
+
+  AggregateObject (mmu);
+}
+
+Ptr<SwitchMmu>
+PfcSwitch::GetMmu (void)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_mmu;
 }
 
 void
 PfcSwitch::SetEcmpSeed (uint32_t s)
 {
+  NS_LOG_FUNCTION (s);
   m_ecmpSeed = s;
 }
 
 void
 PfcSwitch::SetNQueues (uint32_t n)
 {
+  NS_LOG_FUNCTION (n);
   m_nQueues = n;
 }
 
 void
-PfcSwitch::AddRouteTableEntry (const Ipv4Address &dest, Ptr<NetDevice> dev)
+PfcSwitch::AddRouteTableEntry (const Ipv4Address &dest, Ptr<DpskNetDevice> dev)
 {
+  NS_LOG_FUNCTION (dest << dev);
+
+  bool find = false;
+  for (const auto &entry : m_devices)
+    {
+      if (entry.second == dev)
+        {
+          find = true;
+          break;
+        }
+    }
+  NS_ASSERT_MSG (find, "PfcSwitch::AddRouteTableEntry: No such device");
+
   uint32_t destVal = dest.Get ();
   m_routeTable[destVal].push_back (dev);
+}
+
+std::unordered_map<uint32_t, std::vector<Ptr<DpskNetDevice>>>
+PfcSwitch::GetRouteTable ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_routeTable;
 }
 
 void
 PfcSwitch::ClearRouteTable ()
 {
+  NS_LOG_FUNCTION_NOARGS ();
   m_routeTable.clear ();
 }
 
-Ptr<NetDevice>
+Ptr<DpskNetDevice>
 PfcSwitch::GetOutDev (Ptr<const Packet> p)
 {
+  NS_LOG_FUNCTION (p);
+
   Ptr<Packet> packet = p->Copy ();
   // Reveal IP header
   Ipv4Header ipHeader;
@@ -226,6 +278,8 @@ PfcSwitch::GetOutDev (Ptr<const Packet> p)
 uint32_t
 PfcSwitch::CalcEcmpHash (const uint8_t *key, size_t len)
 {
+  NS_LOG_FUNCTION (key << len);
+
   uint32_t h = m_ecmpSeed;
   if (len > 3)
     {
@@ -272,9 +326,12 @@ PfcSwitch::CalcEcmpHash (const uint8_t *key, size_t len)
 void
 PfcSwitch::DeviceDequeueHandler (Ptr<NetDevice> outDev, Ptr<Packet> packet, uint32_t qIndex)
 {
+  NS_LOG_FUNCTION (outDev << packet << qIndex);
+
   PfcSwitchTag tag;
   packet->PeekPacketTag (tag);
-  Ptr<DpskNetDevice> inDev = DynamicCast<DpskNetDevice> (tag.GetInDev ());
+
+  Ptr<DpskNetDevice> inDev = DynamicCast<DpskNetDevice> (m_devices[tag.GetInDevIdx ()]);
   uint32_t pSize = packet->GetSize ();
 
   if (qIndex == m_nQueues) // control queue

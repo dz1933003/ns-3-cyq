@@ -62,6 +62,20 @@ public:
    */
   virtual ~DpskNetDeviceImpl ();
 
+  /**
+   * \brief Get the name of the implementation.
+   * \return name
+   */
+  std::string GetName () const;
+
+  /**
+   * \brief Set the name of the implementation.
+   * \param name the name of the implementation
+   *
+   * In fact, every instance of a implementation should have a unique name.
+   */
+  void SetName (std::string name);
+
 protected:
   /**
    * Make protected functions of this class and its subclasses public to
@@ -105,6 +119,7 @@ protected:
    */
   virtual void DoDispose (void);
 
+  std::string m_name; //!< Dpsk layer name
   Ptr<DpskNetDevice> m_dev; //!< Attached DpskNetDevice
 
 private:

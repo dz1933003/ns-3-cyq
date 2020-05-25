@@ -41,11 +41,20 @@ PfcSwitchPort::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::PfcSwitchPort")
                           .SetParent<Object> ()
                           .SetGroupName ("PfcSwitchPort")
-                          .AddConstructor<PfcSwitchPort> ();
+                          .AddConstructor<PfcSwitchPort> ()
+                          .AddTraceSource ("PfcRx", "Receive a PFC packet",
+                                           MakeTraceSourceAccessor (&PfcSwitchPort::m_pfcRxTrace),
+                                           "PfcHeader::PfcType, uint32_t, std::vector<bool>");
   return tid;
 }
 
 PfcSwitchPort::PfcSwitchPort ()
+    : m_nQueues (0),
+      m_lastQueueIdx (0),
+      m_nInQueueBytes (0),
+      m_nInQueuePackets (0),
+      m_nTxBytes (0),
+      m_nRxBytes (0)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -91,17 +100,19 @@ PfcSwitchPort::Transmit ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  uint32_t qIndex = m_nQueues + 1; // bigger than number of queues is invalid
+  uint32_t qIndex;
   Ptr<Packet> p = Dequeue (qIndex);
 
   if (p == 0)
     return 0;
 
+  // Notify switch dequeue event
+  m_mmuCallback (m_dev, p, qIndex);
+
   PfcSwitchTag tag;
   p->RemovePacketTag (tag);
 
-  // Notify switch dequeue event
-  m_mmuCallback (m_dev, p, qIndex);
+  m_nTxBytes += p->GetSize();
 
   return p;
 }
@@ -150,15 +161,19 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  PfcSwitchTag tag (m_dev);
+  m_nRxBytes += p->GetSize();
+
+  PfcSwitchTag tag (m_dev->GetIfIndex ());
   p->AddPacketTag (tag); // Add tag for tracing input device when dequeue in the net device
 
-  // Pop Ethernet header
+  // Get Ethernet header
   EthernetHeader ethHeader;
-  p->RemoveHeader (ethHeader);
+  p->PeekHeader (ethHeader);
 
   if (ethHeader.GetLengthType () == PfcHeader::PROT_NUM) // PFC protocol number
     {
+      // Pop Ethernet header
+      p->RemoveHeader (ethHeader);
       // Pop PFC header
       PfcHeader pfcHeader;
       p->RemoveHeader (pfcHeader);
@@ -169,6 +184,7 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
           uint32_t pfcQIndex = pfcHeader.GetQIndex ();
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = true;
+          m_pfcRxTrace (PfcHeader::Pause, qIndex, m_pausedStates);
           return false; // Do not forward up to node
         }
       else if (pfcHeader.GetType () == PfcHeader::Resume) // PFC Resume
@@ -177,6 +193,7 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
           uint32_t pfcQIndex = pfcHeader.GetQIndex ();
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = false;
+          m_pfcRxTrace (PfcHeader::Resume, qIndex, m_pausedStates);
           m_dev->TriggerTransmit (); // Trigger device transmitting
           return false; // Do not forward up to node
         }
@@ -185,11 +202,10 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
           NS_ASSERT_MSG (false, "PfcSwitchPort::Rx: Invalid PFC type");
           return false; // Drop this packet
         }
-      // TODO cyq: trace PFC
     }
   else // Not PFC
     {
-      return true; // Forward up to node
+      return true; // Forward up to node without any change
     }
 }
 

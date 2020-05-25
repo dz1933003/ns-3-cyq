@@ -232,6 +232,7 @@ DpskNetDevice::SetImplementation (Ptr<DpskNetDeviceImpl> impl)
   SetTransmitInterceptor (MakeCallback (&DpskNetDeviceImpl::Transmit, m_impl));
   SetSendInterceptor (MakeCallback (&DpskNetDeviceImpl::Send, m_impl));
   SetReceiveInterceptor (MakeCallback (&DpskNetDeviceImpl::Receive, m_impl));
+  AggregateObject(m_impl);
 }
 
 Ptr<DpskNetDeviceImpl>
@@ -353,7 +354,7 @@ DpskNetDevice::TransmitRequest ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  Ptr<Packet> p = m_txInterceptor ();
+  Ptr<Packet> p = m_txInterceptor (); // DPSK transmit process
   if (p == 0)
     {
       m_keepTransmit = false;
@@ -479,17 +480,19 @@ DpskNetDevice::Receive (Ptr<Packet> packet)
       //
       Ptr<Packet> originalPacket = packet->Copy ();
 
-      if (!m_promiscCallback.IsNull ())
-        {
-          m_macPromiscRxTrace (originalPacket);
-          m_promiscCallback (this, packet, protocol, GetRemote (), GetAddress (),
-                             NetDevice::PACKET_HOST);
-        }
-
-      m_macRxTrace (originalPacket);
-
       if (m_rxInterceptor (packet))
-        m_rxCallback (this, packet, protocol, GetRemote ());
+        {
+          if (!m_promiscCallback.IsNull ())
+            {
+              m_macPromiscRxTrace (originalPacket);
+              m_promiscCallback (this, packet, protocol, GetRemote (), GetAddress (),
+                                 NetDevice::PACKET_HOST); // DPSK receive process
+            }
+
+          m_macRxTrace (originalPacket);
+
+          m_rxCallback (this, packet, protocol, GetRemote ()); // Other protocols
+        }
     }
 }
 
@@ -673,10 +676,17 @@ DpskNetDevice::SendFrom (Ptr<Packet> packet, const Address &source, const Addres
     }
   else if (m_txMode == ACTIVE)
     {
-      bool status = m_sendInterceptor (packet, source, dest, protocolNumber);
+      bool status = m_sendInterceptor (packet, source, dest, protocolNumber); // DPSK send process
       if (status == false)
-        m_macTxDropTrace (packet);
-      return status;
+        {
+          m_macTxDropTrace (packet);
+          return false;
+        }
+      else
+        {
+          TriggerTransmit ();
+          return status;
+        }
     }
   else
     {
@@ -720,7 +730,7 @@ bool
 DpskNetDevice::SupportsSendFrom (void) const
 {
   NS_LOG_FUNCTION (this);
-  return false;
+  return true;
 }
 
 void

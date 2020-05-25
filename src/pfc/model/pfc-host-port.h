@@ -18,27 +18,27 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#ifndef PFC_SWITCH_PORT_H
-#define PFC_SWITCH_PORT_H
+#ifndef PFC_HOST_PORT_H
+#define PFC_HOST_PORT_H
 
 #include "ns3/dpsk-net-device-impl.h"
+#include "ns3/rdma-tx-queue-pair.h"
+#include "ns3/rdma-rx-queue-pair.h"
 #include "ns3/traced-callback.h"
-#include "ns3/pfc-header.h"
+#include "pfc-header.h"
+#include "pfc-host.h"
 #include <vector>
 #include <queue>
+#include <map>
 
 namespace ns3 {
 
 /**
  * \ingroup pfc
- * \class PfcSwitchPort
+ * \class PfcHostPort
  * \brief The Priority Flow Control Net Device Logic Implementation.
- *
- * Attention: No data packet modify on the port when receive (for mmu statics). Only
- * handle PFC frames.
- * Add Ethenet header when transmit.
  */
-class PfcSwitchPort : public DpskNetDeviceImpl
+class PfcHostPort : public DpskNetDeviceImpl
 {
 public:
   /**
@@ -51,12 +51,12 @@ public:
   /**
    * Constructor
    */
-  PfcSwitchPort ();
+  PfcHostPort ();
 
   /**
    * Destructor
    */
-  virtual ~PfcSwitchPort ();
+  virtual ~PfcHostPort ();
 
   /**
    * Setup queues.
@@ -71,25 +71,29 @@ public:
   void CleanQueues ();
 
   /**
-   * Transmit callback to notify mmu
+   * Add RDMA queue pair for transmitting
    *
-   * \param output device
-   * \param output packet
-   * \param output queue index
-   * \return void
+   * \param qp queue pair to send
    */
-  typedef Callback<void, Ptr<NetDevice>, Ptr<Packet>, uint32_t> DeviceDequeueNotifier;
+  void AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp);
 
   /**
-   * Setup dequeue event notifier
+   * Get RDMA queue pair for transmitting
    *
-   * \param h callback
+   * \return queue pairs to send
    */
-  void SetDeviceDequeueHandler (DeviceDequeueNotifier h);
+  std::vector<Ptr<RdmaTxQueuePair>> GetRdmaTxQueuePairs ();
+
+  /**
+   * Get RDMA queue pair for receiving
+   *
+   * \return queue pairs to receive
+   */
+  std::map<uint32_t, Ptr<RdmaRxQueuePair>> GetRdmaRxQueuePairs ();
 
 protected:
   /**
-   * PFC switch port transmitting logic.
+   * PFC host port transmitting logic.
    *
    * \return Ptr to the packet.
    */
@@ -103,7 +107,7 @@ protected:
    *        this packet. Used to call the right L3Protocol when the packet
    *        is received.
    *
-   *  Called by Switch Node.
+   *  Called by Host Node.
    *
    * \return whether the Send operation succeeded
    */
@@ -111,7 +115,7 @@ protected:
                      uint16_t protocolNumber);
 
   /**
-   * PFC switch port receiving logic.
+   * PFC host port receiving logic.
    *
    * \param p Ptr to the received packet.
    * \return whether need to forward up.
@@ -123,32 +127,28 @@ protected:
    */
   virtual void DoDispose (void);
 
+  // Admission to PfcHost
+  friend class PfcHost;
+
 private:
-  /**
-   * Dequeue by round robin for queues of the port
-   * except the control queue.
-   *
-   * \param qIndex dequeue queue index (output)
-   * \return Ptr to the dequeued packet
-   */
-  Ptr<Packet> DequeueRoundRobin (uint32_t &qIndex);
-
-  /**
-   * Dequeue a packet for queues with the control queue.
-   *
-   * \param qIndex dequeue queue index (output)
-   * \return Ptr to the dequeued packet
-   */
-  Ptr<Packet> Dequeue (uint32_t &qIndex);
-
   uint32_t m_nQueues; //!< queue count of the port (control queue not included)
-  std::vector<std::queue<Ptr<Packet>>> m_queues; //!< queues of the port (with control queue)
 
   std::vector<bool> m_pausedStates; //!< paused state of queues
 
-  uint32_t m_lastQueueIdx; //!< last dequeue queue index (control queue excluded)
+  std::queue<Ptr<Packet>> m_controlQueue; //!< control queue
 
-  DeviceDequeueNotifier m_mmuCallback; //!< callback to notify mmu
+  std::vector<Ptr<RdmaTxQueuePair>> m_txQueuePairs; //!< transmit queue pairs
+  std::map<uint32_t, Ptr<RdmaRxQueuePair>> m_rxQueuePairs; //!< hash and received queue pairs
+
+  uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
+
+  /**
+   * Generate data packet of target transmitting queue pair
+   *
+   * \param qp queue pair
+   * \return data packet
+   */
+  Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp);
 
   /**
    * The trace source fired for received a PFC packet.
@@ -159,14 +159,22 @@ private:
    */
   TracedCallback<PfcHeader::PfcType, uint32_t, std::vector<bool>> m_pfcRxTrace;
 
+  /**
+   * The trace source fired for completing sending a queue pair.
+   *
+   * \param Ptr pointer of RdmaTxQueuePair
+   */
+  TracedCallback<Ptr<RdmaTxQueuePair>> m_queuePairTxCompleteTrace;
+
+  /**
+   * The trace source fired for completing receiving a queue pair.
+   *
+   * \param Ptr pointer of RdmaRxQueuePair
+   */
+  TracedCallback<Ptr<RdmaRxQueuePair>> m_queuePairRxCompleteTrace;
+
 public:
   /// Statistics
-
-  uint64_t m_nInQueueBytes; //!< total in-queue bytes (control queue included)
-  std::vector<uint64_t> m_inQueueBytesList; //!< in-queue bytes in every queue
-
-  uint32_t m_nInQueuePackets; //!< total in-queue packet count (control queue included)
-  std::vector<uint32_t> m_inQueuePacketsList; //!< in-queue packet count in every queue
 
   uint64_t m_nTxBytes; //!< total transmit bytes
   uint64_t m_nRxBytes; //!< total receive bytes
@@ -175,14 +183,14 @@ private:
   /**
    * Disabled method.
    */
-  PfcSwitchPort &operator= (const PfcSwitchPort &o);
+  PfcHostPort &operator= (const PfcHostPort &o);
 
   /**
    * Disabled method.
    */
-  PfcSwitchPort (const PfcSwitchPort &o);
+  PfcHostPort (const PfcHostPort &o);
 };
 
 } // namespace ns3
 
-#endif /* PFC_SWITCH_PORT_H */
+#endif /* PFC_HOST_PORT_H */

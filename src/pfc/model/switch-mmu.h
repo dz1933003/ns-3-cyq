@@ -22,6 +22,7 @@
 #include <ns3/node.h>
 #include <vector>
 #include <map>
+#include <sstream>
 
 namespace ns3 {
 
@@ -47,14 +48,24 @@ public:
   SwitchMmu ();
   ~SwitchMmu ();
 
+  std::string Dump();
+
+private:
   /**
    * Add devices need to be managed to the mmu
    *
-   * \param devs devices.
-   * \param n number of queues
+   * \param dev device.
    */
-  void AggregateDevices (const std::vector<Ptr<NetDevice>> &devs, const uint32_t &n);
+  void AggregateDevice (Ptr<NetDevice> dev);
 
+  /**
+   * Configurate queue number of the switch
+   *
+   * \param n queue number
+   */
+  void ConfigNQueue (uint32_t n);
+
+public:
   /**
    * Configurate buffer size
    *
@@ -63,7 +74,7 @@ public:
   void ConfigBufferSize (uint64_t size);
 
   /**
-   * Configurate ECN parameters
+   * Configurate ECN parameters on one queue
    *
    * \param port target port
    * \param qIndex target queue index
@@ -74,13 +85,129 @@ public:
   void ConfigEcn (Ptr<NetDevice> port, uint32_t qIndex, uint64_t kMin, uint64_t kMax, double pMax);
 
   /**
-   * Configurate headroom
+   * Configurate ECN parameters on all queues of the port
+   *
+   * \param port target port
+   * \param kMin kMin
+   * \param kMax kMax
+   * \param pMax pMax
+   */
+  void ConfigEcn (Ptr<NetDevice> port, uint64_t kMin, uint64_t kMax, double pMax);
+
+  /**
+   * Configurate ECN parameters on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param kMin kMin
+   * \param kMax kMax
+   * \param pMax pMax
+   */
+  void ConfigEcn (uint32_t qIndex, uint64_t kMin, uint64_t kMax, double pMax);
+
+  /**
+   * Configurate ECN parameters on all ports in the switch
+   *
+   * \param kMin kMin
+   * \param kMax kMax
+   * \param pMax pMax
+   */
+  void ConfigEcn (uint64_t kMin, uint64_t kMax, double pMax);
+
+  /**
+   * Configurate headroom on one queue
    *
    * \param port target port
    * \param qIndex target queue index
    * \param size headroom size by byte
    */
   void ConfigHeadroom (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate headroom on all queues of the port
+   *
+   * \param port target port
+   * \param size headroom size by byte
+   */
+  void ConfigHeadroom (Ptr<NetDevice> port, uint64_t size);
+
+  /**
+   * Configurate headroom on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param size headroom size by byte
+   */
+  void ConfigHeadroom (uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate headroom on all ports in the switch
+   *
+   * \param size headroom size by byte
+   */
+  void ConfigHeadroom (uint64_t size);
+
+  /**
+   * Configurate reserved buffer on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param size reserved size by byte
+   */
+  void ConfigReserve (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate reserve on all queues of the port
+   *
+   * \param port target port
+   * \param size reserve size by byte
+   */
+  void ConfigReserve (Ptr<NetDevice> port, uint64_t size);
+
+  /**
+   * Configurate reserved buffer on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param size reserved size by byte
+   */
+  void ConfigReserve (uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate reserve on all ports in the switch
+   *
+   * \param size reserve size by byte
+   */
+  void ConfigReserve (uint64_t size);
+
+  /**
+   * Configurate resume offset on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param size resume offset size by byte
+   */
+  void ConfigResumeOffset (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate resume offset on all queues of the port
+   *
+   * \param port target port
+   * \param size resume offset size by byte
+   */
+  void ConfigResumeOffset (Ptr<NetDevice> port, uint64_t size);
+
+  /**
+   * Configurate resume offset on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param size resume offset size by byte
+   */
+  void ConfigResumeOffset (uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate resume offset on all ports in the switch
+   *
+   * \param size resume offset size by byte
+   */
+  void ConfigResumeOffset (uint64_t size);
 
   /**
    * Check the admission of target ingress
@@ -195,6 +322,30 @@ public:
   uint64_t GetBufferSize ();
 
   /**
+   * Get headroom size
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return headroom by byte
+   */
+  uint64_t GetHeadroomSize (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Get headroom size
+   *
+   * \param port target port
+   * \return headroom by byte
+   */
+  uint64_t GetHeadroomSize (Ptr<NetDevice> port);
+
+  /**
+   * Get headroom size
+   *
+   * \return headroom by byte
+   */
+  uint64_t GetHeadroomSize ();
+
+  /**
    * Get shared buffer size
    *
    * \return shared buffer size by byte
@@ -239,6 +390,8 @@ protected:
    */
   virtual void DoDispose (void);
 
+  friend class PfcSwitch;
+
 private:
   uint64_t m_bufferConfig; //!< configuration of buffer size
 
@@ -256,6 +409,7 @@ private:
     uint64_t kMin;
     uint64_t kMax;
     double pMax;
+    bool enable;
   };
 
   // Map from Ptr to net device to the queue configuration of ECN
@@ -279,10 +433,12 @@ private:
   uint32_t m_nQueues; //!< queue number of each device
   std::vector<Ptr<NetDevice>> m_devices; //!< devices managed by this mmu
 
+  bool m_dynamicThreshold; //!< if enabled dynamic PFC threshold
+
   // Map from Ptr to net device to a vector of queue PFC paused states.
   std::map<Ptr<NetDevice>, std::vector<bool>> m_pausedStates;
 
-  Ptr<UniformRandomVariable> uniRand;
+  Ptr<UniformRandomVariable> uniRand; //!< random var stream
 
   /**
    * \brief Copy constructor
