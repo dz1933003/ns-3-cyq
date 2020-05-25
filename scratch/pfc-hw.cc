@@ -42,11 +42,13 @@ std::map<Ptr<Node>, std::vector<Ptr<DpskNetDevice>>> allPorts;
 std::map<Ptr<Node>, Ipv4Address> allIpv4Addresses;
 std::set<Ptr<Node>> hostNodes;
 std::set<Ptr<Node>> switchNodes;
-std::set<Ptr<RdmaTxQueuePair>> allTxQueuePairs;
+std::map<uint32_t, Ptr<RdmaTxQueuePair>> allTxQueuePairs;
 std::map<uint32_t, Ptr<RdmaRxQueuePair>> allRxQueuePairs;
 
 uint64_t maxBdp = 0;
 Time maxRtt (0);
+
+std::string outputFolder;
 
 struct Interface
 {
@@ -73,6 +75,7 @@ void SetRoutingEntries ();
 void CalculateRttBdp ();
 
 void DoTrace (const std::string &configFile);
+void DoLog ();
 
 NS_LOG_COMPONENT_DEFINE ("PFC HW");
 
@@ -222,18 +225,20 @@ main (int argc, char *argv[])
       sendDpskLayer->AddRdmaTxQueuePair (txQp);
       auto receiveDpskLayer = allNodes[toNode]->GetObject<PfcHost> ();
       receiveDpskLayer->AddRdmaRxQueuePairSize (txQp->GetHash (), size);
-      allTxQueuePairs.insert (txQp);
+      allTxQueuePairs[txQp->GetHash ()] = txQp;
     }
 
   // TODO cyq: add trace and logs
   NS_LOG_UNCOND ("====Trace====");
+  outputFolder = conf["LogOutputFolder"];
+  DoTrace (conf["TraceConfigFile"]);
 
   NS_LOG_UNCOND ("====Simulate====");
   Simulator::Run ();
   Simulator::Destroy ();
 
   NS_LOG_UNCOND ("====Output====");
-  DoTrace (conf["TraceConfigFile"]);
+  DoLog ();
 
   NS_LOG_UNCOND ("====Done====");
 }
@@ -505,17 +510,16 @@ CalculateRttBdp ()
  * Trace Functions *
  *******************/
 
-std::string outputFolder;
+std::map<std::string, std::stringstream> logStreams;
 
 void TraceFlow ();
+void TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp);
 
 void
 DoTrace (const std::string &configFile)
 {
   std::ifstream file (configFile);
   json conf = json::parse (file);
-
-  outputFolder = conf["OutputFolder"];
 
   if (conf["Flow"]["Enable"] == true)
     {
@@ -526,19 +530,44 @@ DoTrace (const std::string &configFile)
 void
 TraceFlow ()
 {
-  // std::string outputFileName =
-  //     outputFolder + "/flow_" + cyq::Time::GetCurrTimeStr ("%Y%m%d%H%M%S") + ".log";
-  // std::ofstream file (outputFileName);
+  logStreams["QueuePairRxComplete"]
+      << "SourceIP,DestinationIP,SourcePort,DestinationPort,Size,Priority,StartTime,EndTime\n";
+  for (const auto &host : hostNodes)
+    {
+      const auto devs = allPorts[host];
+      for (const auto &dev : devs)
+        {
+          const auto impl = dev->GetObject<PfcHostPort> ();
+          impl->TraceConnectWithoutContext ("QueuePairRxComplete",
+                                            MakeCallback (&TraceQueuePairRxComplete));
+        }
+    }
+}
 
-  // for (const auto &host : hostNodes)
-  //   {
-  //     const auto dpskLayer = host->GetObject<PfcHost> ();
-  //     const auto queuePairs = dpskLayer->GetRdmaRxQueuePairs ();
-  //     allRxQueuePairs.insert (queuePairs.begin (), queuePairs.end ());
-  //   }
-  // for (const auto &txQp : allTxQueuePairs)
-  //   {
-  //     const auto rxQp = allRxQueuePairs[txQp->GetHash ()];
-  //     file << rxQp->
-  //   }
+void
+TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp)
+{
+  logStreams["QueuePairRxComplete"] << qp->m_sIp << "," << qp->m_dIp << "," << qp->m_sPort << ","
+                                    << qp->m_dPort << "," << qp->m_size << "," << qp->m_priority
+                                    << "," << allTxQueuePairs[qp->GetHash ()]->m_startTime << ","
+                                    << Simulator::Now () << "\n";
+}
+
+/*****************
+ * Log Functions *
+ *****************/
+
+void
+DoLog ()
+{
+  for (const auto &streamItem : logStreams)
+    {
+      const auto &name = streamItem.first;
+      const auto &ss = streamItem.second;
+      const std::string filePath =
+          outputFolder + "/" + name + cyq::Time::GetCurrTimeStr ("%Y%m%d%H%M%S") + ".log";
+      std::ofstream file (filePath);
+      file << ss.str ();
+      file.close ();
+    }
 }

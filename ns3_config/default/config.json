@@ -26,5 +26,6 @@
   ],
   "LinkConfigFile": "ns3_config/default/link.csv",
   "FlowConfigFile": "ns3_config/default/flow.csv",
-  "TraceConfigFile": "ns3_config/default/trace.json"
+  "TraceConfigFile": "ns3_config/default/trace.json",
+  "LogOutputFolder": "ns3_config/default"
 }
