@@ -58,11 +58,11 @@ struct Interface
   Time delay;
   DataRate bandwidth;
 };
-std::map<Ptr<Node>, std::map<Ptr<Node>, Interface>> nbr2if;
+std::map<Ptr<Node>, std::map<Ptr<Node>, Interface>> onewayOutDev;
 std::map<Ptr<Node>, std::map<Ptr<Node>, std::vector<Ptr<Node>>>> nextHopTable;
 std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairDelay;
 std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairTxDelay;
-std::map<Ptr<Node>, std::map<Ptr<Node>, DataRate>> pairBw;
+std::map<Ptr<Node>, std::map<Ptr<Node>, DataRate>> pairBandwidth;
 std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t>> pairBdp; // byte
 std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairRtt;
 
@@ -79,7 +79,7 @@ void CalculateRttBdp ();
 void DoTrace (const std::string &configFile);
 void DoLog ();
 
-NS_LOG_COMPONENT_DEFINE ("PFC HW");
+NS_LOG_COMPONENT_DEFINE ("PFC CYQ");
 
 int
 main (int argc, char *argv[])
@@ -193,8 +193,8 @@ main (int argc, char *argv[])
       channel->SetAttribute ("Delay", TimeValue (delay));
       s_dev->Attach (channel);
       d_dev->Attach (channel);
-      nbr2if[s_node][d_node] = {.device = s_dev, .delay = delay, .bandwidth = dataRate};
-      nbr2if[d_node][s_node] = {.device = d_dev, .delay = delay, .bandwidth = dataRate};
+      onewayOutDev[s_node][d_node] = {.device = s_dev, .delay = delay, .bandwidth = dataRate};
+      onewayOutDev[d_node][s_node] = {.device = d_dev, .delay = delay, .bandwidth = dataRate};
     }
 
   NS_LOG_UNCOND ("====Route====");
@@ -231,7 +231,6 @@ main (int argc, char *argv[])
       allTxQueuePairs[txQp->GetHash ()] = txQp;
     }
 
-  // TODO cyq: add trace and logs
   NS_LOG_UNCOND ("====Trace====");
   outputFolder = conf["LogOutputFolder"];
   DoTrace (conf["TraceConfigFile"]);
@@ -421,7 +420,7 @@ CalculateRoute (Ptr<Node> host)
   for (size_t i = 0; i < bfsQueue.size (); i++)
     {
       const auto currNode = bfsQueue[i];
-      for (const auto &next : nbr2if[currNode])
+      for (const auto &next : onewayOutDev[currNode])
         {
           const auto nextNode = next.first;
           const auto nextInterface = next.second;
@@ -449,7 +448,7 @@ CalculateRoute (Ptr<Node> host)
   for (const auto &it : txDelays)
     pairTxDelay[it.first][host] = it.second;
   for (const auto &it : bandwidths)
-    pairBw[it.first][host] = it.second;
+    pairBandwidth[it.first][host] = it.second;
 }
 
 void
@@ -470,7 +469,7 @@ SetRoutingEntries ()
           Ipv4Address dstAddr = allIpv4Addresses.left.at (toNode);
           for (const auto &nextNode : nextNodeTable)
             {
-              const auto &device = nbr2if[fromNode][nextNode].device;
+              const auto &device = onewayOutDev[fromNode][nextNode].device;
               if (switchNodes.find (fromNode) != switchNodes.end ())
                 {
                   auto dpskLayer = fromNode->GetObject<PfcSwitch> ();
@@ -498,10 +497,10 @@ CalculateRttBdp ()
               const auto delay = pairDelay[src][dst];
               const auto txDelay = pairTxDelay[src][dst];
               const auto rtt = delay + txDelay + delay;
-              const auto bandwidth = pairBw[src][dst];
+              const auto bandwidth = pairBandwidth[src][dst];
               const uint64_t bdp = rtt.GetSeconds () * bandwidth.GetBitRate () / 8;
               pairRtt[src][dst] = rtt;
-              pairBw[src][dst] = bdp;
+              pairBandwidth[src][dst] = bdp;
               maxBdp = std::max (bdp, maxBdp);
               maxRtt = std::max (rtt, maxRtt);
             }
