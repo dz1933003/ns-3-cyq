@@ -645,7 +645,7 @@ DoLog ()
       const auto &name = streamItem.first;
       const auto &ss = streamItem.second;
       const std::string filePath =
-          outputFolder + "/" + name + cyq::Time::GetCurrTimeStr ("%Y%m%d%H%M%S") + ".log";
+          outputFolder + "/" + cyq::Time::GetCurrTimeStr ("%Y%m%d%H%M%S") + "_" + name + ".csv";
       std::ofstream file (filePath);
       file << ss.str ();
       file.close ();
