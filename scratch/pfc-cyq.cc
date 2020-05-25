@@ -538,7 +538,7 @@ DoTrace (const std::string &configFile)
     }
   if (conf["TxByte"]["Enable"] == true)
     {
-      logStreams["TxByte"] << "Time,Node,PortIndex,DropPacket\n";
+      logStreams["TxByte"] << "Time,Node,PortIndex,TxByte\n";
       const auto interval = Time (conf["TxByte"]["Interval"].get<std::string> ());
       const auto start = Time (conf["TxByte"]["Start"].get<std::string> ());
       const auto end = Time (conf["TxByte"]["End"].get<std::string> ());
@@ -559,7 +559,7 @@ void
 TraceFlow ()
 {
   logStreams["QueuePairRxComplete"]
-      << "FromNode,ToNode,SourcePort,DestinationPort,Size,Priority,StartTime,EndTime\n";
+      << "FromNode,ToNode,SourcePort,DestinationPort,Size,Priority,StartTime,EndTime,Duration\n";
   for (const auto &host : hostNodes)
     {
       const auto devs = allPorts[host];
@@ -577,10 +577,12 @@ TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp)
 {
   const auto fromNode = allNodes.right.at (allIpv4Addresses.right.at (qp->m_sIp));
   const auto toNode = allNodes.right.at (allIpv4Addresses.right.at (qp->m_dIp));
-  logStreams["QueuePairRxComplete"] << fromNode << "," << toNode << "," << qp->m_sPort << ","
-                                    << qp->m_dPort << "," << qp->m_size << "," << qp->m_priority
-                                    << "," << allTxQueuePairs[qp->GetHash ()]->m_startTime << ","
-                                    << Simulator::Now () << "\n";
+  const auto startTime = allTxQueuePairs[qp->GetHash ()]->m_startTime;
+  const auto endTime = Simulator::Now ();
+  const auto duration = endTime - startTime;
+  logStreams["QueuePairRxComplete"]
+      << fromNode << "," << toNode << "," << qp->m_sPort << "," << qp->m_dPort << "," << qp->m_size
+      << "," << qp->m_priority << "," << startTime << "," << endTime << "," << duration << "\n";
 }
 
 void
