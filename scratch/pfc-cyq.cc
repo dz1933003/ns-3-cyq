@@ -521,6 +521,7 @@ void TraceSwitch (const json &conf);
 void TraceIngressDropPacket (Time interval, Time end);
 
 void TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex);
+void TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex);
 
 void
 DoTrace (const std::string &configFile)
@@ -552,6 +553,27 @@ DoTrace (const std::string &configFile)
                 }
             }
         }
+    }
+  if (conf["RxByte"]["Enable"] == true)
+    {
+      logStreams["RxByte"] << "Time,Node,PortIndex,RxByte\n";
+      const auto interval = Time (conf["RxByte"]["Interval"].get<std::string> ());
+      const auto start = Time (conf["RxByte"]["Start"].get<std::string> ());
+      const auto end = Time (conf["RxByte"]["End"].get<std::string> ());
+      for (const auto &target : conf["RxByte"]["Target"])
+        {
+          for (const auto &name : target["Name"])
+            {
+              for (const auto &portIndex : target["PortIndex"])
+                {
+                  Simulator::Schedule (start, &TraceRxByte, interval, end, name, portIndex);
+                }
+            }
+        }
+    }
+  if (conf["PFC"]["Enable"] == true)
+    {
+      // TODO cyq: add pfc trace
     }
 }
 
@@ -632,6 +654,22 @@ TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex)
                        << "\n";
   if (Simulator::Now () < end)
     Simulator::Schedule (interval, &TraceTxByte, interval, end, name, portIndex);
+}
+
+void
+TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex)
+{
+  const auto node = allNodes.left.at (name);
+  const auto port = allPorts[node][portIndex];
+  uint64_t rxByte = 0;
+  if (hostNodes.find (node) != hostNodes.end ())
+    rxByte = port->GetObject<PfcHostPort> ()->m_nRxBytes;
+  else if (switchNodes.find (node) != switchNodes.end ())
+    rxByte = port->GetObject<PfcSwitchPort> ()->m_nRxBytes;
+  logStreams["RxByte"] << Simulator::Now () << "," << name << "," << portIndex << "," << rxByte
+                       << "\n";
+  if (Simulator::Now () < end)
+    Simulator::Schedule (interval, &TraceRxByte, interval, end, name, portIndex);
 }
 
 /*****************

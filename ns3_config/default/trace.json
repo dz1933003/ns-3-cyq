@@ -28,6 +28,32 @@
     ]
   },
   "RxByte": {
-    "Enable": false
+    "Enable": true,
+    "Interval": "1s",
+    "Start": "0s",
+    "End": "3s",
+    "Target": [
+      {
+        "Name": [
+          "s1"
+        ],
+        "PortIndex": [
+          0
+        ]
+      }
+    ]
+  },
+  "PFC": {
+    "Enable": true,
+    "Target": [
+      {
+        "Name": [
+          "s1"
+        ],
+        "PortIndex": [
+          1
+        ]
+      }
+    ]
   }
 }
