@@ -523,6 +523,9 @@ void TraceIngressDropPacket (Time interval, Time end);
 void TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex);
 void TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex);
 
+void TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type,
+                 std::vector<bool> pfcState);
+
 void
 DoTrace (const std::string &configFile)
 {
@@ -573,7 +576,20 @@ DoTrace (const std::string &configFile)
     }
   if (conf["PFC"]["Enable"] == true)
     {
-      // TODO cyq: add pfc trace
+      logStreams["PfcRx"] << "Node,IfIndex,qIndex,PfcType,PfcState\n";
+      for (const auto &target : conf["PFC"]["Target"])
+        {
+          for (const auto &name : target["Name"])
+            {
+              for (const auto &portIndex : target["PortIndex"])
+                {
+                  const auto node = allNodes.left.at (name);
+                  const auto dev = allPorts[node][portIndex];
+                  const auto impl = dev->GetImplementation ();
+                  impl->TraceConnectWithoutContext ("PfcRx", MakeCallback (&TracePfcRx));
+                }
+            }
+        }
     }
 }
 
@@ -670,6 +686,20 @@ TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex)
                        << "\n";
   if (Simulator::Now () < end)
     Simulator::Schedule (interval, &TraceRxByte, interval, end, name, portIndex);
+}
+
+void
+TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type,
+            std::vector<bool> pfcState)
+{
+  const std::string pfcType = (type == PfcHeader::PfcType::Pause) ? "P" : "R";
+  logStreams["PfcRx"] << allNodes.right.at (dev->GetNode ()) << "," << dev->GetIfIndex () << ","
+                      << qIndex << "," << pfcType << ",";
+  for (const auto &state : pfcState)
+    {
+      logStreams["PfcRx"] << (state ? "P" : "R");
+    }
+  logStreams["PfcRx"] << "\n";
 }
 
 /*****************

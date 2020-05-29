@@ -48,10 +48,10 @@
     "Target": [
       {
         "Name": [
-          "s1"
+          "h1"
         ],
         "PortIndex": [
-          1
+          0
         ]
       }
     ]

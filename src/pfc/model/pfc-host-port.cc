@@ -45,7 +45,8 @@ PfcHostPort::GetTypeId (void)
           .AddConstructor<PfcHostPort> ()
           .AddTraceSource ("PfcRx", "Receive a PFC packet",
                            MakeTraceSourceAccessor (&PfcHostPort::m_pfcRxTrace),
-                           "PfcHeader::PfcType, uint32_t, std::vector<bool>")
+                           "Ptr<DpskNetDevice>, uint32_t, "
+                           "PfcHeader::PfcType, std::vector<bool>")
           .AddTraceSource ("QueuePairTxComplete", "Completing sending a queue pair",
                            MakeTraceSourceAccessor (&PfcHostPort::m_queuePairTxCompleteTrace),
                            "Ptr<RdmaTxQueuePair>")
@@ -71,7 +72,7 @@ PfcHostPort::SetupQueues (uint32_t n)
   NS_LOG_FUNCTION (n);
   CleanQueues ();
   m_nQueues = n;
-  for (uint32_t i = 0; i < m_nQueues; i++)
+  for (uint32_t i = 0; i <= m_nQueues; i++)
     {
       m_pausedStates.push_back (false);
     }
@@ -172,7 +173,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t pfcQIndex = pfcHeader.GetQIndex ();
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = true;
-          m_pfcRxTrace (PfcHeader::Pause, qIndex, m_pausedStates);
+          m_pfcRxTrace (m_dev, qIndex, PfcHeader::Pause, m_pausedStates);
           return false; // Do not forward up to node
         }
       else if (pfcHeader.GetType () == PfcHeader::Resume) // PFC Resume
@@ -181,7 +182,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t pfcQIndex = pfcHeader.GetQIndex ();
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = false;
-          m_pfcRxTrace (PfcHeader::Resume, qIndex, m_pausedStates);
+          m_pfcRxTrace (m_dev, qIndex, PfcHeader::Resume, m_pausedStates);
           m_dev->TriggerTransmit (); // Trigger device transmitting
           return false; // Do not forward up to node
         }
