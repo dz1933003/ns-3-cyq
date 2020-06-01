@@ -576,7 +576,7 @@ DoTrace (const std::string &configFile)
     }
   if (conf["PFC"]["Enable"] == true)
     {
-      logStreams["PfcRx"] << "Node,IfIndex,qIndex,PfcType,PfcState\n";
+      logStreams["PfcRx"] << "Time,Node,IfIndex,qIndex,PfcType,PfcState\n";
       for (const auto &target : conf["PFC"]["Target"])
         {
           for (const auto &name : target["Name"])
@@ -693,8 +693,8 @@ TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type,
             std::vector<bool> pfcState)
 {
   const std::string pfcType = (type == PfcHeader::PfcType::Pause) ? "P" : "R";
-  logStreams["PfcRx"] << allNodes.right.at (dev->GetNode ()) << "," << dev->GetIfIndex () << ","
-                      << qIndex << "," << pfcType << ",";
+  logStreams["PfcRx"] << Simulator::Now () << "," << allNodes.right.at (dev->GetNode ()) << ","
+                      << dev->GetIfIndex () << "," << qIndex << "," << pfcType << ",";
   for (const auto &state : pfcState)
     {
       logStreams["PfcRx"] << (state ? "P" : "R");
