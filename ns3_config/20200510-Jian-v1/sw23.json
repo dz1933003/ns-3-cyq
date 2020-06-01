@@ -1,0 +1,6 @@
+[
+  {
+    "PortIndex": "all",
+    "QueueConfigFile": "ns3_config/20200510-Jian-v1/sw23-all.json"
+  }
+]

@@ -1,0 +1,46 @@
+{
+  "Flow": {
+    "Enable": true
+  },
+  "Switch": {
+    "Enable": false,
+    "IngressDropPacket": {
+      "Enable": true,
+      "Interval": "1s",
+      "Start": "1s",
+      "End": "3s"
+    }
+  },
+  "TxByte": {
+    "Enable": false,
+    "Interval": "1ms",
+    "Start": "1s",
+    "End": "1.1s",
+    "Target": [
+      {
+        "Name": [
+          "sw1"
+        ],
+        "PortIndex": [
+          0
+        ]
+      }
+    ]
+  },
+  "RxByte": {
+    "Enable": false
+  },
+  "PFC": {
+    "Enable": false,
+    "Target": [
+      {
+        "Name": [
+          "sw1"
+        ],
+        "PortIndex": [
+          0
+        ]
+      }
+    ]
+  }
+}

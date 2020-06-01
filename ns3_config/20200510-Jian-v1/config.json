@@ -1,0 +1,45 @@
+{
+  "Global": {
+    "QueueNumber": 1,
+    "EcmpSeed": 1
+  },
+  "Host": [
+    {
+      "Name": [
+        "s0",
+        "s1",
+        "s2",
+        "s3"
+      ],
+      "PortNumber": 1
+    }
+  ],
+  "Switch": [
+    {
+      "Name": [
+        "sw0",
+        "sw1"
+      ],
+      "PortNumber": 2,
+      "Config": {
+        "Buffer": "12MiB",
+        "ConfigFile": "ns3_config/20200510-Jian-v1/sw01.json"
+      }
+    },
+    {
+      "Name": [
+        "sw2",
+        "sw3"
+      ],
+      "PortNumber": 3,
+      "Config": {
+        "Buffer": "12MiB",
+        "ConfigFile": "ns3_config/20200510-Jian-v1/sw23.json"
+      }
+    }
+  ],
+  "LinkConfigFile": "ns3_config/20200510-Jian-v1/link.csv",
+  "FlowConfigFile": "ns3_config/20200510-Jian-v1/flow.csv",
+  "TraceConfigFile": "ns3_config/20200510-Jian-v1/trace.json",
+  "LogOutputFolder": "ns3_log/20200510-Jian-v1"
+}

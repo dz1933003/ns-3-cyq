@@ -1,0 +1,14 @@
+[
+  {
+    "PortIndex": [
+      0
+    ],
+    "QueueConfigFile": "ns3_config/20200510-Jian-v1/sw01-0.json"
+  },
+  {
+    "PortIndex": [
+      1
+    ],
+    "QueueConfigFile": "ns3_config/20200510-Jian-v1/sw01-1.json"
+  }
+]
