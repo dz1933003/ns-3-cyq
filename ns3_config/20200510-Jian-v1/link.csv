@@ -3,6 +3,6 @@ s0,0,sw2,0,100Gbps,1us
 s1,0,sw2,1,100Gbps,1us
 s2,0,sw3,0,100Gbps,1us
 s3,0,sw3,1,100Gbps,1us
-sw2,2,sw0,0,100Gbps,1us
+sw0,0,sw2,2,100Gbps,1us
 sw1,0,sw3,2,100Gbps,1us
 sw0,1,sw1,1,100Gbps,400us

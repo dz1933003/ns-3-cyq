@@ -22,7 +22,7 @@
       ],
       "PortNumber": 2,
       "Config": {
-        "Buffer": "12MiB",
+        "Buffer": "12MB",
         "ConfigFile": "ns3_config/20200510-Jian-v1/sw01.json"
       }
     },
@@ -33,7 +33,7 @@
       ],
       "PortNumber": 3,
       "Config": {
-        "Buffer": "12MiB",
+        "Buffer": "12MB",
         "ConfigFile": "ns3_config/20200510-Jian-v1/sw23.json"
       }
     }
