@@ -574,7 +574,7 @@ DoTrace (const std::string &configFile)
             }
         }
     }
-  if (conf["PFC"]["Enable"] == true)
+  if (conf["PfcRx"]["Enable"] == true)
     {
       logStreams["PfcRx"] << "Time,Node,IfIndex,qIndex,PfcType,PfcState\n";
       for (const auto &target : conf["PFC"]["Target"])
