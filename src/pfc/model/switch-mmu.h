@@ -383,6 +383,30 @@ public:
    */
   uint64_t GetSharedBufferUsed ();
 
+    /**
+   * Get buffer used bytes of a queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return used bytes
+   */
+  uint64_t GetBufferUsed (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Get buffer used bytes of a port
+   *
+   * \param port target port
+   * \return used bytes
+   */
+  uint64_t GetBufferUsed (Ptr<NetDevice> port);
+
+  /**
+   * Get total buffer used bytes
+   *
+   * \return used bytes
+   */
+  uint64_t GetBufferUsed ();
+
 protected:
   /**
    * Perform any object release functionality required to break reference

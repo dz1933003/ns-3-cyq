@@ -463,6 +463,30 @@ SwitchMmu::GetSharedBufferUsed ()
   return sum;
 }
 
+uint64_t
+SwitchMmu::GetBufferUsed (Ptr<NetDevice> port, uint32_t qIndex)
+{
+  return m_ingressUsed[port][qIndex] + m_headroomUsed[port][qIndex];
+}
+
+uint64_t
+SwitchMmu::GetBufferUsed (Ptr<NetDevice> port)
+{
+  uint64_t sum = 0;
+  for (uint i = 0; i <= m_nQueues; i++)
+    sum += GetBufferUsed (port, i);
+  return sum;
+}
+
+uint64_t
+SwitchMmu::GetBufferUsed ()
+{
+  uint64_t sum = 0;
+  for (const auto &dev : m_devices)
+    sum += GetBufferUsed (dev);
+  return sum;
+}
+
 std::string
 SwitchMmu::Dump ()
 {

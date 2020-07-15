@@ -9,6 +9,22 @@
       "Interval": "1s",
       "Start": "0s",
       "End": "3s"
+    },
+    "BufferUsed": {
+      "Enable": true,
+      "Interval": "1s",
+      "Start": "0s",
+      "End": "3s",
+      "Target": [
+        {
+          "Name": [
+            "s1"
+          ],
+          "PortIndex": [
+            0
+          ]
+        }
+      ]
     }
   },
   "TxByte": {
