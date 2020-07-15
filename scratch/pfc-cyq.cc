@@ -514,13 +514,18 @@ CalculateRttBdp ()
 
 std::map<std::string, std::stringstream> logStreams;
 
-void TraceFlow ();
+void TraceFct ();
 void TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp);
 
 void TraceSwitch (const json &conf);
 void TraceIngressDropPacket (Time interval, Time end);
+void TraceBufferUsed (Time interval, Time end, std::string name, uint32_t portIndex);
 
 void TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex);
+void TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex);
+
+void TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type,
+                 std::vector<bool> pfcState);
 
 void
 DoTrace (const std::string &configFile)
@@ -528,9 +533,9 @@ DoTrace (const std::string &configFile)
   std::ifstream file (configFile);
   json conf = json::parse (file);
 
-  if (conf["Flow"]["Enable"] == true)
+  if (conf["Fct"]["Enable"] == true)
     {
-      TraceFlow ();
+      TraceFct ();
     }
   if (conf["Switch"]["Enable"] == true)
     {
@@ -538,7 +543,7 @@ DoTrace (const std::string &configFile)
     }
   if (conf["TxByte"]["Enable"] == true)
     {
-      logStreams["TxByte"] << "Time,Node,PortIndex,DropPacket\n";
+      logStreams["TxByte"] << "Time,Node,PortIndex,TxByte\n";
       const auto interval = Time (conf["TxByte"]["Interval"].get<std::string> ());
       const auto start = Time (conf["TxByte"]["Start"].get<std::string> ());
       const auto end = Time (conf["TxByte"]["End"].get<std::string> ());
@@ -553,13 +558,47 @@ DoTrace (const std::string &configFile)
             }
         }
     }
+  if (conf["RxByte"]["Enable"] == true)
+    {
+      logStreams["RxByte"] << "Time,Node,PortIndex,RxByte\n";
+      const auto interval = Time (conf["RxByte"]["Interval"].get<std::string> ());
+      const auto start = Time (conf["RxByte"]["Start"].get<std::string> ());
+      const auto end = Time (conf["RxByte"]["End"].get<std::string> ());
+      for (const auto &target : conf["RxByte"]["Target"])
+        {
+          for (const auto &name : target["Name"])
+            {
+              for (const auto &portIndex : target["PortIndex"])
+                {
+                  Simulator::Schedule (start, &TraceRxByte, interval, end, name, portIndex);
+                }
+            }
+        }
+    }
+  if (conf["PfcRx"]["Enable"] == true)
+    {
+      logStreams["PfcRx"] << "Time,Node,IfIndex,qIndex,PfcType,PfcState\n";
+      for (const auto &target : conf["PFC"]["Target"])
+        {
+          for (const auto &name : target["Name"])
+            {
+              for (const auto &portIndex : target["PortIndex"])
+                {
+                  const auto node = allNodes.left.at (name);
+                  const auto dev = allPorts[node][portIndex];
+                  const auto impl = dev->GetImplementation ();
+                  impl->TraceConnectWithoutContext ("PfcRx", MakeCallback (&TracePfcRx));
+                }
+            }
+        }
+    }
 }
 
 void
-TraceFlow ()
+TraceFct ()
 {
   logStreams["QueuePairRxComplete"]
-      << "FromNode,ToNode,SourcePort,DestinationPort,Size,Priority,StartTime,EndTime\n";
+      << "FromNode,ToNode,SourcePort,DestinationPort,Size,Priority,StartTime,EndTime,Duration\n";
   for (const auto &host : hostNodes)
     {
       const auto devs = allPorts[host];
@@ -577,10 +616,12 @@ TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp)
 {
   const auto fromNode = allNodes.right.at (allIpv4Addresses.right.at (qp->m_sIp));
   const auto toNode = allNodes.right.at (allIpv4Addresses.right.at (qp->m_dIp));
-  logStreams["QueuePairRxComplete"] << fromNode << "," << toNode << "," << qp->m_sPort << ","
-                                    << qp->m_dPort << "," << qp->m_size << "," << qp->m_priority
-                                    << "," << allTxQueuePairs[qp->GetHash ()]->m_startTime << ","
-                                    << Simulator::Now () << "\n";
+  const auto startTime = allTxQueuePairs[qp->GetHash ()]->m_startTime;
+  const auto endTime = Simulator::Now ();
+  const auto duration = endTime - startTime;
+  logStreams["QueuePairRxComplete"]
+      << fromNode << "," << toNode << "," << qp->m_sPort << "," << qp->m_dPort << "," << qp->m_size
+      << "," << qp->m_priority << "," << startTime << "," << endTime << "," << duration << "\n";
 }
 
 void
@@ -593,6 +634,23 @@ TraceSwitch (const json &conf)
       const auto start = Time (conf["IngressDropPacket"]["Start"].get<std::string> ());
       const auto end = Time (conf["IngressDropPacket"]["End"].get<std::string> ());
       Simulator::Schedule (start, &TraceIngressDropPacket, interval, end);
+    }
+  if (conf["BufferUsed"]["Enable"] == true)
+    {
+      logStreams["BufferUsed"] << "Time,Node,PortIndex,Used\n";
+      const auto interval = Time (conf["BufferUsed"]["Interval"].get<std::string> ());
+      const auto start = Time (conf["BufferUsed"]["Start"].get<std::string> ());
+      const auto end = Time (conf["BufferUsed"]["End"].get<std::string> ());
+      for (const auto &target : conf["BufferUsed"]["Target"])
+        {
+          for (const auto &name : target["Name"])
+            {
+              for (const auto &portIndex : target["PortIndex"])
+                {
+                  Simulator::Schedule (start, &TraceBufferUsed, interval, end, name, portIndex);
+                }
+            }
+        }
     }
 }
 
@@ -617,6 +675,22 @@ TraceIngressDropPacket (Time interval, Time end)
 }
 
 void
+TraceBufferUsed (Time interval, Time end, std::string name, uint32_t portIndex)
+{
+  const auto node = allNodes.left.at (name);
+  const auto port = allPorts[node][portIndex];
+  uint64_t bufferUsed = 0;
+  if (hostNodes.find (node) != hostNodes.end ())
+    return;
+  else if (switchNodes.find (node) != switchNodes.end ())
+    bufferUsed = node->GetObject<PfcSwitch> ()->GetObject<SwitchMmu> ()->GetBufferUsed (port);
+  logStreams["BufferUsed"] << Simulator::Now () << "," << name << "," << portIndex << ","
+                           << bufferUsed << "\n";
+  if (Simulator::Now () < end)
+    Simulator::Schedule (interval, &TraceBufferUsed, interval, end, name, portIndex);
+}
+
+void
 TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex)
 {
   const auto node = allNodes.left.at (name);
@@ -630,6 +704,36 @@ TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex)
                        << "\n";
   if (Simulator::Now () < end)
     Simulator::Schedule (interval, &TraceTxByte, interval, end, name, portIndex);
+}
+
+void
+TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex)
+{
+  const auto node = allNodes.left.at (name);
+  const auto port = allPorts[node][portIndex];
+  uint64_t rxByte = 0;
+  if (hostNodes.find (node) != hostNodes.end ())
+    rxByte = port->GetObject<PfcHostPort> ()->m_nRxBytes;
+  else if (switchNodes.find (node) != switchNodes.end ())
+    rxByte = port->GetObject<PfcSwitchPort> ()->m_nRxBytes;
+  logStreams["RxByte"] << Simulator::Now () << "," << name << "," << portIndex << "," << rxByte
+                       << "\n";
+  if (Simulator::Now () < end)
+    Simulator::Schedule (interval, &TraceRxByte, interval, end, name, portIndex);
+}
+
+void
+TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type,
+            std::vector<bool> pfcState)
+{
+  const std::string pfcType = (type == PfcHeader::PfcType::Pause) ? "P" : "R";
+  logStreams["PfcRx"] << Simulator::Now () << "," << allNodes.right.at (dev->GetNode ()) << ","
+                      << dev->GetIfIndex () << "," << qIndex << "," << pfcType << ",";
+  for (const auto &state : pfcState)
+    {
+      logStreams["PfcRx"] << (state ? "P" : "R");
+    }
+  logStreams["PfcRx"] << "\n";
 }
 
 /*****************

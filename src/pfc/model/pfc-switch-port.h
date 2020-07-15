@@ -153,11 +153,12 @@ private:
   /**
    * The trace source fired for received a PFC packet.
    *
-   * \param PfcType PFC type
+   * \param Ptr Dpsk net device
    * \param uint32_t target queue index
+   * \param PfcType PFC type
    * \param vector pause state after received
    */
-  TracedCallback<PfcHeader::PfcType, uint32_t, std::vector<bool>> m_pfcRxTrace;
+  TracedCallback<Ptr<DpskNetDevice>, uint32_t, PfcHeader::PfcType, std::vector<bool>> m_pfcRxTrace;
 
 public:
   /// Statistics

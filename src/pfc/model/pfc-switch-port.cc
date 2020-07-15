@@ -44,7 +44,8 @@ PfcSwitchPort::GetTypeId (void)
                           .AddConstructor<PfcSwitchPort> ()
                           .AddTraceSource ("PfcRx", "Receive a PFC packet",
                                            MakeTraceSourceAccessor (&PfcSwitchPort::m_pfcRxTrace),
-                                           "PfcHeader::PfcType, uint32_t, std::vector<bool>");
+                                           "Ptr<DpskNetDevice>, uint32_t, "
+                                           "PfcHeader::PfcType, std::vector<bool>");
   return tid;
 }
 
@@ -112,7 +113,7 @@ PfcSwitchPort::Transmit ()
   PfcSwitchTag tag;
   p->RemovePacketTag (tag);
 
-  m_nTxBytes += p->GetSize();
+  m_nTxBytes += p->GetSize ();
 
   return p;
 }
@@ -161,7 +162,7 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  m_nRxBytes += p->GetSize();
+  m_nRxBytes += p->GetSize ();
 
   PfcSwitchTag tag (m_dev->GetIfIndex ());
   p->AddPacketTag (tag); // Add tag for tracing input device when dequeue in the net device
@@ -184,7 +185,7 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
           uint32_t pfcQIndex = pfcHeader.GetQIndex ();
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = true;
-          m_pfcRxTrace (PfcHeader::Pause, qIndex, m_pausedStates);
+          m_pfcRxTrace (m_dev, qIndex, PfcHeader::Pause, m_pausedStates);
           return false; // Do not forward up to node
         }
       else if (pfcHeader.GetType () == PfcHeader::Resume) // PFC Resume
@@ -193,7 +194,7 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
           uint32_t pfcQIndex = pfcHeader.GetQIndex ();
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = false;
-          m_pfcRxTrace (PfcHeader::Resume, qIndex, m_pausedStates);
+          m_pfcRxTrace (m_dev, qIndex, PfcHeader::Resume, m_pausedStates);
           m_dev->TriggerTransmit (); // Trigger device transmitting
           return false; // Do not forward up to node
         }

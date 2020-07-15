@@ -1,5 +1,5 @@
 {
-  "Flow": {
+  "Fct": {
     "Enable": true
   },
   "Switch": {
@@ -9,6 +9,22 @@
       "Interval": "1s",
       "Start": "0s",
       "End": "3s"
+    },
+    "BufferUsed": {
+      "Enable": true,
+      "Interval": "1s",
+      "Start": "0s",
+      "End": "3s",
+      "Target": [
+        {
+          "Name": [
+            "s1"
+          ],
+          "PortIndex": [
+            0
+          ]
+        }
+      ]
     }
   },
   "TxByte": {
@@ -28,6 +44,32 @@
     ]
   },
   "RxByte": {
-    "Enable": false
+    "Enable": true,
+    "Interval": "1s",
+    "Start": "0s",
+    "End": "3s",
+    "Target": [
+      {
+        "Name": [
+          "s1"
+        ],
+        "PortIndex": [
+          0
+        ]
+      }
+    ]
+  },
+  "PfcRx": {
+    "Enable": true,
+    "Target": [
+      {
+        "Name": [
+          "h1"
+        ],
+        "PortIndex": [
+          0
+        ]
+      }
+    ]
   }
 }
