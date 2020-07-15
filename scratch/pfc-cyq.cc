@@ -514,7 +514,7 @@ CalculateRttBdp ()
 
 std::map<std::string, std::stringstream> logStreams;
 
-void TraceFlow ();
+void TraceFct ();
 void TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp);
 
 void TraceSwitch (const json &conf);
@@ -532,9 +532,9 @@ DoTrace (const std::string &configFile)
   std::ifstream file (configFile);
   json conf = json::parse (file);
 
-  if (conf["Flow"]["Enable"] == true)
+  if (conf["Fct"]["Enable"] == true)
     {
-      TraceFlow ();
+      TraceFct ();
     }
   if (conf["Switch"]["Enable"] == true)
     {
@@ -594,7 +594,7 @@ DoTrace (const std::string &configFile)
 }
 
 void
-TraceFlow ()
+TraceFct ()
 {
   logStreams["QueuePairRxComplete"]
       << "FromNode,ToNode,SourcePort,DestinationPort,Size,Priority,StartTime,EndTime,Duration\n";
