@@ -58,7 +58,11 @@ SwitchMmu::AggregateDevice (Ptr<DpskNetDevice> dev)
   m_devices.push_back (dev);
   for (uint32_t i = 0; i <= m_nQueues; i++) // with one control queue
     {
-      m_switchMmuQueueConfig[dev].push_back (CreateObject<PfcSwitchMmuQueue> ());
+      const auto devType = PfcSwitch::DeviceToL2Type (dev);
+      if (devType == PfcSwitch::PFC)
+        {
+          m_switchMmuQueueConfig[dev].push_back (CreateObject<PfcSwitchMmuQueue> ());
+        }
       m_ecnConfig[dev].push_back ({0, 0, 0., false});
     }
 }
@@ -214,27 +218,34 @@ SwitchMmu::CheckIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t
 {
   NS_LOG_FUNCTION (port << qIndex << pSize);
 
-  auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+  const auto portType = PfcSwitch::DeviceToL2Type (port);
+  if (portType == PfcSwitch::PFC)
+    {
+      auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
 
-  // Can not use shared buffer and headroom is full
-  if (m_dynamicThreshold)
-    {
-      if (pSize + GetSharedBufferUsed (port, qIndex) > GetPfcThreshold (port, qIndex) &&
-          pSize + queueConfig->headroomUsed > queueConfig->headroom)
+      // Can not use shared buffer and headroom is full
+      if (m_dynamicThreshold)
         {
-          return false;
+          if (pSize + GetSharedBufferUsed (port, qIndex) > GetPfcThreshold (port, qIndex) &&
+              pSize + queueConfig->headroomUsed > queueConfig->headroom)
+            {
+              return false;
+            }
+          return true;
         }
-      return true;
-    }
-  else
-    {
-      if (pSize + GetSharedBufferUsed () > GetSharedBufferSize () &&
-          pSize + queueConfig->headroomUsed > queueConfig->headroom)
+      else
         {
-          return false;
+          if (pSize + GetSharedBufferUsed () > GetSharedBufferSize () &&
+              pSize + queueConfig->headroomUsed > queueConfig->headroom)
+            {
+              return false;
+            }
+          return true;
         }
-      return true;
     }
+
+  // Unknown port type
+  return false;
 }
 
 bool
@@ -249,40 +260,50 @@ SwitchMmu::UpdateIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_
 {
   NS_LOG_FUNCTION (port << qIndex << pSize);
 
-  auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
-
-  uint64_t newIngressUsed = queueConfig->ingressUsed + pSize;
-  uint64_t reserve = queueConfig->reserve;
-
-  if (newIngressUsed <= reserve) // using reserve buffer
+  const auto portType = PfcSwitch::DeviceToL2Type (port);
+  if (portType == PfcSwitch::PFC)
     {
-      queueConfig->ingressUsed += pSize;
-    }
-  else
-    {
-      uint64_t threshold;
-      if (m_dynamicThreshold)
-        threshold = GetPfcThreshold (port, qIndex);
-      else
-        threshold = GetSharedBufferSize ();
+      auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
 
-      uint64_t newSharedBufferUsed = newIngressUsed - reserve;
-      if (newSharedBufferUsed > threshold) // using headroom
-        {
-          queueConfig->headroomUsed += pSize;
-        }
-      else // using shared buffer
+      uint64_t newIngressUsed = queueConfig->ingressUsed + pSize;
+      uint64_t reserve = queueConfig->reserve;
+
+      if (newIngressUsed <= reserve) // using reserve buffer
         {
           queueConfig->ingressUsed += pSize;
         }
+      else
+        {
+          uint64_t threshold;
+          if (m_dynamicThreshold)
+            threshold = GetPfcThreshold (port, qIndex);
+          else
+            threshold = GetSharedBufferSize ();
+
+          uint64_t newSharedBufferUsed = newIngressUsed - reserve;
+          if (newSharedBufferUsed > threshold) // using headroom
+            {
+              queueConfig->headroomUsed += pSize;
+            }
+          else // using shared buffer
+            {
+              queueConfig->ingressUsed += pSize;
+            }
+        }
     }
+  // Unknown port type
 }
 
 void
 SwitchMmu::UpdateEgressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t pSize)
 {
   NS_LOG_FUNCTION (port << qIndex << pSize);
-  DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->egressUsed += pSize;
+  const auto portType = PfcSwitch::DeviceToL2Type (port);
+  if (portType == PfcSwitch::PFC)
+    {
+      DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->egressUsed += pSize;
+    }
+  // Unknown port type
 }
 
 void
@@ -290,18 +311,28 @@ SwitchMmu::RemoveFromIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uin
 {
   NS_LOG_FUNCTION (port << qIndex << pSize);
 
-  auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+  const auto portType = PfcSwitch::DeviceToL2Type (port);
+  if (portType == PfcSwitch::PFC)
+    {
+      auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
 
-  uint64_t fromHeadroom = std::min (queueConfig->headroomUsed, (uint64_t) pSize);
-  queueConfig->headroomUsed -= fromHeadroom;
-  queueConfig->ingressUsed -= pSize - fromHeadroom;
+      uint64_t fromHeadroom = std::min (queueConfig->headroomUsed, (uint64_t) pSize);
+      queueConfig->headroomUsed -= fromHeadroom;
+      queueConfig->ingressUsed -= pSize - fromHeadroom;
+    }
+  // Unknown port type
 }
 
 void
 SwitchMmu::RemoveFromEgressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t pSize)
 {
   NS_LOG_FUNCTION (port << qIndex << pSize);
-  DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->egressUsed -= pSize;
+  const auto portType = PfcSwitch::DeviceToL2Type (port);
+  if (portType == PfcSwitch::PFC)
+    {
+      DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->egressUsed -= pSize;
+    }
+  // Unknown port type
 }
 
 bool
@@ -345,27 +376,33 @@ SwitchMmu::CheckShouldSetEcn (Ptr<NetDevice> port, uint32_t qIndex)
 {
   NS_LOG_FUNCTION (port << qIndex);
 
-  auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
-
-  if (qIndex >= m_nQueues) // control queue
-    return false;
-
-  uint64_t kMin = m_ecnConfig[port][qIndex].kMin;
-  uint64_t kMax = m_ecnConfig[port][qIndex].kMax;
-  double pMax = m_ecnConfig[port][qIndex].pMax;
-  bool enable = m_ecnConfig[port][qIndex].enable;
-  uint64_t qLen = queueConfig->egressUsed;
-
-  if (!enable)
-    return false; // ECN not enabled
-  if (qLen > kMax)
-    return true;
-  if (qLen > kMin)
+  const auto portType = PfcSwitch::DeviceToL2Type (port);
+  if (portType == PfcSwitch::PFC)
     {
-      double p = pMax * double (qLen - kMin) / double (kMax - kMin);
-      if (uniRand->GetValue (0, 1) < p)
+      auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+
+      if (qIndex >= m_nQueues) // control queue
+        return false;
+
+      uint64_t kMin = m_ecnConfig[port][qIndex].kMin;
+      uint64_t kMax = m_ecnConfig[port][qIndex].kMax;
+      double pMax = m_ecnConfig[port][qIndex].pMax;
+      bool enable = m_ecnConfig[port][qIndex].enable;
+      uint64_t qLen = queueConfig->egressUsed;
+
+      if (!enable)
+        return false; // ECN not enabled
+      if (qLen > kMax)
         return true;
+      if (qLen > kMin)
+        {
+          double p = pMax * double (qLen - kMin) / double (kMax - kMin);
+          if (uniRand->GetValue (0, 1) < p)
+            return true;
+        }
+      return false;
     }
+  // Unknown port type
   return false;
 }
 
@@ -498,17 +535,22 @@ SwitchMmu::Dump ()
     {
       for (uint32_t i; i <= m_nQueues; i++)
         {
-          auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[dev][i]);
-
-          ss << "Dev: " << dev << " Queue: " << i << '\n';
-          ss << "Headroom: " << queueConfig->headroom << '\n';
-          ss << "Reserve: " << queueConfig->reserve << '\n';
-          ss << "ResumeOffset: " << queueConfig->resumeOffset << '\n';
-          if (m_ecnConfig[dev][i].enable)
+          const auto portType = PfcSwitch::DeviceToL2Type (dev);
+          if (portType == PfcSwitch::PFC)
             {
-              ss << "EcnConfig: " << m_ecnConfig[dev][i].kMin << ' ' << m_ecnConfig[dev][i].kMax
-                 << ' ' << m_ecnConfig[dev][i].pMax << '\n';
+              auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[dev][i]);
+
+              ss << "Dev: " << dev << " Queue: " << i << '\n';
+              ss << "Headroom: " << queueConfig->headroom << '\n';
+              ss << "Reserve: " << queueConfig->reserve << '\n';
+              ss << "ResumeOffset: " << queueConfig->resumeOffset << '\n';
+              if (m_ecnConfig[dev][i].enable)
+                {
+                  ss << "EcnConfig: " << m_ecnConfig[dev][i].kMin << ' ' << m_ecnConfig[dev][i].kMax
+                     << ' ' << m_ecnConfig[dev][i].pMax << '\n';
+                }
             }
+          // Unknown port type
         }
     }
   return ss.str ();

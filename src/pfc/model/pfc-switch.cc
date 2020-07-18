@@ -114,17 +114,21 @@ PfcSwitch::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, u
           return; // Drop packet
         }
 
-      // Check and send PFC
-      if (m_mmu->CheckShouldSendPfcPause (inDev, qIndex))
+      const auto inDevType = DeviceToL2Type (inDev);
+      if (inDevType == PFC)
         {
-          m_mmu->SetPause (inDev, qIndex);
+          // Check and send PFC
+          if (m_mmu->CheckShouldSendPfcPause (inDev, qIndex))
+            {
+              m_mmu->SetPause (inDev, qIndex);
 
-          PfcHeader pfcHeader (PfcHeader::PfcType::Pause, qIndex);
-          Ptr<Packet> pfc = Create<Packet> (0);
-          pfc->AddHeader (pfcHeader);
+              PfcHeader pfcHeader (PfcHeader::PfcType::Pause, qIndex);
+              Ptr<Packet> pfc = Create<Packet> (0);
+              pfc->AddHeader (pfcHeader);
 
-          SendFromDevice (inDev, pfc, PfcHeader::PROT_NUM, inDev->GetAddress (),
-                          inDev->GetRemote ());
+              SendFromDevice (inDev, pfc, PfcHeader::PROT_NUM, inDev->GetAddress (),
+                              inDev->GetRemote ());
+            }
         }
     }
 
@@ -351,16 +355,22 @@ PfcSwitch::DeviceDequeueHandler (Ptr<NetDevice> outDev, Ptr<Packet> packet, uint
       packet->AddHeader (ipHeader);
       packet->AddHeader (ethHeader);
     }
-  // Check and send resume
-  if (m_mmu->CheckShouldSendPfcResume (inDev, qIndex))
+
+  const auto inDevType = DeviceToL2Type (inDev);
+  if (inDevType == PFC)
     {
-      m_mmu->SetResume (inDev, qIndex);
+      // Check and send resume
+      if (m_mmu->CheckShouldSendPfcResume (inDev, qIndex))
+        {
+          m_mmu->SetResume (inDev, qIndex);
 
-      PfcHeader PfcHeader (PfcHeader::PfcType::Resume, qIndex);
-      Ptr<Packet> pfc = Create<Packet> (0);
-      pfc->AddHeader (PfcHeader);
+          PfcHeader PfcHeader (PfcHeader::PfcType::Resume, qIndex);
+          Ptr<Packet> pfc = Create<Packet> (0);
+          pfc->AddHeader (PfcHeader);
 
-      SendFromDevice (inDev, pfc, PfcHeader::PROT_NUM, inDev->GetAddress (), inDev->GetRemote ());
+          SendFromDevice (inDev, pfc, PfcHeader::PROT_NUM, inDev->GetAddress (),
+                          inDev->GetRemote ());
+        }
     }
 }
 
