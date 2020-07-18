@@ -19,6 +19,7 @@
 #include "switch-mmu.h"
 
 #include "ns3/log.h"
+#include "ns3/pfc-switch.h"
 
 #include "ns3/random-variable-stream.h"
 
@@ -51,7 +52,7 @@ SwitchMmu::~SwitchMmu (void)
 }
 
 void
-SwitchMmu::AggregateDevice (Ptr<NetDevice> dev)
+SwitchMmu::AggregateDevice (Ptr<DpskNetDevice> dev)
 {
   NS_LOG_FUNCTION (dev);
   m_devices.push_back (dev);

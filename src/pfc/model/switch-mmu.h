@@ -24,6 +24,7 @@
 #include <map>
 #include <sstream>
 
+#include "ns3/dpsk-net-device.h"
 #include "pfc-switch-mmu-queue.h"
 #include "cbfc-switch-mmu-queue.h"
 
@@ -59,7 +60,7 @@ public:
    *
    * \param dev device.
    */
-  void AggregateDevice (Ptr<NetDevice> dev);
+  void AggregateDevice (Ptr<DpskNetDevice> dev);
 
   /**
    * Configurate queue number of the switch
