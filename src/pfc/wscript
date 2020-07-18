@@ -34,6 +34,7 @@ def build(bld):
         'model/pfc-switch.h',
         'model/pfc-switch-tag.h',
         'model/switch-mmu.h',
+        'model/switch-mmu-queue.h',
         'model/pfc-host-port.h',
         'model/pfc-host.h',
         'model/pfc-header.h',

@@ -24,6 +24,8 @@
 #include <map>
 #include <sstream>
 
+#include "switch-mmu-queue.h"
+
 namespace ns3 {
 
 class Packet;
@@ -48,7 +50,7 @@ public:
   SwitchMmu ();
   ~SwitchMmu ();
 
-  std::string Dump();
+  std::string Dump ();
 
 private:
   /**
@@ -383,7 +385,7 @@ public:
    */
   uint64_t GetSharedBufferUsed ();
 
-    /**
+  /**
    * Get buffer used bytes of a queue
    *
    * \param port target port
@@ -427,6 +429,12 @@ private:
 
   // Map from Ptr to net device to the queue configuration of PFC resume offset
   std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_resumeOffsetConfig;
+
+  // PFC queue configurations
+  std::map<Ptr<NetDevice>, std::vector<PfcSwitchMmuQueue>> m_pfcQueueConfig;
+
+  // CBFC queue configurations
+  std::map<Ptr<NetDevice>, std::vector<CbfcSwitchMmuQueue>> m_cbfcQueueConfig;
 
   struct EcnConfig // ECN configuration
   {
