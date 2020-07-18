@@ -130,7 +130,7 @@ public:
    */
   enum L2FlowControlType { UNKNOWN = -1, PFC, CBFC };
 
-  static L2FlowControlType DeviceToL2Type (Ptr<DpskNetDevice> dev);
+  static L2FlowControlType DeviceToL2Type (Ptr<NetDevice> dev);
 
 protected:
   /**
