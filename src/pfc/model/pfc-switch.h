@@ -125,6 +125,11 @@ public:
    */
   void ClearRouteTable ();
 
+  /**
+   * Level 2 flow control type
+   */
+  enum L2FlowControlType { UNKNOWN = -1, PFC, CBFC };
+
 protected:
   /**
    * Perform any object release functionality required to break reference
@@ -158,6 +163,8 @@ private:
    * \param qIndex output queue index
    */
   void DeviceDequeueHandler (Ptr<NetDevice> outDev, Ptr<Packet> packet, uint32_t qIndex);
+
+  static L2FlowControlType DeviceToL2Type (Ptr<DpskNetDevice> dev);
 
   uint32_t m_ecmpSeed; //!< ECMP seed
 

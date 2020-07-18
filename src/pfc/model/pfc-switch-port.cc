@@ -58,6 +58,7 @@ PfcSwitchPort::PfcSwitchPort ()
       m_nRxBytes (0)
 {
   NS_LOG_FUNCTION (this);
+  m_name = "PfcSwitchPort";
 }
 
 PfcSwitchPort::~PfcSwitchPort ()

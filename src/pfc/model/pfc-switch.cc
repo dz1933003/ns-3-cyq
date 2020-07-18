@@ -364,6 +364,16 @@ PfcSwitch::DeviceDequeueHandler (Ptr<NetDevice> outDev, Ptr<Packet> packet, uint
     }
 }
 
+PfcSwitch::L2FlowControlType
+PfcSwitch::DeviceToL2Type (Ptr<DpskNetDevice> dev)
+{
+  const auto name = dev->GetImplementation ()->GetName ();
+  if (name == "PfcSwitchPort")
+    return PFC;
+  else
+    return UNKNOWN;
+}
+
 void
 PfcSwitch::DoDispose ()
 {

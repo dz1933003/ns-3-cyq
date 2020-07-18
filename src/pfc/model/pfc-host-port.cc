@@ -59,6 +59,7 @@ PfcHostPort::GetTypeId (void)
 PfcHostPort::PfcHostPort () : m_nTxBytes (0), m_nRxBytes (0)
 {
   NS_LOG_FUNCTION (this);
+  m_name = "PfcHostPort";
 }
 
 PfcHostPort::~PfcHostPort ()
