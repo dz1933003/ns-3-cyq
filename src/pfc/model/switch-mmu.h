@@ -422,20 +422,8 @@ protected:
 private:
   uint64_t m_bufferConfig; //!< configuration of buffer size
 
-  // Map from Ptr to net device to the queue configuration of headroom buffer
-  std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_headroomConfig;
-
-  // Map from Ptr to net device to the queue configuration of reserve buffer
-  std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_reserveConfig;
-
-  // Map from Ptr to net device to the queue configuration of PFC resume offset
-  std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_resumeOffsetConfig;
-
-  // PFC queue configurations
-  std::map<Ptr<NetDevice>, std::vector<PfcSwitchMmuQueue>> m_pfcQueueConfig;
-
-  // CBFC queue configurations
-  std::map<Ptr<NetDevice>, std::vector<CbfcSwitchMmuQueue>> m_cbfcQueueConfig;
+  // Queue configurations
+  std::map<Ptr<NetDevice>, std::vector<Ptr<SwitchMmuQueue>>> m_switchMmuQueueConfig;
 
   struct EcnConfig // ECN configuration
   {
@@ -447,21 +435,6 @@ private:
 
   // Map from Ptr to net device to the queue configuration of ECN
   std::map<Ptr<NetDevice>, std::vector<EcnConfig>> m_ecnConfig;
-
-  // Map from Ptr to net device to a vector of queue headroom bytes.
-  std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_headroomUsed;
-
-  /**
-   * Map from Ptr to net device to a vector of ingress queue bytes.
-   * Reserve included and headroom excluded.
-   */
-  std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_ingressUsed;
-
-  /**
-   * Map from Ptr to net device to a vector of egress queue bytes.
-   * Reserve included and headroom excluded.
-   */
-  std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_egressUsed;
 
   uint32_t m_nQueues; //!< queue number of each device
   std::vector<Ptr<NetDevice>> m_devices; //!< devices managed by this mmu

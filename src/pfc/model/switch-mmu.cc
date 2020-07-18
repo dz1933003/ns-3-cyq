@@ -57,15 +57,8 @@ SwitchMmu::AggregateDevice (Ptr<NetDevice> dev)
   m_devices.push_back (dev);
   for (uint32_t i = 0; i <= m_nQueues; i++) // with one control queue
     {
-      m_headroomConfig[dev].push_back (0);
-      m_reserveConfig[dev].push_back (0);
-      m_resumeOffsetConfig[dev].push_back (0);
+      m_switchMmuQueueConfig[dev].push_back (CreateObject<PfcSwitchMmuQueue> ());
       m_ecnConfig[dev].push_back ({0, 0, 0., false});
-
-      m_headroomUsed[dev].push_back (0);
-      m_ingressUsed[dev].push_back (0);
-      m_egressUsed[dev].push_back (0);
-
       m_pausedStates[dev].push_back (false);
     }
 }
@@ -120,7 +113,7 @@ SwitchMmu::ConfigEcn (uint64_t kMin, uint64_t kMax, double pMax)
 void
 SwitchMmu::ConfigHeadroom (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size)
 {
-  m_headroomConfig[port][qIndex] = size;
+  DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->headroom = size;
 }
 
 void
@@ -153,7 +146,7 @@ SwitchMmu::ConfigHeadroom (uint64_t size)
 void
 SwitchMmu::ConfigReserve (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size)
 {
-  m_reserveConfig[port][qIndex] = size;
+  DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->reserve = size;
 }
 
 void
@@ -186,7 +179,7 @@ SwitchMmu::ConfigReserve (uint64_t size)
 void
 SwitchMmu::ConfigResumeOffset (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size)
 {
-  m_resumeOffsetConfig[port][qIndex] = size;
+  DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->resumeOffset = size;
 }
 
 void
@@ -220,11 +213,14 @@ bool
 SwitchMmu::CheckIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t pSize)
 {
   NS_LOG_FUNCTION (port << qIndex << pSize);
+
+  auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+
   // Can not use shared buffer and headroom is full
   if (m_dynamicThreshold)
     {
       if (pSize + GetSharedBufferUsed (port, qIndex) > GetPfcThreshold (port, qIndex) &&
-          pSize + m_headroomUsed[port][qIndex] > m_headroomConfig[port][qIndex])
+          pSize + queueConfig->headroomUsed > queueConfig->headroom)
         {
           return false;
         }
@@ -233,7 +229,7 @@ SwitchMmu::CheckIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t
   else
     {
       if (pSize + GetSharedBufferUsed () > GetSharedBufferSize () &&
-          pSize + m_headroomUsed[port][qIndex] > m_headroomConfig[port][qIndex])
+          pSize + queueConfig->headroomUsed > queueConfig->headroom)
         {
           return false;
         }
@@ -253,12 +249,14 @@ SwitchMmu::UpdateIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_
 {
   NS_LOG_FUNCTION (port << qIndex << pSize);
 
-  uint64_t newIngressUsed = m_ingressUsed[port][qIndex] + pSize;
-  uint64_t reserve = m_reserveConfig[port][qIndex];
+  auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+
+  uint64_t newIngressUsed = queueConfig->ingressUsed + pSize;
+  uint64_t reserve = queueConfig->reserve;
 
   if (newIngressUsed <= reserve) // using reserve buffer
     {
-      m_ingressUsed[port][qIndex] += pSize;
+      queueConfig->ingressUsed += pSize;
     }
   else
     {
@@ -271,11 +269,11 @@ SwitchMmu::UpdateIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_
       uint64_t newSharedBufferUsed = newIngressUsed - reserve;
       if (newSharedBufferUsed > threshold) // using headroom
         {
-          m_headroomUsed[port][qIndex] += pSize;
+          queueConfig->headroomUsed += pSize;
         }
       else // using shared buffer
         {
-          m_ingressUsed[port][qIndex] += pSize;
+          queueConfig->ingressUsed += pSize;
         }
     }
 }
@@ -284,7 +282,7 @@ void
 SwitchMmu::UpdateEgressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t pSize)
 {
   NS_LOG_FUNCTION (port << qIndex << pSize);
-  m_egressUsed[port][qIndex] += pSize;
+  DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->egressUsed += pSize;
 }
 
 void
@@ -292,16 +290,18 @@ SwitchMmu::RemoveFromIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uin
 {
   NS_LOG_FUNCTION (port << qIndex << pSize);
 
-  uint64_t fromHeadroom = std::min (m_headroomUsed[port][qIndex], (uint64_t) pSize);
-  m_headroomUsed[port][qIndex] -= fromHeadroom;
-  m_ingressUsed[port][qIndex] -= pSize - fromHeadroom;
+  auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+
+  uint64_t fromHeadroom = std::min (queueConfig->headroomUsed, (uint64_t) pSize);
+  queueConfig->headroomUsed -= fromHeadroom;
+  queueConfig->ingressUsed -= pSize - fromHeadroom;
 }
 
 void
 SwitchMmu::RemoveFromEgressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t pSize)
 {
   NS_LOG_FUNCTION (port << qIndex << pSize);
-  m_egressUsed[port][qIndex] -= pSize;
+  DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->egressUsed -= pSize;
 }
 
 bool
@@ -309,12 +309,14 @@ SwitchMmu::CheckShouldSendPfcPause (Ptr<NetDevice> port, uint32_t qIndex)
 {
   NS_LOG_FUNCTION (port << qIndex);
 
+  auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+
   if (m_dynamicThreshold)
     return (m_pausedStates[port][qIndex] == false) &&
-           (m_headroomUsed[port][qIndex] > 0 ||
+           (queueConfig->headroomUsed > 0 ||
             GetSharedBufferUsed (port, qIndex) >= GetPfcThreshold (port, qIndex));
   else
-    return m_pausedStates[port][qIndex] == false && m_headroomUsed[port][qIndex] > 0;
+    return m_pausedStates[port][qIndex] == false && queueConfig->headroomUsed > 0;
 }
 
 bool
@@ -322,24 +324,28 @@ SwitchMmu::CheckShouldSendPfcResume (Ptr<NetDevice> port, uint32_t qIndex)
 {
   NS_LOG_FUNCTION (port << qIndex);
 
+  auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+
   if (m_pausedStates[port][qIndex] == false)
     return false;
 
   uint64_t sharedBufferUsed = GetSharedBufferUsed (port, qIndex);
   if (m_dynamicThreshold)
-    return (m_headroomUsed[port][qIndex] == 0) &&
-           (sharedBufferUsed == 0 || sharedBufferUsed + m_resumeOffsetConfig[port][qIndex] <=
-                                         GetPfcThreshold (port, qIndex));
-  else
-    return (m_headroomUsed[port][qIndex] == 0) &&
+    return (queueConfig->headroomUsed == 0) &&
            (sharedBufferUsed == 0 ||
-            GetSharedBufferUsed () + m_resumeOffsetConfig[port][qIndex] <= GetSharedBufferSize ());
+            sharedBufferUsed + queueConfig->resumeOffset <= GetPfcThreshold (port, qIndex));
+  else
+    return (queueConfig->headroomUsed == 0) &&
+           (sharedBufferUsed == 0 ||
+            GetSharedBufferUsed () + queueConfig->resumeOffset <= GetSharedBufferSize ());
 }
 
 bool
 SwitchMmu::CheckShouldSetEcn (Ptr<NetDevice> port, uint32_t qIndex)
 {
   NS_LOG_FUNCTION (port << qIndex);
+
+  auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
 
   if (qIndex >= m_nQueues) // control queue
     return false;
@@ -348,7 +354,7 @@ SwitchMmu::CheckShouldSetEcn (Ptr<NetDevice> port, uint32_t qIndex)
   uint64_t kMax = m_ecnConfig[port][qIndex].kMax;
   double pMax = m_ecnConfig[port][qIndex].pMax;
   bool enable = m_ecnConfig[port][qIndex].enable;
-  uint64_t qLen = m_egressUsed[port][qIndex];
+  uint64_t qLen = queueConfig->egressUsed;
 
   if (!enable)
     return false; // ECN not enabled
@@ -391,7 +397,7 @@ SwitchMmu::GetBufferSize ()
 uint64_t
 SwitchMmu::GetHeadroomSize (Ptr<NetDevice> port, uint32_t qIndex)
 {
-  return m_headroomConfig[port][qIndex];
+  return DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->headroom;
 }
 
 uint64_t
@@ -424,8 +430,7 @@ SwitchMmu::GetSharedBufferSize ()
     {
       for (uint32_t i = 0; i <= m_nQueues; i++)
         {
-          size -= m_headroomConfig[dev][i];
-          size -= m_reserveConfig[dev][i];
+          size -= m_switchMmuQueueConfig[dev][i]->GetBufferSize ();
         }
     }
   return size;
@@ -440,9 +445,7 @@ SwitchMmu::GetSharedBufferRemain ()
 uint64_t
 SwitchMmu::GetSharedBufferUsed (Ptr<NetDevice> port, uint32_t qIndex)
 {
-  uint64_t used = m_ingressUsed[port][qIndex];
-  uint64_t reserve = m_reserveConfig[port][qIndex];
-  return used > reserve ? used - reserve : 0;
+  return m_switchMmuQueueConfig[port][qIndex]->GetSharedBufferUsed ();
 }
 
 uint64_t
@@ -466,7 +469,7 @@ SwitchMmu::GetSharedBufferUsed ()
 uint64_t
 SwitchMmu::GetBufferUsed (Ptr<NetDevice> port, uint32_t qIndex)
 {
-  return m_ingressUsed[port][qIndex] + m_headroomUsed[port][qIndex];
+  return m_switchMmuQueueConfig[port][qIndex]->GetBufferUsed ();
 }
 
 uint64_t
@@ -495,10 +498,12 @@ SwitchMmu::Dump ()
     {
       for (uint32_t i; i <= m_nQueues; i++)
         {
+          auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[dev][i]);
+
           ss << "Dev: " << dev << " Queue: " << i << '\n';
-          ss << "Headroom: " << m_headroomConfig[dev][i] << '\n';
-          ss << "Reserve: " << m_reserveConfig[dev][i] << '\n';
-          ss << "ResumeOffset: " << m_resumeOffsetConfig[dev][i] << '\n';
+          ss << "Headroom: " << queueConfig->headroom << '\n';
+          ss << "Reserve: " << queueConfig->reserve << '\n';
+          ss << "ResumeOffset: " << queueConfig->resumeOffset << '\n';
           if (m_ecnConfig[dev][i].enable)
             {
               ss << "EcnConfig: " << m_ecnConfig[dev][i].kMin << ' ' << m_ecnConfig[dev][i].kMax
@@ -514,14 +519,8 @@ SwitchMmu::DoDispose ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  m_headroomConfig.clear ();
-  m_reserveConfig.clear ();
-  m_resumeOffsetConfig.clear ();
+  m_switchMmuQueueConfig.clear ();
   m_ecnConfig.clear ();
-
-  m_headroomUsed.clear ();
-  m_ingressUsed.clear ();
-  m_egressUsed.clear ();
 
   m_devices.clear ();
   m_pausedStates.clear ();
