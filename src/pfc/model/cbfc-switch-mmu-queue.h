@@ -16,10 +16,12 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#ifndef SWITCH_MMU_QUEUE_H
-#define SWITCH_MMU_QUEUE_H
+#ifndef CBFC_SWITCH_MMU_QUEUE_H
+#define CBFC_SWITCH_MMU_QUEUE_H
 
 #include <ns3/object.h>
+
+#include "switch-mmu-queue.h"
 
 namespace ns3 {
 
@@ -27,10 +29,21 @@ class Packet;
 
 /**
  * \ingroup pfc
- * \brief Queue configuration of switch memory management unit
+ * \brief PFC queue configuration of switch memory management unit
  */
-class SwitchMmuQueue : public Object
+class CbfcSwitchMmuQueue : public SwitchMmuQueue
 {
+public:
+  uint64_t bufferSize = 0; //!< Buffer size of a queue
+
+  uint64_t rxFccl = 0; //!< Receiver FCCL
+  uint64_t rxAbr = 0; //!< Receiver ABR
+
+  uint64_t txFccl = 0; //!< Transmitter FCCL
+  uint64_t txFctbs = 0; //!< Transmitter FCTBS
+
+  uint64_t bufferUsed = 0; //!< Buffer used of a queue
+
 public:
   static TypeId GetTypeId ();
 
@@ -43,4 +56,4 @@ public:
 
 } /* namespace ns3 */
 
-#endif /* SWITCH_MMU_QUEUE_H */
+#endif /* CBFC_SWITCH_MMU_QUEUE_H */

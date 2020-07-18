@@ -16,31 +16,49 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#ifndef SWITCH_MMU_QUEUE_H
-#define SWITCH_MMU_QUEUE_H
+#include "cbfc-switch-mmu-queue.h"
 
-#include <ns3/object.h>
+#include "ns3/log.h"
 
 namespace ns3 {
 
-class Packet;
+NS_LOG_COMPONENT_DEFINE ("CbfcSwitchMmuQueue");
 
-/**
- * \ingroup pfc
- * \brief Queue configuration of switch memory management unit
- */
-class SwitchMmuQueue : public Object
+NS_OBJECT_ENSURE_REGISTERED (CbfcSwitchMmuQueue);
+
+TypeId
+CbfcSwitchMmuQueue::GetTypeId (void)
 {
-public:
-  static TypeId GetTypeId ();
+  static TypeId tid = TypeId ("ns3::CbfcSwitchMmuQueue")
+                          .SetParent<SwitchMmuQueue> ()
+                          .SetGroupName ("Pfc")
+                          .AddConstructor<CbfcSwitchMmuQueue> ();
+  return tid;
+}
 
-  virtual uint64_t GetBufferSize ();
-  virtual uint64_t GetBufferUsed ();
-  virtual uint64_t GetSharedBufferUsed ();
+uint64_t
+CbfcSwitchMmuQueue::GetBufferSize ()
+{
+  return bufferSize;
+}
 
-  virtual void DoDispose ();
-};
+uint64_t
+CbfcSwitchMmuQueue::GetBufferUsed ()
+{
+  return bufferUsed;
+}
 
-} /* namespace ns3 */
+uint64_t
+CbfcSwitchMmuQueue::GetSharedBufferUsed ()
+{
+  return 0;
+}
 
-#endif /* SWITCH_MMU_QUEUE_H */
+void
+CbfcSwitchMmuQueue::DoDispose ()
+{
+  NS_LOG_FUNCTION (this);
+  SwitchMmuQueue::DoDispose ();
+}
+
+} // namespace ns3

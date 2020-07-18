@@ -24,7 +24,8 @@
 #include <map>
 #include <sstream>
 
-#include "switch-mmu-queue.h"
+#include "pfc-switch-mmu-queue.h"
+#include "cbfc-switch-mmu-queue.h"
 
 namespace ns3 {
 

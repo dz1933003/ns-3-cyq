@@ -16,10 +16,12 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#ifndef SWITCH_MMU_QUEUE_H
-#define SWITCH_MMU_QUEUE_H
+#ifndef PFC_SWITCH_MMU_QUEUE_H
+#define PFC_SWITCH_MMU_QUEUE_H
 
 #include <ns3/object.h>
+
+#include "switch-mmu-queue.h"
 
 namespace ns3 {
 
@@ -27,10 +29,20 @@ class Packet;
 
 /**
  * \ingroup pfc
- * \brief Queue configuration of switch memory management unit
+ * \brief PFC queue configuration of switch memory management unit
  */
-class SwitchMmuQueue : public Object
+class PfcSwitchMmuQueue : public SwitchMmuQueue
 {
+public:
+  uint64_t headroom = 0; //!< headroom buffer
+  uint64_t reserve = 0; //!< reserve buffer
+
+  uint64_t resumeOffset = 0;
+
+  uint64_t ingressUsed = 0;
+  uint64_t headroomUsed = 0;
+  uint64_t egressUsed = 0;
+
 public:
   static TypeId GetTypeId ();
 
@@ -43,4 +55,4 @@ public:
 
 } /* namespace ns3 */
 
-#endif /* SWITCH_MMU_QUEUE_H */
+#endif /* PFC_SWITCH_MMU_QUEUE_H */

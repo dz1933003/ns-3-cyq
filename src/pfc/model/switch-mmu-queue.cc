@@ -16,31 +16,49 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#ifndef SWITCH_MMU_QUEUE_H
-#define SWITCH_MMU_QUEUE_H
+#include "switch-mmu-queue.h"
 
-#include <ns3/object.h>
+#include "ns3/log.h"
 
 namespace ns3 {
 
-class Packet;
+NS_LOG_COMPONENT_DEFINE ("SwitchMmuQueue");
 
-/**
- * \ingroup pfc
- * \brief Queue configuration of switch memory management unit
- */
-class SwitchMmuQueue : public Object
+NS_OBJECT_ENSURE_REGISTERED (SwitchMmuQueue);
+
+TypeId
+SwitchMmuQueue::GetTypeId (void)
 {
-public:
-  static TypeId GetTypeId ();
+  static TypeId tid = TypeId ("ns3::SwitchMmuQueue")
+                          .SetParent<Object> ()
+                          .SetGroupName ("Pfc")
+                          .AddConstructor<SwitchMmuQueue> ();
+  return tid;
+}
 
-  virtual uint64_t GetBufferSize ();
-  virtual uint64_t GetBufferUsed ();
-  virtual uint64_t GetSharedBufferUsed ();
+uint64_t
+SwitchMmuQueue::GetBufferSize ()
+{
+  return 0;
+}
 
-  virtual void DoDispose ();
-};
+uint64_t
+SwitchMmuQueue::GetBufferUsed ()
+{
+  return 0;
+}
 
-} /* namespace ns3 */
+uint64_t
+SwitchMmuQueue::GetSharedBufferUsed ()
+{
+  return 0;
+}
 
-#endif /* SWITCH_MMU_QUEUE_H */
+void
+SwitchMmuQueue::DoDispose ()
+{
+  NS_LOG_FUNCTION (this);
+  Object::DoDispose ();
+}
+
+} // namespace ns3
