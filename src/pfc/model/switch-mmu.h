@@ -53,7 +53,7 @@ public:
 
   std::string Dump ();
 
-private:
+public:
   /**
    * Add devices need to be managed to the mmu
    *
@@ -416,8 +416,6 @@ protected:
    * cycles in reference counted objects held by the device.
    */
   virtual void DoDispose (void);
-
-  friend class PfcSwitch;
 
 private:
   uint64_t m_bufferConfig; //!< configuration of buffer size
