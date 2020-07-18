@@ -25,8 +25,6 @@
 
 namespace ns3 {
 
-class Packet;
-
 /**
  * \ingroup pfc
  * \brief PFC queue configuration of switch memory management unit
