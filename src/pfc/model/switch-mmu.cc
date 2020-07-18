@@ -59,7 +59,6 @@ SwitchMmu::AggregateDevice (Ptr<NetDevice> dev)
     {
       m_switchMmuQueueConfig[dev].push_back (CreateObject<PfcSwitchMmuQueue> ());
       m_ecnConfig[dev].push_back ({0, 0, 0., false});
-      m_pausedStates[dev].push_back (false);
     }
 }
 
@@ -312,11 +311,11 @@ SwitchMmu::CheckShouldSendPfcPause (Ptr<NetDevice> port, uint32_t qIndex)
   auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
 
   if (m_dynamicThreshold)
-    return (m_pausedStates[port][qIndex] == false) &&
+    return (queueConfig->isPaused == false) &&
            (queueConfig->headroomUsed > 0 ||
             GetSharedBufferUsed (port, qIndex) >= GetPfcThreshold (port, qIndex));
   else
-    return m_pausedStates[port][qIndex] == false && queueConfig->headroomUsed > 0;
+    return queueConfig->isPaused == false && queueConfig->headroomUsed > 0;
 }
 
 bool
@@ -326,7 +325,7 @@ SwitchMmu::CheckShouldSendPfcResume (Ptr<NetDevice> port, uint32_t qIndex)
 
   auto queueConfig = DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
 
-  if (m_pausedStates[port][qIndex] == false)
+  if (queueConfig->isPaused == false)
     return false;
 
   uint64_t sharedBufferUsed = GetSharedBufferUsed (port, qIndex);
@@ -372,13 +371,13 @@ SwitchMmu::CheckShouldSetEcn (Ptr<NetDevice> port, uint32_t qIndex)
 void
 SwitchMmu::SetPause (Ptr<NetDevice> port, uint32_t qIndex)
 {
-  m_pausedStates[port][qIndex] = true;
+  DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->isPaused = true;
 }
 
 void
 SwitchMmu::SetResume (Ptr<NetDevice> port, uint32_t qIndex)
 {
-  m_pausedStates[port][qIndex] = false;
+  DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->isPaused = false;
 }
 
 uint64_t
@@ -523,7 +522,6 @@ SwitchMmu::DoDispose ()
   m_ecnConfig.clear ();
 
   m_devices.clear ();
-  m_pausedStates.clear ();
 
   Object::DoDispose ();
 }
