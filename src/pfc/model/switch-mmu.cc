@@ -654,14 +654,21 @@ SwitchMmu::Dump ()
               ss << "Headroom: " << queueConfig->headroom << '\n';
               ss << "Reserve: " << queueConfig->reserve << '\n';
               ss << "ResumeOffset: " << queueConfig->resumeOffset << '\n';
-              if (m_ecnConfig[dev][i].enable)
-                {
-                  ss << "EcnConfig: " << m_ecnConfig[dev][i].kMin << ' ' << m_ecnConfig[dev][i].kMax
-                     << ' ' << m_ecnConfig[dev][i].pMax << '\n';
-                }
             }
-          // TODO cyq: add dump for CBFC
+          else if (portType == PfcSwitch::CBFC)
+            {
+              auto queueConfig = DynamicCast<CbfcSwitchMmuQueue> (m_switchMmuQueueConfig[dev][i]);
+
+              ss << "Dev: " << dev << " Queue: " << i << '\n';
+              ss << "IngressSize: " << queueConfig->ingressSize << '\n';
+              ss << "FeedbackPeriod: " << queueConfig->peroid << '\n';
+            }
           // Unknown port type
+          if (m_ecnConfig[dev][i].enable)
+            {
+              ss << "EcnConfig: " << m_ecnConfig[dev][i].kMin << ' ' << m_ecnConfig[dev][i].kMax
+                 << ' ' << m_ecnConfig[dev][i].pMax << '\n';
+            }
         }
     }
   return ss.str ();

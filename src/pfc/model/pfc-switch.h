@@ -127,6 +127,12 @@ public:
   void ClearRouteTable ();
 
   /**
+   * Initiate sending CBFC feedback periodically.
+   * Invoke after configuring devices and MMU.
+   */
+  void InitSendCbfcFeedback ();
+
+  /**
    * Level 2 flow control type
    */
   enum L2FlowControlType { UNKNOWN = -1, PFC, CBFC };
@@ -166,12 +172,6 @@ private:
    * \param qIndex output queue index
    */
   void DeviceDequeueHandler (Ptr<NetDevice> outDev, Ptr<Packet> packet, uint32_t qIndex);
-
-  /**
-   * Initiate sending CBFC feedback periodically.
-   * Invoke after configuring devices and MMU.
-   */
-  void InitSendCbfcFeedback ();
 
   /**
    * Send CBFC feedback periodically for a queue in one device
