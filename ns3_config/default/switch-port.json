@@ -1,6 +1,10 @@
 [
   {
-    "PortIndex": "all",
-    "QueueConfigFile": "ns3_config/default/switch-queue.json"
+    "PortIndex": 0,
+    "QueueConfigFile": "ns3_config/default/switch-pfc-queue.json"
+  },
+  {
+    "PortIndex": 1,
+    "QueueConfigFile": "ns3_config/default/switch-cbfc-queue.json"
   }
 ]

@@ -29,6 +29,7 @@
 #include "cbfc-header.h"
 #include "pfc-switch-tag.h"
 #include "pfc-switch-port.h"
+#include "cbfc-switch-port.h"
 
 namespace ns3 {
 
@@ -151,8 +152,19 @@ PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
     {
       const auto dpskDev = DynamicCast<DpskNetDevice> (dev);
       m_devices.insert ({dev->GetIfIndex (), dpskDev});
-      const auto pfcPortImpl = dpskDev->GetObject<PfcSwitchPort> ();
-      pfcPortImpl->SetDeviceDequeueHandler (MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
+      const auto type = DeviceToL2Type (dpskDev);
+      if (type == PFC)
+        {
+          const auto pfcPortImpl = dpskDev->GetObject<PfcSwitchPort> ();
+          pfcPortImpl->SetDeviceDequeueHandler (
+              MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
+        }
+      else if (type == CBFC)
+        {
+          const auto cbfcPortImpl = dpskDev->GetObject<CbfcSwitchPort> ();
+          cbfcPortImpl->SetDeviceDequeueHandler (
+              MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
+        }
     }
 
   AggregateObject (m_dpsk->GetNode ());
@@ -414,6 +426,8 @@ PfcSwitch::DeviceToL2Type (Ptr<NetDevice> dev)
   const auto name = DynamicCast<DpskNetDevice> (dev)->GetImplementation ()->GetName ();
   if (name == "PfcSwitchPort")
     return PFC;
+  else if (name == "CbfcSwitchPort")
+    return CBFC;
   else
     return UNKNOWN;
 }

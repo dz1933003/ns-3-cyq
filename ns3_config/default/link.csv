@@ -1,3 +1,4 @@
 FromNode,FromPort,ToNode,ToPort,DataRate,Delay
 s1,0,h1,0,100Gbps,1us
-s1,1,h2,0,1bps,1us
+s1,1,s2,1,10Gbps,1us
+s2,0,h2,0,1Gbps,1us

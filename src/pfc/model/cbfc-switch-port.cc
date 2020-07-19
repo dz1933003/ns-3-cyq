@@ -44,8 +44,7 @@ CbfcSwitchPort::GetTypeId (void)
                           .AddConstructor<CbfcSwitchPort> ()
                           .AddTraceSource ("CbfcRx", "Receive a CBFC packet",
                                            MakeTraceSourceAccessor (&CbfcSwitchPort::m_cbfcRxTrace),
-                                           "Ptr<DpskNetDevice>, uint32_t, "
-                                           "PfcHeader::PfcType, std::vector<bool>");
+                                           "Ptr<DpskNetDevice>, uint32_t, uint64_t");
   return tid;
 }
 

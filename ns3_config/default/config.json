@@ -1,7 +1,8 @@
 {
   "Global": {
     "QueueNumber": 1,
-    "EcmpSeed": 1
+    "EcmpSeed": 1,
+    "StopTime": "10s"
   },
   "Host": [
     {
@@ -15,9 +16,14 @@
   "Switch": [
     {
       "Name": [
-        "s1"
+        "s1",
+        "s2"
       ],
       "PortNumber": 2,
+      "PortType": [
+        "PFC",
+        "CBFC"
+      ],
       "Config": {
         "Buffer": "12MiB",
         "ConfigFile": "ns3_config/default/switch-port.json"

@@ -71,5 +71,18 @@
         ]
       }
     ]
+  },
+  "CbfcRx": {
+    "Enable": true,
+    "Target": [
+      {
+        "Name": [
+          "s1"
+        ],
+        "PortIndex": [
+          1
+        ]
+      }
+    ]
   }
 }
