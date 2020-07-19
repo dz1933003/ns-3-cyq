@@ -25,10 +25,9 @@
 
 namespace ns3 {
 
-// TODO cyq: modify comment
 /**
  * \ingroup pfc
- * \brief PFC queue configuration of switch memory management unit
+ * \brief CBFC queue configuration of switch memory management unit
  */
 class CbfcSwitchMmuQueue : public SwitchMmuQueue
 {
@@ -37,10 +36,6 @@ public:
 
   uint64_t rxFccl = 0; //!< Receiver FCCL
   uint64_t rxAbr = 0; //!< Receiver ABR
-
-  // TODO cyq: move these 2 to port implementation
-  uint64_t txFccl = 0; //!< Transmitter FCCL
-  uint64_t txFctbs = 0; //!< Transmitter FCTBS
 
   uint64_t bufferUsed = 0; //!< Buffer used of a queue
 
