@@ -39,7 +39,6 @@ public:
 
   uint64_t ingressUsed = 0;
   uint64_t headroomUsed = 0;
-  uint64_t egressUsed = 0;
 
   bool isPaused = false; //!< true: pause
 

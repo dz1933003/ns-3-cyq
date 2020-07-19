@@ -213,6 +213,8 @@ CbfcSwitchPort::DequeueRoundRobin (uint32_t &qIndex)
               Ptr<Packet> p = m_queues[qIdx].front ();
               m_queues[qIdx].pop ();
 
+              m_txStates[qIdx].txFctbs += p->GetSize ();
+
               m_nInQueueBytes -= p->GetSize ();
               m_nInQueuePackets--;
               m_inQueueBytesList[qIdx] -= p->GetSize ();
@@ -233,11 +235,11 @@ CbfcSwitchPort::Dequeue (uint32_t &qIndex)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  if (!CanDequeue (m_nQueues)) // No control packets
+  if (m_inQueuePacketsList[m_nQueues] == 0) // No control packets
     {
       return DequeueRoundRobin (qIndex);
     }
-  else // Dequeue control packets
+  else // Dequeue control packets without FCCL check
     {
       Ptr<Packet> p = m_queues[m_nQueues].front ();
       m_queues[m_nQueues].pop ();

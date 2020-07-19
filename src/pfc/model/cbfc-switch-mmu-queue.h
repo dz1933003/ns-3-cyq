@@ -20,6 +20,7 @@
 #define CBFC_SWITCH_MMU_QUEUE_H
 
 #include <ns3/object.h>
+#include <ns3/nstime.h>
 
 #include "switch-mmu-queue.h"
 
@@ -32,12 +33,24 @@ namespace ns3 {
 class CbfcSwitchMmuQueue : public SwitchMmuQueue
 {
 public:
-  uint64_t bufferSize = 0; //!< Buffer size of a queue
+  uint64_t ingressSize = 0; //!< ingress size of a queue
 
-  uint64_t rxFccl = 0; //!< Receiver FCCL
+  /**
+   * Get FCCL in bytes
+   *
+   * \return FCCL in bytes
+   */
+  uint64_t
+  GetFccl ()
+  {
+    return rxAbr + (ingressSize - ingressUsed);
+  }
+
   uint64_t rxAbr = 0; //!< Receiver ABR
 
-  uint64_t bufferUsed = 0; //!< Buffer used of a queue
+  uint64_t ingressUsed = 0;
+
+  Time peroid = Time ("50us"); //!< feedback
 
 public:
   static TypeId GetTypeId ();

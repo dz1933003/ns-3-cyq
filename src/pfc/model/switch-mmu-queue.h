@@ -30,6 +30,9 @@ namespace ns3 {
 class SwitchMmuQueue : public Object
 {
 public:
+  uint64_t egressUsed = 0;
+
+public:
   static TypeId GetTypeId ();
 
   virtual uint64_t GetBufferSize ();

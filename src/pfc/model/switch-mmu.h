@@ -214,6 +214,70 @@ public:
   void ConfigResumeOffset (uint64_t size);
 
   /**
+   * Configurate CBFC buffer on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param size CBFC buffer size by byte
+   */
+  void ConfigCbfcBufferSize (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate CBFC buffer on all queues of the port
+   *
+   * \param port target port
+   * \param size CBFC buffer size by byte
+   */
+  void ConfigCbfcBufferSize (Ptr<NetDevice> port, uint64_t size);
+
+  /**
+   * Configurate CBFC buffer on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param size CBFC buffer size by byte
+   */
+  void ConfigCbfcBufferSize (uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate CBFC buffer on all ports in the switch
+   *
+   * \param size CBFC buffer size by byte
+   */
+  void ConfigCbfcBufferSize (uint64_t size);
+
+  /**
+   * Configurate CBFC feedback peroid on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param peroid CBFC feedback peroid
+   */
+  void ConfigCbfcFeedbackPeroid (Ptr<NetDevice> port, uint32_t qIndex, Time peroid);
+
+  /**
+   * Configurate CBFC feedback peroid on all queues of the port
+   *
+   * \param port target port
+   * \param peroid CBFC feedback peroid
+   */
+  void ConfigCbfcFeedbackPeroid (Ptr<NetDevice> port, Time peroid);
+
+  /**
+   * Configurate CBFC feedback peroid on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param peroid CBFC feedback peroid
+   */
+  void ConfigCbfcFeedbackPeroid (uint32_t qIndex, Time peroid);
+
+  /**
+   * Configurate CBFC feedback peroid on all ports in the switch
+   *
+   * \param peroid CBFC feedback peroid
+   */
+  void ConfigCbfcFeedbackPeroid (Time peroid);
+
+  /**
    * Check the admission of target ingress
    *
    * \param port target port

@@ -39,13 +39,13 @@ CbfcSwitchMmuQueue::GetTypeId (void)
 uint64_t
 CbfcSwitchMmuQueue::GetBufferSize ()
 {
-  return bufferSize;
+  return ingressSize;
 }
 
 uint64_t
 CbfcSwitchMmuQueue::GetBufferUsed ()
 {
-  return bufferUsed;
+  return ingressUsed;
 }
 
 uint64_t
