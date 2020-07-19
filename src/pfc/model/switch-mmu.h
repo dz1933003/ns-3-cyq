@@ -278,6 +278,24 @@ public:
   void ConfigCbfcFeedbackPeroid (Time peroid);
 
   /**
+   * Get CBFC feedback peroid on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return CBFC feedback peroid
+   */
+  Time GetCbfcFeedbackPeroid (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Get FCCL on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return FCCL in bytes
+   */
+  uint64_t GetCbfcFccl (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
    * Check the admission of target ingress
    *
    * \param port target port

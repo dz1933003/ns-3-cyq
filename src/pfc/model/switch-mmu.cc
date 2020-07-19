@@ -303,6 +303,18 @@ SwitchMmu::ConfigCbfcFeedbackPeroid (Time peroid)
     }
 }
 
+Time
+SwitchMmu::GetCbfcFeedbackPeroid (Ptr<NetDevice> port, uint32_t qIndex)
+{
+  return DynamicCast<CbfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->peroid;
+}
+
+uint64_t
+SwitchMmu::GetCbfcFccl (Ptr<NetDevice> port, uint32_t qIndex)
+{
+  return DynamicCast<CbfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->GetFccl ();
+}
+
 bool
 SwitchMmu::CheckIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t pSize)
 {
@@ -648,6 +660,7 @@ SwitchMmu::Dump ()
                      << ' ' << m_ecnConfig[dev][i].pMax << '\n';
                 }
             }
+          // TODO cyq: add dump for CBFC
           // Unknown port type
         }
     }

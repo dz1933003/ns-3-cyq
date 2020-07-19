@@ -26,6 +26,7 @@
 #include "ns3/ipv4-header.h"
 #include "ns3/udp-header.h"
 #include "pfc-header.h"
+#include "cbfc-header.h"
 #include "pfc-switch-tag.h"
 #include "pfc-switch-port.h"
 
@@ -372,6 +373,39 @@ PfcSwitch::DeviceDequeueHandler (Ptr<NetDevice> outDev, Ptr<Packet> packet, uint
                           inDev->GetRemote ());
         }
     }
+}
+
+void
+PfcSwitch::InitSendCbfcFeedback ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  for (const auto &entry : m_devices)
+    {
+      const auto dev = entry.second;
+      const auto type = DeviceToL2Type (dev);
+      if (type == CBFC)
+        {
+          for (uint32_t i = 0; i < m_nQueues; ++i)
+            {
+              const auto period = m_mmu->GetCbfcFeedbackPeroid (dev, i);
+              Simulator::ScheduleNow (&PfcSwitch::SendCbfcFeedback, this, period, dev, i);
+            }
+        }
+    }
+}
+
+void
+PfcSwitch::SendCbfcFeedback (Time period, Ptr<DpskNetDevice> dev, uint32_t qIndex)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+
+  CbfcHeader cbfcHeader (m_mmu->GetCbfcFccl (dev, qIndex), qIndex);
+  Ptr<Packet> cbfc = Create<Packet> (0);
+  cbfc->AddHeader (cbfcHeader);
+
+  SendFromDevice (dev, cbfc, CbfcHeader::PROT_NUM, dev->GetAddress (), dev->GetRemote ());
+
+  Simulator::Schedule (Time (period), &PfcSwitch::SendCbfcFeedback, this, period, dev, qIndex);
 }
 
 PfcSwitch::L2FlowControlType
