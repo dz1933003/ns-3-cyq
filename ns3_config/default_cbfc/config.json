@@ -1,8 +1,7 @@
 {
   "Global": {
     "QueueNumber": 1,
-    "EcmpSeed": 1,
-    "StopTime": "10s"
+    "EcmpSeed": 1
   },
   "Host": [
     {

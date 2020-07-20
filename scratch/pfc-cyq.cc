@@ -42,7 +42,6 @@ static DpskHelper dpskHelper;
 
 uint32_t nQueue;
 uint32_t ecmpSeed;
-Time stopTime;
 DpskNetDevice::TxMode portTxMode;
 boost::bimap<std::string, Ptr<Node>> allNodes;
 std::map<Ptr<Node>, std::vector<Ptr<DpskNetDevice>>> allPorts;
@@ -51,6 +50,9 @@ std::set<Ptr<Node>> hostNodes;
 std::set<Ptr<Node>> switchNodes;
 std::map<uint32_t, Ptr<RdmaTxQueuePair>> allTxQueuePairs;
 std::map<uint32_t, Ptr<RdmaRxQueuePair>> allRxQueuePairs;
+
+uint32_t txCompleteCnt = 0;
+uint32_t rxCompleteCnt = 0;
 
 uint64_t maxBdp = 0;
 Time maxRtt (0);
@@ -112,7 +114,6 @@ main (int argc, char *argv[])
   NS_LOG_UNCOND ("====Global====");
   nQueue = conf["Global"]["QueueNumber"];
   ecmpSeed = conf["Global"]["EcmpSeed"];
-  stopTime = Time (conf["Global"]["StopTime"].get<std::string> ());
   portTxMode = DpskNetDevice::TxMode::ACTIVE;
   NS_LOG_UNCOND ("QueueNumber: " << nQueue);
   NS_LOG_UNCOND ("EcmpSeed: " << ecmpSeed);
@@ -264,7 +265,6 @@ main (int argc, char *argv[])
   DoTrace (conf["TraceConfigFile"]);
 
   NS_LOG_UNCOND ("====Simulate====");
-  Simulator::Stop (stopTime);
   Simulator::Run ();
   Simulator::Destroy ();
 
@@ -471,7 +471,10 @@ CalculateRttBdp ()
 std::map<std::string, std::stringstream> logStreams;
 
 void TraceFct ();
+void TraceQueuePairTxComplete (Ptr<RdmaTxQueuePair> qp);
 void TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp);
+
+void CheckQueuePair ();
 
 void TraceSwitch (const json &conf);
 void TraceIngressDropPacket (Time interval, Time end);
@@ -580,10 +583,19 @@ TraceFct ()
       for (const auto &dev : devs)
         {
           const auto impl = dev->GetObject<PfcHostPort> ();
+          impl->TraceConnectWithoutContext ("QueuePairTxComplete",
+                                            MakeCallback (&TraceQueuePairTxComplete));
           impl->TraceConnectWithoutContext ("QueuePairRxComplete",
                                             MakeCallback (&TraceQueuePairRxComplete));
         }
     }
+}
+
+void
+TraceQueuePairTxComplete (Ptr<RdmaTxQueuePair> qp)
+{
+  txCompleteCnt++;
+  CheckQueuePair ();
 }
 
 void
@@ -597,6 +609,21 @@ TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp)
   logStreams["QueuePairRxComplete"]
       << fromNode << "," << toNode << "," << qp->m_sPort << "," << qp->m_dPort << "," << qp->m_size
       << "," << qp->m_priority << "," << startTime << "," << endTime << "," << duration << "\n";
+  rxCompleteCnt++;
+  CheckQueuePair ();
+}
+
+void
+CheckQueuePair ()
+{
+  const auto allQPCnt = allTxQueuePairs.size ();
+  std::clog << "\rTx: " << txCompleteCnt << "/" << allQPCnt << " Rx: " << rxCompleteCnt << "/"
+            << allQPCnt;
+  if (txCompleteCnt == allQPCnt && rxCompleteCnt == allQPCnt)
+    {
+      NS_LOG_UNCOND ("\nComplete Simulation: " << Simulator::Now ());
+      Simulator::Stop ();
+    }
 }
 
 void
