@@ -23,6 +23,7 @@
 #include <fstream>
 #include <map>
 #include <set>
+#include <chrono>
 
 #include <boost/bimap.hpp>
 
@@ -110,6 +111,8 @@ main (int argc, char *argv[])
 
   std::ifstream file (argv[1]);
   json conf = json::parse (file);
+
+  const auto sim_start = std::chrono::system_clock::now ();
 
   NS_LOG_UNCOND ("====Global====");
   nQueue = conf["Global"]["QueueNumber"];
@@ -272,6 +275,9 @@ main (int argc, char *argv[])
   DoLog ();
 
   NS_LOG_UNCOND ("====Done====");
+  const auto sim_end = std::chrono::system_clock::now ();
+  const std::chrono::duration<double> elapsed_seconds = sim_end - sim_start;
+  NS_LOG_UNCOND ("Elapsed " << elapsed_seconds.count () << "s");
 }
 
 /*********************
