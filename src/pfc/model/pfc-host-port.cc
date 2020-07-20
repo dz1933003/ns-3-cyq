@@ -128,7 +128,8 @@ PfcHostPort::Transmit ()
     {
       uint32_t qIdx = (m_lastQpIndex + i) % flowCnt;
       auto qp = m_txQueuePairs[qIdx];
-      if (m_pausedStates[qp->m_priority] == false && qp->IsFinished () == false)
+      if (m_pausedStates[qp->m_priority] == false && qp->IsFinished () == false &&
+          qp->m_startTime <= Simulator::Now ())
         {
           m_lastQpIndex = qIdx;
           auto p = GenData (qp);
