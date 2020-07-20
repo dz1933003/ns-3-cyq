@@ -33,6 +33,10 @@
 using namespace ns3;
 using json = nlohmann::json;
 
+/*******************************
+ * Global simulation variables *
+ *******************************/
+
 static const uint32_t CYQ_MTU = 1500;
 static DpskHelper dpskHelper;
 
@@ -51,7 +55,11 @@ std::map<uint32_t, Ptr<RdmaRxQueuePair>> allRxQueuePairs;
 uint64_t maxBdp = 0;
 Time maxRtt (0);
 
-std::string outputFolder;
+std::string outputFolder; // Log output folder
+
+/*******************************
+ * Route calculation variables *
+ *******************************/
 
 struct Interface
 {
@@ -67,6 +75,10 @@ std::map<Ptr<Node>, std::map<Ptr<Node>, DataRate>> pairBandwidth;
 std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t>> pairBdp; // byte
 std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairRtt;
 
+/***************************************
+ * Help functions for simulation setup *
+ ***************************************/
+
 void ConfigMmuPort (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile);
 void ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                      const std::string &configFile);
@@ -78,6 +90,10 @@ void CalculateRttBdp ();
 
 void DoTrace (const std::string &configFile);
 void DoLog ();
+
+/********************
+ * Simulation setup *
+ ********************/
 
 NS_LOG_COMPONENT_DEFINE ("PFC CYQ");
 
@@ -258,6 +274,10 @@ main (int argc, char *argv[])
   NS_LOG_UNCOND ("====Done====");
 }
 
+/*********************
+ * MMU configuration *
+ *********************/
+
 void
 ConfigMmuPort (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile)
 {
@@ -324,6 +344,10 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
         }
     }
 }
+
+/*********************
+ * Route calculation *
+ *********************/
 
 void
 CalculateRoute ()
@@ -715,7 +739,7 @@ void
 TraceCbfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, uint64_t fccl)
 {
   logStreams["CbfcRx"] << Simulator::Now () << "," << allNodes.right.at (dev->GetNode ()) << ","
-                      << dev->GetIfIndex () << "," << qIndex << "," << fccl << "\n";
+                       << dev->GetIfIndex () << "," << qIndex << "," << fccl << "\n";
 }
 
 /*****************
