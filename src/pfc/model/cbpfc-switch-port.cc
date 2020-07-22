@@ -18,37 +18,38 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#include "cbfc-switch-port.h"
+#include "cbpfc-switch-port.h"
 
 #include "ns3/log.h"
 #include "ns3/uinteger.h"
 #include "ns3/pointer.h"
+#include "ns3/simulator.h"
 #include "ns3/ethernet-header.h"
 #include "ns3/ipv4-header.h"
-#include "ns3/cbfc-header.h"
+#include "ns3/pfc-header.h"
 #include "ns3/dpsk-net-device.h"
 #include "pfc-switch-tag.h"
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("CbfcSwitchPort");
+NS_LOG_COMPONENT_DEFINE ("CbpfcSwitchPort");
 
-NS_OBJECT_ENSURE_REGISTERED (CbfcSwitchPort);
+NS_OBJECT_ENSURE_REGISTERED (CbpfcSwitchPort);
 
 TypeId
-CbfcSwitchPort::GetTypeId (void)
+CbpfcSwitchPort::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::CbfcSwitchPort")
+  static TypeId tid = TypeId ("ns3::CbpfcSwitchPort")
                           .SetParent<Object> ()
-                          .SetGroupName ("CbfcSwitchPort")
-                          .AddConstructor<CbfcSwitchPort> ()
-                          .AddTraceSource ("CbfcRx", "Receive a CBFC packet",
-                                           MakeTraceSourceAccessor (&CbfcSwitchPort::m_cbfcRxTrace),
-                                           "Ptr<DpskNetDevice>, uint32_t, uint64_t");
+                          .SetGroupName ("CbpfcSwitchPort")
+                          .AddConstructor<CbpfcSwitchPort> ()
+                          .AddTraceSource ("PfcRx", "Receive a PFC packet",
+                                           MakeTraceSourceAccessor (&CbpfcSwitchPort::m_pfcRxTrace),
+                                           "Ptr<DpskNetDevice>, uint32_t, PfcHeader::PfcType");
   return tid;
 }
 
-CbfcSwitchPort::CbfcSwitchPort ()
+CbpfcSwitchPort::CbpfcSwitchPort ()
     : m_nQueues (0),
       m_lastQueueIdx (0),
       m_nInQueueBytes (0),
@@ -57,16 +58,23 @@ CbfcSwitchPort::CbfcSwitchPort ()
       m_nRxBytes (0)
 {
   NS_LOG_FUNCTION (this);
-  m_name = "CbfcSwitchPort";
+  m_name = "CbpfcSwitchPort";
 }
 
-CbfcSwitchPort::~CbfcSwitchPort ()
+CbpfcSwitchPort::~CbpfcSwitchPort ()
 {
   NS_LOG_FUNCTION (this);
 }
 
 void
-CbfcSwitchPort::SetupQueues (uint32_t n)
+CbpfcSwitchPort::SetBandwidth (DataRate rate)
+{
+  NS_LOG_FUNCTION (rate);
+  bandwidth = rate;
+}
+
+void
+CbpfcSwitchPort::SetupQueues (uint32_t n)
 {
   NS_LOG_FUNCTION (n);
   CleanQueues ();
@@ -81,7 +89,7 @@ CbfcSwitchPort::SetupQueues (uint32_t n)
 }
 
 void
-CbfcSwitchPort::CleanQueues ()
+CbpfcSwitchPort::CleanQueues ()
 {
   NS_LOG_FUNCTION_NOARGS ();
   m_queues.clear ();
@@ -91,13 +99,13 @@ CbfcSwitchPort::CleanQueues ()
 }
 
 void
-CbfcSwitchPort::SetDeviceDequeueHandler (DeviceDequeueNotifier h)
+CbpfcSwitchPort::SetDeviceDequeueHandler (DeviceDequeueNotifier h)
 {
   m_mmuCallback = h;
 }
 
 Ptr<Packet>
-CbfcSwitchPort::Transmit ()
+CbpfcSwitchPort::Transmit ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
@@ -119,8 +127,8 @@ CbfcSwitchPort::Transmit ()
 }
 
 bool
-CbfcSwitchPort::Send (Ptr<Packet> packet, const Address &source, const Address &dest,
-                      uint16_t protocolNumber)
+CbpfcSwitchPort::Send (Ptr<Packet> packet, const Address &source, const Address &dest,
+                       uint16_t protocolNumber)
 {
   // Assembly Ethernet header
   EthernetHeader ethHeader;
@@ -128,7 +136,7 @@ CbfcSwitchPort::Send (Ptr<Packet> packet, const Address &source, const Address &
   ethHeader.SetDestination (Mac48Address::ConvertFrom (dest));
   ethHeader.SetLengthType (protocolNumber);
 
-  if (protocolNumber == CbfcHeader::PROT_NUM) // CBFC protocol number
+  if (protocolNumber == PfcHeader::PROT_NUM) // PFC protocol number
     {
       // Add Ethernet header
       packet->AddHeader (ethHeader);
@@ -137,7 +145,7 @@ CbfcSwitchPort::Send (Ptr<Packet> packet, const Address &source, const Address &
       m_inQueueBytesList[m_nQueues] += packet->GetSize ();
       m_inQueuePacketsList[m_nQueues]++;
     }
-  else // Not CBFC
+  else // Not PFC
     {
       // Get queue index
       Ipv4Header ipHeader;
@@ -158,7 +166,7 @@ CbfcSwitchPort::Send (Ptr<Packet> packet, const Address &source, const Address &
 }
 
 bool
-CbfcSwitchPort::Receive (Ptr<Packet> p)
+CbpfcSwitchPort::Receive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
@@ -171,31 +179,52 @@ CbfcSwitchPort::Receive (Ptr<Packet> p)
   EthernetHeader ethHeader;
   p->PeekHeader (ethHeader);
 
-  if (ethHeader.GetLengthType () == CbfcHeader::PROT_NUM) // CBFC protocol number
+  if (ethHeader.GetLengthType () == PfcHeader::PROT_NUM) // PFC protocol number
     {
       // Pop Ethernet header
       p->RemoveHeader (ethHeader);
-      // Pop CBFC header
-      CbfcHeader cbfcHeader;
-      p->RemoveHeader (cbfcHeader);
+      // Pop PFC header
+      PfcHeader pfcHeader;
+      p->RemoveHeader (pfcHeader);
 
-      const auto fccl = cbfcHeader.GetFccl ();
-      const auto qIndex = cbfcHeader.GetQIndex ();
-
-      m_txStates[qIndex].txFccl = fccl;
-      m_cbfcRxTrace (m_dev, qIndex, fccl);
-      m_dev->TriggerTransmit ();
+      // TODO cyq: logic of receiving PFC frames
+      if (pfcHeader.GetType () == PfcHeader::Pause) // PFC Pause
+        {
+          // Update paused state
+          uint32_t pfcQIndex = pfcHeader.GetQIndex ();
+          uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
+          UpdateTxMaxTime ();
+          m_txStates[qIndex].isPause = true;
+          m_pfcRxTrace (m_dev, qIndex, PfcHeader::Pause);
+          return false; // Do not forward up to node
+        }
+      else if (pfcHeader.GetType () == PfcHeader::Resume) // PFC Resume
+        {
+          // Update paused state
+          uint32_t pfcQIndex = pfcHeader.GetQIndex ();
+          uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
+          m_txStates[qIndex].isPause = false;
+          m_txStates[qIndex].lastResumeTime = Simulator::Now ();
+          m_pfcRxTrace (m_dev, qIndex, PfcHeader::Resume);
+          m_dev->TriggerTransmit (); // Trigger device transmitting
+          return false; // Do not forward up to node
+        }
+      else
+        {
+          NS_ASSERT_MSG (false, "PfcSwitchPort::Rx: Invalid PFC type");
+          return false; // Drop this packet
+        }
 
       return false;
     }
-  else // Not CBFC
+  else // Not PFC
     {
       return true; // Forward up to node without any change
     }
 }
 
 Ptr<Packet>
-CbfcSwitchPort::DequeueRoundRobin (uint32_t &qIndex)
+CbpfcSwitchPort::DequeueRoundRobin (uint32_t &qIndex)
 {
   NS_LOG_FUNCTION_NOARGS ();
   if (m_nInQueuePackets == 0 || m_nQueues == 0)
@@ -213,7 +242,7 @@ CbfcSwitchPort::DequeueRoundRobin (uint32_t &qIndex)
               Ptr<Packet> p = m_queues[qIdx].front ();
               m_queues[qIdx].pop ();
 
-              m_txStates[qIdx].txFctbs += p->GetSize ();
+              m_txStates[qIdx].txTime += bandwidth.CalculateBytesTxTime (p->GetSize ());
 
               m_nInQueueBytes -= p->GetSize ();
               m_nInQueuePackets--;
@@ -231,15 +260,16 @@ CbfcSwitchPort::DequeueRoundRobin (uint32_t &qIndex)
 }
 
 Ptr<Packet>
-CbfcSwitchPort::Dequeue (uint32_t &qIndex)
+CbpfcSwitchPort::Dequeue (uint32_t &qIndex)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
   if (m_inQueuePacketsList[m_nQueues] == 0) // No control packets
     {
+      UpdateTxMaxTime ();
       return DequeueRoundRobin (qIndex);
     }
-  else // Dequeue control packets without FCCL check
+  else // Dequeue control packets
     {
       Ptr<Packet> p = m_queues[m_nQueues].front ();
       m_queues[m_nQueues].pop ();
@@ -255,7 +285,7 @@ CbfcSwitchPort::Dequeue (uint32_t &qIndex)
 }
 
 bool
-CbfcSwitchPort::CanDequeue (uint32_t qIndex)
+CbpfcSwitchPort::CanDequeue (uint32_t qIndex)
 {
   NS_LOG_FUNCTION (qIndex);
   // No packets in queue
@@ -263,17 +293,32 @@ CbfcSwitchPort::CanDequeue (uint32_t qIndex)
     return false;
   // Packets in queue
   Ptr<Packet> p = m_queues[qIndex].front ();
-  auto fccl = m_txStates[qIndex].txFccl;
-  auto fctbs = m_txStates[qIndex].txFctbs;
-  // FCTBS greater than FCCL after send
-  if (fccl < fctbs + p->GetSize ())
+  const auto txMaxTime = m_txStates[qIndex].txMaxTime;
+  const auto txTime = m_txStates[qIndex].txTime;
+  // txTime greater than txMaxTime after send
+  if (txMaxTime < txTime + bandwidth.CalculateBytesTxTime (p->GetSize ()))
     return false;
-  // Packets in queue and FCTBS less or equal to FCCL after send
+  // Packets in queue and txTime less or equal to txMaxTime after send
   return true;
 }
 
 void
-CbfcSwitchPort::DoDispose ()
+CbpfcSwitchPort::UpdateTxMaxTime ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  for (auto state : m_txStates)
+    {
+      if (state.isPause == false)
+        {
+          const auto now = Simulator::Now ();
+          state.txMaxTime += now - state.lastResumeTime;
+          state.lastResumeTime = now;
+        }
+    }
+}
+
+void
+CbpfcSwitchPort::DoDispose ()
 {
   NS_LOG_FUNCTION (this);
   m_queues.clear ();
