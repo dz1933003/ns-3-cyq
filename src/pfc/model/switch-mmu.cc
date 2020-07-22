@@ -509,6 +509,20 @@ SwitchMmu::GetCbpfcFree (Ptr<NetDevice> port, uint32_t qIndex)
   return DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->GetFree ();
 }
 
+bool
+SwitchMmu::GetCbpfcIsPause (Ptr<NetDevice> port, uint32_t qIndex)
+{
+  return DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->isPaused;
+}
+
+void
+SwitchMmu::AddCbpfcReserved (Ptr<DpskNetDevice> port, uint32_t qIndex, Time period)
+{
+  // TODO cyq: loss accuracy here
+  auto queueConfig = DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+  queueConfig->reserved += port->GetDataRate ().GetBitRate () * period.GetSeconds () / 8;
+}
+
 /*******************************************************
  * Common Functions for all L2 flow control algorithms *
  *******************************************************/

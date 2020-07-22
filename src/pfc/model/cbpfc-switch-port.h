@@ -60,13 +60,6 @@ public:
   virtual ~CbpfcSwitchPort ();
 
   /**
-   * Set bandwidth.
-   *
-   * \param rate bandwidth
-   */
-  void SetBandwidth (DataRate rate);
-
-  /**
    * Setup queues.
    *
    * \param n queue number
@@ -161,8 +154,6 @@ private:
    * Update txMaxTime in resume state
    */
   void UpdateTxMaxTime ();
-
-  DataRate bandwidth; //!< Net device bandwidth
 
   uint32_t m_nQueues; //!< queue count of the port (control queue not included)
   std::vector<std::queue<Ptr<Packet>>> m_queues; //!< queues of the port (with control queue)

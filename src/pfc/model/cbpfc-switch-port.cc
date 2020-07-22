@@ -180,7 +180,6 @@ CbpfcSwitchPort::Receive (Ptr<Packet> p)
       PfcHeader pfcHeader;
       p->RemoveHeader (pfcHeader);
 
-      // TODO cyq: logic of receiving PFC frames
       if (pfcHeader.GetType () == PfcHeader::Pause) // PFC Pause
         {
           // Update paused state

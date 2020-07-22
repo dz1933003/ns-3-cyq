@@ -133,6 +133,12 @@ public:
   void InitSendCbfcFeedback ();
 
   /**
+   * Initiate checking CBPFC update periodically.
+   * Invoke after configuring devices and MMU.
+   */
+  void InitCbpfcReservedUpdate ();
+
+  /**
    * Level 2 flow control type
    */
   enum L2FlowControlType { UNKNOWN = -1, PFC, CBFC, CBPFC };
@@ -181,6 +187,15 @@ private:
    * \param qIndex for queue
    */
   void SendCbfcFeedback (Time period, Ptr<DpskNetDevice> dev, uint32_t qIndex);
+
+  /**
+   * Send Pause or Resume by checking and updating reserved
+   * 
+   * \param peroid checking peroid
+   * \param dev send from device
+   * \param qIndex for queue
+   */
+  void CheckCbpfcReservedUpdate (Time period, Ptr<DpskNetDevice> dev, uint32_t qIndex);
 
   uint32_t m_ecmpSeed; //!< ECMP seed
 

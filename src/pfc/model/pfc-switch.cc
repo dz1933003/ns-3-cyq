@@ -30,6 +30,7 @@
 #include "pfc-switch-tag.h"
 #include "pfc-switch-port.h"
 #include "cbfc-switch-port.h"
+#include "cbpfc-switch-port.h"
 
 namespace ns3 {
 
@@ -163,6 +164,12 @@ PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
         {
           const auto cbfcPortImpl = dpskDev->GetObject<CbfcSwitchPort> ();
           cbfcPortImpl->SetDeviceDequeueHandler (
+              MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
+        }
+      else if (type == CBPFC)
+        {
+          const auto cbpfcPortImpl = dpskDev->GetObject<CbpfcSwitchPort> ();
+          cbpfcPortImpl->SetDeviceDequeueHandler (
               MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
         }
     }
@@ -420,6 +427,65 @@ PfcSwitch::SendCbfcFeedback (Time period, Ptr<DpskNetDevice> dev, uint32_t qInde
   Simulator::Schedule (Time (period), &PfcSwitch::SendCbfcFeedback, this, period, dev, qIndex);
 }
 
+void
+PfcSwitch::InitCbpfcReservedUpdate ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  for (const auto &entry : m_devices)
+    {
+      const auto dev = entry.second;
+      const auto type = DeviceToL2Type (dev);
+      if (type == CBPFC)
+        {
+          for (uint32_t i = 0; i < m_nQueues; ++i)
+            {
+              const auto period = m_mmu->GetCbpfcReservedUpdatePeroid (dev, i);
+              Simulator::ScheduleNow (&PfcSwitch::CheckCbpfcReservedUpdate, this, period, dev, i);
+            }
+        }
+    }
+}
+
+void
+PfcSwitch::CheckCbpfcReservedUpdate (Time period, Ptr<DpskNetDevice> dev, uint32_t qIndex)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+
+  const bool isPause = m_mmu->GetCbpfcIsPause (dev, qIndex);
+  const auto free = m_mmu->GetCbpfcFree (dev, qIndex);
+  if (isPause) // Pause
+    {
+      if (dev->GetDataRate ().CalculateBytesTxTime (free) > period) // Send Resume
+        {
+          // Lend the first free buffer out
+          m_mmu->AddCbpfcReserved (dev, qIndex, period);
+
+          PfcHeader PfcHeader (PfcHeader::PfcType::Resume, qIndex);
+          Ptr<Packet> pfc = Create<Packet> (0);
+          pfc->AddHeader (PfcHeader);
+
+          SendFromDevice (dev, pfc, PfcHeader::PROT_NUM, dev->GetAddress (), dev->GetRemote ());
+        }
+      // else keep paused
+    }
+  else // Resume
+    {
+      if (dev->GetDataRate ().CalculateBytesTxTime (free) < period) // Send Pause
+        {
+          PfcHeader pfcHeader (PfcHeader::PfcType::Pause, qIndex);
+          Ptr<Packet> pfc = Create<Packet> (0);
+          pfc->AddHeader (pfcHeader);
+
+          SendFromDevice (dev, pfc, PfcHeader::PROT_NUM, dev->GetAddress (), dev->GetRemote ());
+        }
+      else
+        {
+          // Lend free buffer out
+          m_mmu->AddCbpfcReserved (dev, qIndex, period);
+        }
+    }
+}
+
 PfcSwitch::L2FlowControlType
 PfcSwitch::DeviceToL2Type (Ptr<NetDevice> dev)
 {
@@ -428,6 +494,8 @@ PfcSwitch::DeviceToL2Type (Ptr<NetDevice> dev)
     return PFC;
   else if (name == "CbfcSwitchPort")
     return CBFC;
+  else if (name == "CbpfcSwitchPort")
+    return CBPFC;
   else
     return UNKNOWN;
 }

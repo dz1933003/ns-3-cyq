@@ -451,6 +451,24 @@ public:
    */
   uint64_t GetCbpfcFree (Ptr<NetDevice> port, uint32_t qIndex);
 
+  /**
+   * Get PFC state.
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return true is pause, false is resume.
+   */
+  bool GetCbpfcIsPause (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Add CBPFC reserved buffer size by update period
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param period update period
+   */
+  void AddCbpfcReserved (Ptr<DpskNetDevice> port, uint32_t qIndex, Time period);
+
   // Common Functions for all L2 flow control algorithms
 
   /**
