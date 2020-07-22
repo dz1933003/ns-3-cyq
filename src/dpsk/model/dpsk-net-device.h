@@ -292,6 +292,8 @@ public:
   virtual void SetPromiscReceiveCallback (PromiscReceiveCallback cb);
   virtual bool SupportsSendFrom (void) const;
 
+  DataRate GetDataRate () const;
+
   /**
    * \returns the address of the remote device connected to this device
    * through the Dpsk channel.
