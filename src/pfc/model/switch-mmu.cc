@@ -550,6 +550,13 @@ SwitchMmu::CheckIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t
         return false;
       return true;
     }
+  else if (portType == PfcSwitch::CBPFC)
+    {
+      auto queueConfig = DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+      if (pSize + queueConfig->ingressUsed > queueConfig->ingressSize)
+        return false;
+      return true;
+    }
 
   // Unknown port type
   return false;
@@ -604,6 +611,12 @@ SwitchMmu::UpdateIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_
       queueConfig->rxAbr += pSize;
       queueConfig->ingressUsed += pSize;
     }
+  else if (portType == PfcSwitch::CBPFC)
+    {
+      auto queueConfig = DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+      queueConfig->reserved -= pSize;
+      queueConfig->ingressUsed += pSize;
+    }
   // Unknown port type
 }
 
@@ -631,6 +644,10 @@ SwitchMmu::RemoveFromIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uin
   else if (portType == PfcSwitch::CBFC)
     {
       DynamicCast<CbfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->ingressUsed -= pSize;
+    }
+  else if (portType == PfcSwitch::CBPFC)
+    {
+      DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->ingressUsed -= pSize;
     }
   // Unknown port type
 }
