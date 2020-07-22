@@ -498,7 +498,7 @@ SwitchMmu::ConfigCbpfcReservedUpdatePeroid (Time peroid)
 }
 
 Time
-SwitchMmu::GetCbfcReservedUpdatePeroid (Ptr<NetDevice> port, uint32_t qIndex)
+SwitchMmu::GetCbpfcReservedUpdatePeroid (Ptr<NetDevice> port, uint32_t qIndex)
 {
   return DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->peroid;
 }

@@ -440,7 +440,7 @@ public:
    * \param qIndex target queue index
    * \return CBPFC reserved update peroid
    */
-  Time GetCbfcReservedUpdatePeroid (Ptr<NetDevice> port, uint32_t qIndex);
+  Time GetCbpfcReservedUpdatePeroid (Ptr<NetDevice> port, uint32_t qIndex);
 
   /**
    * Get CBPFC free buffer size on one queue
