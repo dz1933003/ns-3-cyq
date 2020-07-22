@@ -21,6 +21,7 @@
 
 #include <ns3/object.h>
 #include <ns3/nstime.h>
+#include <ns3/data-rate.h>
 
 #include "switch-mmu-queue.h"
 
@@ -46,6 +47,8 @@ public:
   uint64_t ingressUsed = 0;
 
   Time peroid = Time ("50us"); //!< Check period
+
+  bool isPaused = true;
 
 public:
   static TypeId GetTypeId ();

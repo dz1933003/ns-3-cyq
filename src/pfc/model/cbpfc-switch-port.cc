@@ -67,13 +67,6 @@ CbpfcSwitchPort::~CbpfcSwitchPort ()
 }
 
 void
-CbpfcSwitchPort::SetBandwidth (DataRate rate)
-{
-  NS_LOG_FUNCTION (rate);
-  bandwidth = rate;
-}
-
-void
 CbpfcSwitchPort::SetupQueues (uint32_t n)
 {
   NS_LOG_FUNCTION (n);
@@ -242,7 +235,7 @@ CbpfcSwitchPort::DequeueRoundRobin (uint32_t &qIndex)
               Ptr<Packet> p = m_queues[qIdx].front ();
               m_queues[qIdx].pop ();
 
-              m_txStates[qIdx].txTime += bandwidth.CalculateBytesTxTime (p->GetSize ());
+              m_txStates[qIdx].txTime += m_dev->GetDataRate ().CalculateBytesTxTime (p->GetSize ());
 
               m_nInQueueBytes -= p->GetSize ();
               m_nInQueuePackets--;
@@ -296,7 +289,7 @@ CbpfcSwitchPort::CanDequeue (uint32_t qIndex)
   const auto txMaxTime = m_txStates[qIndex].txMaxTime;
   const auto txTime = m_txStates[qIndex].txTime;
   // txTime greater than txMaxTime after send
-  if (txMaxTime < txTime + bandwidth.CalculateBytesTxTime (p->GetSize ()))
+  if (txMaxTime < txTime + m_dev->GetDataRate ().CalculateBytesTxTime (p->GetSize ()))
     return false;
   // Packets in queue and txTime less or equal to txMaxTime after send
   return true;
