@@ -24,6 +24,10 @@
 #include <map>
 #include <sstream>
 
+#include "ns3/dpsk-net-device.h"
+#include "pfc-switch-mmu-queue.h"
+#include "cbfc-switch-mmu-queue.h"
+
 namespace ns3 {
 
 class Packet;
@@ -48,15 +52,15 @@ public:
   SwitchMmu ();
   ~SwitchMmu ();
 
-  std::string Dump();
+  std::string Dump ();
 
-private:
+public:
   /**
    * Add devices need to be managed to the mmu
    *
    * \param dev device.
    */
-  void AggregateDevice (Ptr<NetDevice> dev);
+  void AggregateDevice (Ptr<DpskNetDevice> dev);
 
   /**
    * Configurate queue number of the switch
@@ -72,6 +76,8 @@ public:
    * \param size buffer size by byte
    */
   void ConfigBufferSize (uint64_t size);
+
+  // ECN Functions
 
   /**
    * Configurate ECN parameters on one queue
@@ -112,6 +118,8 @@ public:
    * \param pMax pMax
    */
   void ConfigEcn (uint64_t kMin, uint64_t kMax, double pMax);
+
+  // PFC Functions
 
   /**
    * Configurate headroom on one queue
@@ -210,6 +218,157 @@ public:
   void ConfigResumeOffset (uint64_t size);
 
   /**
+   * Get headroom size
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return headroom by byte
+   */
+  uint64_t GetHeadroomSize (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Get headroom size
+   *
+   * \param port target port
+   * \return headroom by byte
+   */
+  uint64_t GetHeadroomSize (Ptr<NetDevice> port);
+
+  /**
+   * Get headroom size
+   *
+   * \return headroom by byte
+   */
+  uint64_t GetHeadroomSize ();
+
+  /**
+   * Set pause to a port and the target queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   */
+  void SetPause (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Set resume to a port and the target queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   */
+  void SetResume (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Get PFC threshold
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return PFC threshold by bytes
+   */
+  uint64_t GetPfcThreshold (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Check whether send pause to the peer of this port
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   */
+  bool CheckShouldSendPfcPause (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Check whether send resume to the peer of this port
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   */
+  bool CheckShouldSendPfcResume (Ptr<NetDevice> port, uint32_t qIndex);
+
+  // CBFC Functions
+
+  /**
+   * Configurate CBFC buffer on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param size CBFC buffer size by byte
+   */
+  void ConfigCbfcBufferSize (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate CBFC buffer on all queues of the port
+   *
+   * \param port target port
+   * \param size CBFC buffer size by byte
+   */
+  void ConfigCbfcBufferSize (Ptr<NetDevice> port, uint64_t size);
+
+  /**
+   * Configurate CBFC buffer on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param size CBFC buffer size by byte
+   */
+  void ConfigCbfcBufferSize (uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate CBFC buffer on all ports in the switch
+   *
+   * \param size CBFC buffer size by byte
+   */
+  void ConfigCbfcBufferSize (uint64_t size);
+
+  /**
+   * Configurate CBFC feedback peroid on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param peroid CBFC feedback peroid
+   */
+  void ConfigCbfcFeedbackPeroid (Ptr<NetDevice> port, uint32_t qIndex, Time peroid);
+
+  /**
+   * Configurate CBFC feedback peroid on all queues of the port
+   *
+   * \param port target port
+   * \param peroid CBFC feedback peroid
+   */
+  void ConfigCbfcFeedbackPeroid (Ptr<NetDevice> port, Time peroid);
+
+  /**
+   * Configurate CBFC feedback peroid on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param peroid CBFC feedback peroid
+   */
+  void ConfigCbfcFeedbackPeroid (uint32_t qIndex, Time peroid);
+
+  /**
+   * Configurate CBFC feedback peroid on all ports in the switch
+   *
+   * \param peroid CBFC feedback peroid
+   */
+  void ConfigCbfcFeedbackPeroid (Time peroid);
+
+  /**
+   * Get CBFC feedback peroid on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return CBFC feedback peroid
+   */
+  Time GetCbfcFeedbackPeroid (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Get FCCL on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return FCCL in bytes
+   */
+  uint64_t GetCbfcFccl (Ptr<NetDevice> port, uint32_t qIndex);
+
+  // Common Functions for all L2 flow control algorithms
+
+  /**
    * Check the admission of target ingress
    *
    * \param port target port
@@ -266,22 +425,6 @@ public:
   void RemoveFromEgressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t pSize);
 
   /**
-   * Check whether send pause to the peer of this port
-   *
-   * \param port target port
-   * \param qIndex target queue index
-   */
-  bool CheckShouldSendPfcPause (Ptr<NetDevice> port, uint32_t qIndex);
-
-  /**
-   * Check whether send resume to the peer of this port
-   *
-   * \param port target port
-   * \param qIndex target queue index
-   */
-  bool CheckShouldSendPfcResume (Ptr<NetDevice> port, uint32_t qIndex);
-
-  /**
    * Check whether need to set ECN bit
    *
    * \param port target port
@@ -289,30 +432,7 @@ public:
    */
   bool CheckShouldSetEcn (Ptr<NetDevice> port, uint32_t qIndex);
 
-  /**
-   * Set pause to a port and the target queue
-   *
-   * \param port target port
-   * \param qIndex target queue index
-   */
-  void SetPause (Ptr<NetDevice> port, uint32_t qIndex);
-
-  /**
-   * Set resume to a port and the target queue
-   *
-   * \param port target port
-   * \param qIndex target queue index
-   */
-  void SetResume (Ptr<NetDevice> port, uint32_t qIndex);
-
-  /**
-   * Get PFC threshold
-   *
-   * \param port target port
-   * \param qIndex target queue index
-   * \return PFC threshold by bytes
-   */
-  uint64_t GetPfcThreshold (Ptr<NetDevice> port, uint32_t qIndex);
+  // Statistical functions
 
   /**
    * Get buffer size
@@ -320,30 +440,6 @@ public:
    * \return buffer size by byte
    */
   uint64_t GetBufferSize ();
-
-  /**
-   * Get headroom size
-   *
-   * \param port target port
-   * \param qIndex target queue index
-   * \return headroom by byte
-   */
-  uint64_t GetHeadroomSize (Ptr<NetDevice> port, uint32_t qIndex);
-
-  /**
-   * Get headroom size
-   *
-   * \param port target port
-   * \return headroom by byte
-   */
-  uint64_t GetHeadroomSize (Ptr<NetDevice> port);
-
-  /**
-   * Get headroom size
-   *
-   * \return headroom by byte
-   */
-  uint64_t GetHeadroomSize ();
 
   /**
    * Get shared buffer size
@@ -383,7 +479,7 @@ public:
    */
   uint64_t GetSharedBufferUsed ();
 
-    /**
+  /**
    * Get buffer used bytes of a queue
    *
    * \param port target port
@@ -414,19 +510,11 @@ protected:
    */
   virtual void DoDispose (void);
 
-  friend class PfcSwitch;
-
 private:
   uint64_t m_bufferConfig; //!< configuration of buffer size
 
-  // Map from Ptr to net device to the queue configuration of headroom buffer
-  std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_headroomConfig;
-
-  // Map from Ptr to net device to the queue configuration of reserve buffer
-  std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_reserveConfig;
-
-  // Map from Ptr to net device to the queue configuration of PFC resume offset
-  std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_resumeOffsetConfig;
+  // Queue configurations
+  std::map<Ptr<NetDevice>, std::vector<Ptr<SwitchMmuQueue>>> m_switchMmuQueueConfig;
 
   struct EcnConfig // ECN configuration
   {
@@ -439,28 +527,10 @@ private:
   // Map from Ptr to net device to the queue configuration of ECN
   std::map<Ptr<NetDevice>, std::vector<EcnConfig>> m_ecnConfig;
 
-  // Map from Ptr to net device to a vector of queue headroom bytes.
-  std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_headroomUsed;
-
-  /**
-   * Map from Ptr to net device to a vector of ingress queue bytes.
-   * Reserve included and headroom excluded.
-   */
-  std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_ingressUsed;
-
-  /**
-   * Map from Ptr to net device to a vector of egress queue bytes.
-   * Reserve included and headroom excluded.
-   */
-  std::map<Ptr<NetDevice>, std::vector<uint64_t>> m_egressUsed;
-
   uint32_t m_nQueues; //!< queue number of each device
   std::vector<Ptr<NetDevice>> m_devices; //!< devices managed by this mmu
 
   bool m_dynamicThreshold; //!< if enabled dynamic PFC threshold
-
-  // Map from Ptr to net device to a vector of queue PFC paused states.
-  std::map<Ptr<NetDevice>, std::vector<bool>> m_pausedStates;
 
   Ptr<UniformRandomVariable> uniRand; //!< random var stream
 

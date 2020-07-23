@@ -1,0 +1,36 @@
+{
+  "Global": {
+    "QueueNumber": 1,
+    "EcmpSeed": 1
+  },
+  "Host": [
+    {
+      "Name": [
+        "h1",
+        "h2"
+      ],
+      "PortNumber": 1
+    }
+  ],
+  "Switch": [
+    {
+      "Name": [
+        "s1",
+        "s2"
+      ],
+      "PortNumber": 2,
+      "PortType": [
+        "PFC",
+        "CBFC"
+      ],
+      "Config": {
+        "Buffer": "12MiB",
+        "ConfigFile": "ns3_config/default_cbfc/switch-port.json"
+      }
+    }
+  ],
+  "LinkConfigFile": "ns3_config/default_cbfc/link.csv",
+  "FlowConfigFile": "ns3_config/default_cbfc/flow.csv",
+  "TraceConfigFile": "ns3_config/default_cbfc/trace.json",
+  "LogOutputFolder": "ns3_log/default_cbfc"
+}

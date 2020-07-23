@@ -29,11 +29,11 @@
             ]
          },
          {
-            "name": "(gdb) pfc-hw",
+            "name": "(gdb) pfc-cyq default_cbfc",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/scratch/pfc-hw",
-            "args": ["ns3_config/default/config.json"],
+            "program": "${workspaceFolder}/build/scratch/pfc-cyq",
+            "args": ["ns3_config/default_cbfc/config.json"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [

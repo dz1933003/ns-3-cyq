@@ -12,12 +12,17 @@ def build(bld):
     module.source = [
         'model/pfc.cc',
         'model/pfc-switch-port.cc',
+        'model/cbfc-switch-port.cc',
         'model/pfc-switch.cc',
         'model/pfc-switch-tag.cc',
         'model/switch-mmu.cc',
+        'model/switch-mmu-queue.cc',
+        'model/pfc-switch-mmu-queue.cc',
+        'model/cbfc-switch-mmu-queue.cc',
         'model/pfc-host-port.cc',
         'model/pfc-host.cc',
         'model/pfc-header.cc',
+        'model/cbfc-header.cc',
         'helper/pfc-helper.cc',
     ]
 
@@ -31,12 +36,17 @@ def build(bld):
     headers.source = [
         'model/pfc.h',
         'model/pfc-switch-port.h',
+        'model/cbfc-switch-port.h',
         'model/pfc-switch.h',
         'model/pfc-switch-tag.h',
         'model/switch-mmu.h',
+        'model/switch-mmu-queue.h',
+        'model/pfc-switch-mmu-queue.h',
+        'model/cbfc-switch-mmu-queue.h',
         'model/pfc-host-port.h',
         'model/pfc-host.h',
         'model/pfc-header.h',
+        'model/cbfc-header.h',
         'helper/pfc-helper.h',
     ]
 

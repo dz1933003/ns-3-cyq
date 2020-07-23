@@ -232,7 +232,7 @@ DpskNetDevice::SetImplementation (Ptr<DpskNetDeviceImpl> impl)
   SetTransmitInterceptor (MakeCallback (&DpskNetDeviceImpl::Transmit, m_impl));
   SetSendInterceptor (MakeCallback (&DpskNetDeviceImpl::Send, m_impl));
   SetReceiveInterceptor (MakeCallback (&DpskNetDeviceImpl::Receive, m_impl));
-  AggregateObject(m_impl);
+  AggregateObject (m_impl);
 }
 
 Ptr<DpskNetDeviceImpl>
@@ -738,6 +738,13 @@ DpskNetDevice::DoMpiReceive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this << p);
   Receive (p);
+}
+
+DataRate
+DpskNetDevice::GetDataRate () const
+{
+  NS_LOG_FUNCTION (this);
+  return m_bps;
 }
 
 Address

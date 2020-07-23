@@ -1,6 +1,0 @@
-[
-  {
-    "PortIndex": "all",
-    "QueueConfigFile": "ns3_config/default/switch-queue.json"
-  }
-]

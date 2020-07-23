@@ -23,6 +23,7 @@
 #include <fstream>
 #include <map>
 #include <set>
+#include <chrono>
 
 #include <boost/bimap.hpp>
 
@@ -32,6 +33,10 @@
 
 using namespace ns3;
 using json = nlohmann::json;
+
+/*******************************
+ * Global simulation variables *
+ *******************************/
 
 static const uint32_t CYQ_MTU = 1500;
 static DpskHelper dpskHelper;
@@ -47,10 +52,17 @@ std::set<Ptr<Node>> switchNodes;
 std::map<uint32_t, Ptr<RdmaTxQueuePair>> allTxQueuePairs;
 std::map<uint32_t, Ptr<RdmaRxQueuePair>> allRxQueuePairs;
 
+uint32_t txCompleteCnt = 0;
+uint32_t rxCompleteCnt = 0;
+
 uint64_t maxBdp = 0;
 Time maxRtt (0);
 
-std::string outputFolder;
+std::string outputFolder; // Log output folder
+
+/*******************************
+ * Route calculation variables *
+ *******************************/
 
 struct Interface
 {
@@ -66,8 +78,11 @@ std::map<Ptr<Node>, std::map<Ptr<Node>, DataRate>> pairBandwidth;
 std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t>> pairBdp; // byte
 std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairRtt;
 
+/***************************************
+ * Help functions for simulation setup *
+ ***************************************/
+
 void ConfigMmuPort (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile);
-void ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile);
 void ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                      const std::string &configFile);
 
@@ -78,6 +93,10 @@ void CalculateRttBdp ();
 
 void DoTrace (const std::string &configFile);
 void DoLog ();
+
+/********************
+ * Simulation setup *
+ ********************/
 
 NS_LOG_COMPONENT_DEFINE ("PFC CYQ");
 
@@ -92,6 +111,8 @@ main (int argc, char *argv[])
 
   std::ifstream file (argv[1]);
   json conf = json::parse (file);
+
+  const auto sim_start = std::chrono::system_clock::now ();
 
   NS_LOG_UNCOND ("====Global====");
   nQueue = conf["Global"]["QueueNumber"];
@@ -147,9 +168,19 @@ main (int argc, char *argv[])
               dev->SetAddress (Mac48Address::Allocate ());
               dev->SetTxMode (portTxMode);
               node->AddDevice (dev);
-              const Ptr<PfcSwitchPort> impl = CreateObject<PfcSwitchPort> ();
-              dev->SetImplementation (impl);
-              impl->SetupQueues (nQueue);
+              std::string portType = sw["PortType"][i];
+              if (portType == "PFC")
+                {
+                  const Ptr<PfcSwitchPort> impl = CreateObject<PfcSwitchPort> ();
+                  dev->SetImplementation (impl);
+                  impl->SetupQueues (nQueue);
+                }
+              else if (portType == "CBFC")
+                {
+                  const Ptr<CbfcSwitchPort> impl = CreateObject<CbfcSwitchPort> ();
+                  dev->SetImplementation (impl);
+                  impl->SetupQueues (nQueue);
+                }
               allPorts[node].push_back (dev);
             }
           // Install DPSK
@@ -165,6 +196,7 @@ main (int argc, char *argv[])
           const uint64_t buffer = cyq::DataSize::GetBytes (sw["Config"]["Buffer"]);
           mmu->ConfigBufferSize (buffer);
           ConfigMmuPort (node, mmu, sw["Config"]["ConfigFile"]);
+          pfcSwitch->InitSendCbfcFeedback ();
           NS_LOG_DEBUG (mmu->Dump ());
         }
     }
@@ -243,7 +275,14 @@ main (int argc, char *argv[])
   DoLog ();
 
   NS_LOG_UNCOND ("====Done====");
+  const auto sim_end = std::chrono::system_clock::now ();
+  const std::chrono::duration<double> elapsed_seconds = sim_end - sim_start;
+  NS_LOG_UNCOND ("Elapsed " << elapsed_seconds.count () << "s");
 }
+
+/*********************
+ * MMU configuration *
+ *********************/
 
 void
 ConfigMmuPort (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile)
@@ -252,79 +291,9 @@ ConfigMmuPort (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile
   json conf = json::parse (file);
   for (const auto &port : conf)
     {
-      if (port["PortIndex"].is_string () && port["PortIndex"] == "all")
+      for (const auto &index : port["PortIndex"])
         {
-          ConfigMmuQueue (node, mmu, port["QueueConfigFile"]);
-        }
-      else if (port["PortIndex"].is_array ())
-        {
-          for (const auto &index : port["PortIndex"])
-            {
-              ConfigMmuQueue (node, mmu, allPorts[node][index], port["QueueConfigFile"]);
-            }
-        }
-    }
-}
-
-void
-ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile)
-{
-  std::ifstream file (configFile);
-  json conf = json::parse (file);
-  for (const auto &queue : conf)
-    {
-      if (queue["QueueIndex"].is_string () && queue["QueueIndex"] == "all")
-        {
-          if (queue.contains ("Ecn"))
-            {
-              const uint64_t kMin = cyq::DataSize::GetBytes (queue["Ecn"]["kMin"]);
-              const uint64_t kMax = cyq::DataSize::GetBytes (queue["Ecn"]["kMax"]);
-              const double pMax = queue["Ecn"]["pMax"];
-              mmu->ConfigEcn (kMin, kMax, pMax);
-            }
-          if (queue.contains ("Headroom"))
-            {
-              const uint64_t headroom = cyq::DataSize::GetBytes (queue["Headroom"]);
-              mmu->ConfigHeadroom (headroom);
-            }
-          if (queue.contains ("Reserve"))
-            {
-              const uint64_t reserve = cyq::DataSize::GetBytes (queue["Reserve"]);
-              mmu->ConfigReserve (reserve);
-            }
-          if (queue.contains ("ResumeOffset"))
-            {
-              const uint64_t resumeOffset = cyq::DataSize::GetBytes (queue["ResumeOffset"]);
-              mmu->ConfigResumeOffset (resumeOffset);
-            }
-        }
-      else if (queue["QueueIndex"].is_array ())
-        {
-          for (const auto &index : queue["QueueIndex"])
-            {
-              if (queue.contains ("Ecn"))
-                {
-                  const uint64_t kMin = cyq::DataSize::GetBytes (queue["Ecn"]["kMin"]);
-                  const uint64_t kMax = cyq::DataSize::GetBytes (queue["Ecn"]["kMax"]);
-                  const double pMax = queue["Ecn"]["pMax"];
-                  mmu->ConfigEcn (index, kMin, kMax, pMax);
-                }
-              if (queue.contains ("Headroom"))
-                {
-                  const uint64_t headroom = cyq::DataSize::GetBytes (queue["Headroom"]);
-                  mmu->ConfigHeadroom (index, headroom);
-                }
-              if (queue.contains ("Reserve"))
-                {
-                  const uint64_t reserve = cyq::DataSize::GetBytes (queue["Reserve"]);
-                  mmu->ConfigReserve (index, reserve);
-                }
-              if (queue.contains ("ResumeOffset"))
-                {
-                  const uint64_t resumeOffset = cyq::DataSize::GetBytes (queue["ResumeOffset"]);
-                  mmu->ConfigResumeOffset (index, resumeOffset);
-                }
-            }
+          ConfigMmuQueue (node, mmu, allPorts[node][index], port["QueueConfigFile"]);
         }
     }
 }
@@ -337,42 +306,11 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
   json conf = json::parse (file);
   for (const auto &queue : conf)
     {
-      if (queue["QueueIndex"].is_string () && queue["QueueIndex"] == "all")
+      for (const auto &index : queue["QueueIndex"])
         {
-          if (queue.contains ("Ecn"))
+          const auto portType = PfcSwitch::DeviceToL2Type (port);
+          if (portType == PfcSwitch::PFC)
             {
-              const uint64_t kMin = cyq::DataSize::GetBytes (queue["Ecn"]["kMin"]);
-              const uint64_t kMax = cyq::DataSize::GetBytes (queue["Ecn"]["kMax"]);
-              const double pMax = queue["Ecn"]["pMax"];
-              mmu->ConfigEcn (port, kMin, kMax, pMax);
-            }
-          if (queue.contains ("Headroom"))
-            {
-              const uint64_t headroom = cyq::DataSize::GetBytes (queue["Headroom"]);
-              mmu->ConfigHeadroom (port, headroom);
-            }
-          if (queue.contains ("Reserve"))
-            {
-              const uint64_t reserve = cyq::DataSize::GetBytes (queue["Reserve"]);
-              mmu->ConfigReserve (port, reserve);
-            }
-          if (queue.contains ("ResumeOffset"))
-            {
-              const uint64_t resumeOffset = cyq::DataSize::GetBytes (queue["ResumeOffset"]);
-              mmu->ConfigResumeOffset (port, resumeOffset);
-            }
-        }
-      else if (queue["QueueIndex"].is_array ())
-        {
-          for (const auto &index : queue["QueueIndex"])
-            {
-              if (queue.contains ("Ecn"))
-                {
-                  const uint64_t kMin = cyq::DataSize::GetBytes (queue["Ecn"]["kMin"]);
-                  const uint64_t kMax = cyq::DataSize::GetBytes (queue["Ecn"]["kMax"]);
-                  const double pMax = queue["Ecn"]["pMax"];
-                  mmu->ConfigEcn (port, index, kMin, kMax, pMax);
-                }
               if (queue.contains ("Headroom"))
                 {
                   const uint64_t headroom = cyq::DataSize::GetBytes (queue["Headroom"]);
@@ -389,9 +327,33 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                   mmu->ConfigResumeOffset (port, index, resumeOffset);
                 }
             }
+          else if (portType == PfcSwitch::CBFC)
+            {
+              if (queue.contains ("Ingress"))
+                {
+                  const uint64_t ingress = cyq::DataSize::GetBytes (queue["Ingress"]);
+                  mmu->ConfigCbfcBufferSize (port, index, ingress);
+                }
+              if (queue.contains ("Period"))
+                {
+                  const Time period (queue["Period"].get<std::string> ());
+                  mmu->ConfigCbfcFeedbackPeroid (port, index, period);
+                }
+            }
+          if (queue.contains ("Ecn"))
+            {
+              const uint64_t kMin = cyq::DataSize::GetBytes (queue["Ecn"]["kMin"]);
+              const uint64_t kMax = cyq::DataSize::GetBytes (queue["Ecn"]["kMax"]);
+              const double pMax = queue["Ecn"]["pMax"];
+              mmu->ConfigEcn (port, index, kMin, kMax, pMax);
+            }
         }
     }
 }
+
+/*********************
+ * Route calculation *
+ *********************/
 
 void
 CalculateRoute ()
@@ -515,7 +477,10 @@ CalculateRttBdp ()
 std::map<std::string, std::stringstream> logStreams;
 
 void TraceFct ();
+void TraceQueuePairTxComplete (Ptr<RdmaTxQueuePair> qp);
 void TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp);
+
+void CheckQueuePair ();
 
 void TraceSwitch (const json &conf);
 void TraceIngressDropPacket (Time interval, Time end);
@@ -526,6 +491,8 @@ void TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex)
 
 void TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type,
                  std::vector<bool> pfcState);
+
+void TraceCbfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, uint64_t fccl);
 
 void
 DoTrace (const std::string &configFile)
@@ -578,7 +545,7 @@ DoTrace (const std::string &configFile)
   if (conf["PfcRx"]["Enable"] == true)
     {
       logStreams["PfcRx"] << "Time,Node,IfIndex,qIndex,PfcType,PfcState\n";
-      for (const auto &target : conf["PFC"]["Target"])
+      for (const auto &target : conf["PfcRx"]["Target"])
         {
           for (const auto &name : target["Name"])
             {
@@ -588,6 +555,23 @@ DoTrace (const std::string &configFile)
                   const auto dev = allPorts[node][portIndex];
                   const auto impl = dev->GetImplementation ();
                   impl->TraceConnectWithoutContext ("PfcRx", MakeCallback (&TracePfcRx));
+                }
+            }
+        }
+    }
+  if (conf["CbfcRx"]["Enable"] == true)
+    {
+      logStreams["CbfcRx"] << "Time,Node,IfIndex,qIndex,Fccl\n";
+      for (const auto &target : conf["CbfcRx"]["Target"])
+        {
+          for (const auto &name : target["Name"])
+            {
+              for (const auto &portIndex : target["PortIndex"])
+                {
+                  const auto node = allNodes.left.at (name);
+                  const auto dev = allPorts[node][portIndex];
+                  const auto impl = dev->GetImplementation ();
+                  impl->TraceConnectWithoutContext ("CbfcRx", MakeCallback (&TraceCbfcRx));
                 }
             }
         }
@@ -605,10 +589,19 @@ TraceFct ()
       for (const auto &dev : devs)
         {
           const auto impl = dev->GetObject<PfcHostPort> ();
+          impl->TraceConnectWithoutContext ("QueuePairTxComplete",
+                                            MakeCallback (&TraceQueuePairTxComplete));
           impl->TraceConnectWithoutContext ("QueuePairRxComplete",
                                             MakeCallback (&TraceQueuePairRxComplete));
         }
     }
+}
+
+void
+TraceQueuePairTxComplete (Ptr<RdmaTxQueuePair> qp)
+{
+  txCompleteCnt++;
+  CheckQueuePair ();
 }
 
 void
@@ -622,6 +615,21 @@ TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp)
   logStreams["QueuePairRxComplete"]
       << fromNode << "," << toNode << "," << qp->m_sPort << "," << qp->m_dPort << "," << qp->m_size
       << "," << qp->m_priority << "," << startTime << "," << endTime << "," << duration << "\n";
+  rxCompleteCnt++;
+  CheckQueuePair ();
+}
+
+void
+CheckQueuePair ()
+{
+  const auto allQPCnt = allTxQueuePairs.size ();
+  std::clog << "\rTx: " << txCompleteCnt << "/" << allQPCnt << " Rx: " << rxCompleteCnt << "/"
+            << allQPCnt;
+  if (txCompleteCnt == allQPCnt && rxCompleteCnt == allQPCnt)
+    {
+      NS_LOG_UNCOND ("\nComplete Simulation: " << Simulator::Now ());
+      Simulator::Stop ();
+    }
 }
 
 void
@@ -697,9 +705,21 @@ TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex)
   const auto port = allPorts[node][portIndex];
   uint64_t txByte = 0;
   if (hostNodes.find (node) != hostNodes.end ())
-    txByte = port->GetObject<PfcHostPort> ()->m_nTxBytes;
+    {
+      txByte = port->GetObject<PfcHostPort> ()->m_nTxBytes;
+    }
   else if (switchNodes.find (node) != switchNodes.end ())
-    txByte = port->GetObject<PfcSwitchPort> ()->m_nTxBytes;
+    {
+      const auto portType = PfcSwitch::DeviceToL2Type (port);
+      if (portType == PfcSwitch::PFC)
+        {
+          txByte = port->GetObject<PfcSwitchPort> ()->m_nTxBytes;
+        }
+      else if (portType == PfcSwitch::CBFC)
+        {
+          txByte = port->GetObject<CbfcSwitchPort> ()->m_nTxBytes;
+        }
+    }
   logStreams["TxByte"] << Simulator::Now () << "," << name << "," << portIndex << "," << txByte
                        << "\n";
   if (Simulator::Now () < end)
@@ -713,9 +733,21 @@ TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex)
   const auto port = allPorts[node][portIndex];
   uint64_t rxByte = 0;
   if (hostNodes.find (node) != hostNodes.end ())
-    rxByte = port->GetObject<PfcHostPort> ()->m_nRxBytes;
+    {
+      rxByte = port->GetObject<PfcHostPort> ()->m_nRxBytes;
+    }
   else if (switchNodes.find (node) != switchNodes.end ())
-    rxByte = port->GetObject<PfcSwitchPort> ()->m_nRxBytes;
+    {
+      const auto portType = PfcSwitch::DeviceToL2Type (port);
+      if (portType == PfcSwitch::PFC)
+        {
+          rxByte = port->GetObject<PfcSwitchPort> ()->m_nRxBytes;
+        }
+      else if (portType == PfcSwitch::CBFC)
+        {
+          rxByte = port->GetObject<CbfcSwitchPort> ()->m_nTxBytes;
+        }
+    }
   logStreams["RxByte"] << Simulator::Now () << "," << name << "," << portIndex << "," << rxByte
                        << "\n";
   if (Simulator::Now () < end)
@@ -734,6 +766,13 @@ TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type,
       logStreams["PfcRx"] << (state ? "P" : "R");
     }
   logStreams["PfcRx"] << "\n";
+}
+
+void
+TraceCbfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, uint64_t fccl)
+{
+  logStreams["CbfcRx"] << Simulator::Now () << "," << allNodes.right.at (dev->GetNode ()) << ","
+                       << dev->GetIfIndex () << "," << qIndex << "," << fccl << "\n";
 }
 
 /*****************

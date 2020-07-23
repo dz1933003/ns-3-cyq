@@ -21,6 +21,7 @@
 
 #include "ns3/dpsk-layer.h"
 #include "ns3/object.h"
+#include "ns3/simulator.h"
 #include "ns3/dpsk-net-device.h"
 #include "switch-mmu.h"
 #include <unordered_map>
@@ -125,6 +126,19 @@ public:
    */
   void ClearRouteTable ();
 
+  /**
+   * Initiate sending CBFC feedback periodically.
+   * Invoke after configuring devices and MMU.
+   */
+  void InitSendCbfcFeedback ();
+
+  /**
+   * Level 2 flow control type
+   */
+  enum L2FlowControlType { UNKNOWN = -1, PFC, CBFC };
+
+  static L2FlowControlType DeviceToL2Type (Ptr<NetDevice> dev);
+
 protected:
   /**
    * Perform any object release functionality required to break reference
@@ -158,6 +172,15 @@ private:
    * \param qIndex output queue index
    */
   void DeviceDequeueHandler (Ptr<NetDevice> outDev, Ptr<Packet> packet, uint32_t qIndex);
+
+  /**
+   * Send CBFC feedback periodically for a queue in one device
+   * 
+   * \param peroid feedback sending peroid
+   * \param dev send from device
+   * \param qIndex for queue
+   */
+  void SendCbfcFeedback (Time period, Ptr<DpskNetDevice> dev, uint32_t qIndex);
 
   uint32_t m_ecmpSeed; //!< ECMP seed
 

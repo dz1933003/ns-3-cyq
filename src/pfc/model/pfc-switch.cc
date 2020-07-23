@@ -26,8 +26,10 @@
 #include "ns3/ipv4-header.h"
 #include "ns3/udp-header.h"
 #include "pfc-header.h"
+#include "cbfc-header.h"
 #include "pfc-switch-tag.h"
 #include "pfc-switch-port.h"
+#include "cbfc-switch-port.h"
 
 namespace ns3 {
 
@@ -114,17 +116,21 @@ PfcSwitch::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, u
           return; // Drop packet
         }
 
-      // Check and send PFC
-      if (m_mmu->CheckShouldSendPfcPause (inDev, qIndex))
+      const auto inDevType = DeviceToL2Type (inDev);
+      if (inDevType == PFC)
         {
-          m_mmu->SetPause (inDev, qIndex);
+          // Check and send PFC
+          if (m_mmu->CheckShouldSendPfcPause (inDev, qIndex))
+            {
+              m_mmu->SetPause (inDev, qIndex);
 
-          PfcHeader pfcHeader (PfcHeader::PfcType::Pause, qIndex);
-          Ptr<Packet> pfc = Create<Packet> (0);
-          pfc->AddHeader (pfcHeader);
+              PfcHeader pfcHeader (PfcHeader::PfcType::Pause, qIndex);
+              Ptr<Packet> pfc = Create<Packet> (0);
+              pfc->AddHeader (pfcHeader);
 
-          SendFromDevice (inDev, pfc, PfcHeader::PROT_NUM, inDev->GetAddress (),
-                          inDev->GetRemote ());
+              SendFromDevice (inDev, pfc, PfcHeader::PROT_NUM, inDev->GetAddress (),
+                              inDev->GetRemote ());
+            }
         }
     }
 
@@ -146,8 +152,19 @@ PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
     {
       const auto dpskDev = DynamicCast<DpskNetDevice> (dev);
       m_devices.insert ({dev->GetIfIndex (), dpskDev});
-      const auto pfcPortImpl = dpskDev->GetObject<PfcSwitchPort> ();
-      pfcPortImpl->SetDeviceDequeueHandler (MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
+      const auto type = DeviceToL2Type (dpskDev);
+      if (type == PFC)
+        {
+          const auto pfcPortImpl = dpskDev->GetObject<PfcSwitchPort> ();
+          pfcPortImpl->SetDeviceDequeueHandler (
+              MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
+        }
+      else if (type == CBFC)
+        {
+          const auto cbfcPortImpl = dpskDev->GetObject<CbfcSwitchPort> ();
+          cbfcPortImpl->SetDeviceDequeueHandler (
+              MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
+        }
     }
 
   AggregateObject (m_dpsk->GetNode ());
@@ -351,17 +368,68 @@ PfcSwitch::DeviceDequeueHandler (Ptr<NetDevice> outDev, Ptr<Packet> packet, uint
       packet->AddHeader (ipHeader);
       packet->AddHeader (ethHeader);
     }
-  // Check and send resume
-  if (m_mmu->CheckShouldSendPfcResume (inDev, qIndex))
+
+  const auto inDevType = DeviceToL2Type (inDev);
+  if (inDevType == PFC)
     {
-      m_mmu->SetResume (inDev, qIndex);
+      // Check and send resume
+      if (m_mmu->CheckShouldSendPfcResume (inDev, qIndex))
+        {
+          m_mmu->SetResume (inDev, qIndex);
 
-      PfcHeader PfcHeader (PfcHeader::PfcType::Resume, qIndex);
-      Ptr<Packet> pfc = Create<Packet> (0);
-      pfc->AddHeader (PfcHeader);
+          PfcHeader PfcHeader (PfcHeader::PfcType::Resume, qIndex);
+          Ptr<Packet> pfc = Create<Packet> (0);
+          pfc->AddHeader (PfcHeader);
 
-      SendFromDevice (inDev, pfc, PfcHeader::PROT_NUM, inDev->GetAddress (), inDev->GetRemote ());
+          SendFromDevice (inDev, pfc, PfcHeader::PROT_NUM, inDev->GetAddress (),
+                          inDev->GetRemote ());
+        }
     }
+}
+
+void
+PfcSwitch::InitSendCbfcFeedback ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  for (const auto &entry : m_devices)
+    {
+      const auto dev = entry.second;
+      const auto type = DeviceToL2Type (dev);
+      if (type == CBFC)
+        {
+          for (uint32_t i = 0; i < m_nQueues; ++i)
+            {
+              const auto period = m_mmu->GetCbfcFeedbackPeroid (dev, i);
+              Simulator::ScheduleNow (&PfcSwitch::SendCbfcFeedback, this, period, dev, i);
+            }
+        }
+    }
+}
+
+void
+PfcSwitch::SendCbfcFeedback (Time period, Ptr<DpskNetDevice> dev, uint32_t qIndex)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+
+  CbfcHeader cbfcHeader (m_mmu->GetCbfcFccl (dev, qIndex), qIndex);
+  Ptr<Packet> cbfc = Create<Packet> (0);
+  cbfc->AddHeader (cbfcHeader);
+
+  SendFromDevice (dev, cbfc, CbfcHeader::PROT_NUM, dev->GetAddress (), dev->GetRemote ());
+
+  Simulator::Schedule (Time (period), &PfcSwitch::SendCbfcFeedback, this, period, dev, qIndex);
+}
+
+PfcSwitch::L2FlowControlType
+PfcSwitch::DeviceToL2Type (Ptr<NetDevice> dev)
+{
+  const auto name = DynamicCast<DpskNetDevice> (dev)->GetImplementation ()->GetName ();
+  if (name == "PfcSwitchPort")
+    return PFC;
+  else if (name == "CbfcSwitchPort")
+    return CBFC;
+  else
+    return UNKNOWN;
 }
 
 void
