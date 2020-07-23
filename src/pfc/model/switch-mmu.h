@@ -77,6 +77,8 @@ public:
    */
   void ConfigBufferSize (uint64_t size);
 
+  // ECN Functions
+
   /**
    * Configurate ECN parameters on one queue
    *
@@ -116,6 +118,8 @@ public:
    * \param pMax pMax
    */
   void ConfigEcn (uint64_t kMin, uint64_t kMax, double pMax);
+
+  // PFC Functions
 
   /**
    * Configurate headroom on one queue
@@ -214,6 +218,73 @@ public:
   void ConfigResumeOffset (uint64_t size);
 
   /**
+   * Get headroom size
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return headroom by byte
+   */
+  uint64_t GetHeadroomSize (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Get headroom size
+   *
+   * \param port target port
+   * \return headroom by byte
+   */
+  uint64_t GetHeadroomSize (Ptr<NetDevice> port);
+
+  /**
+   * Get headroom size
+   *
+   * \return headroom by byte
+   */
+  uint64_t GetHeadroomSize ();
+
+  /**
+   * Set pause to a port and the target queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   */
+  void SetPause (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Set resume to a port and the target queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   */
+  void SetResume (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Get PFC threshold
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return PFC threshold by bytes
+   */
+  uint64_t GetPfcThreshold (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Check whether send pause to the peer of this port
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   */
+  bool CheckShouldSendPfcPause (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Check whether send resume to the peer of this port
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   */
+  bool CheckShouldSendPfcResume (Ptr<NetDevice> port, uint32_t qIndex);
+
+  // CBFC Functions
+
+  /**
    * Configurate CBFC buffer on one queue
    *
    * \param port target port
@@ -295,6 +366,8 @@ public:
    */
   uint64_t GetCbfcFccl (Ptr<NetDevice> port, uint32_t qIndex);
 
+  // Common Functions for all L2 flow control algorithms
+
   /**
    * Check the admission of target ingress
    *
@@ -352,22 +425,6 @@ public:
   void RemoveFromEgressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t pSize);
 
   /**
-   * Check whether send pause to the peer of this port
-   *
-   * \param port target port
-   * \param qIndex target queue index
-   */
-  bool CheckShouldSendPfcPause (Ptr<NetDevice> port, uint32_t qIndex);
-
-  /**
-   * Check whether send resume to the peer of this port
-   *
-   * \param port target port
-   * \param qIndex target queue index
-   */
-  bool CheckShouldSendPfcResume (Ptr<NetDevice> port, uint32_t qIndex);
-
-  /**
    * Check whether need to set ECN bit
    *
    * \param port target port
@@ -375,30 +432,7 @@ public:
    */
   bool CheckShouldSetEcn (Ptr<NetDevice> port, uint32_t qIndex);
 
-  /**
-   * Set pause to a port and the target queue
-   *
-   * \param port target port
-   * \param qIndex target queue index
-   */
-  void SetPause (Ptr<NetDevice> port, uint32_t qIndex);
-
-  /**
-   * Set resume to a port and the target queue
-   *
-   * \param port target port
-   * \param qIndex target queue index
-   */
-  void SetResume (Ptr<NetDevice> port, uint32_t qIndex);
-
-  /**
-   * Get PFC threshold
-   *
-   * \param port target port
-   * \param qIndex target queue index
-   * \return PFC threshold by bytes
-   */
-  uint64_t GetPfcThreshold (Ptr<NetDevice> port, uint32_t qIndex);
+  // Statistical functions
 
   /**
    * Get buffer size
@@ -406,30 +440,6 @@ public:
    * \return buffer size by byte
    */
   uint64_t GetBufferSize ();
-
-  /**
-   * Get headroom size
-   *
-   * \param port target port
-   * \param qIndex target queue index
-   * \return headroom by byte
-   */
-  uint64_t GetHeadroomSize (Ptr<NetDevice> port, uint32_t qIndex);
-
-  /**
-   * Get headroom size
-   *
-   * \param port target port
-   * \return headroom by byte
-   */
-  uint64_t GetHeadroomSize (Ptr<NetDevice> port);
-
-  /**
-   * Get headroom size
-   *
-   * \return headroom by byte
-   */
-  uint64_t GetHeadroomSize ();
 
   /**
    * Get shared buffer size

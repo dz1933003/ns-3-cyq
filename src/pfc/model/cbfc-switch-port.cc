@@ -185,6 +185,7 @@ CbfcSwitchPort::Receive (Ptr<Packet> p)
       m_txStates[qIndex].txFccl = fccl;
       m_cbfcRxTrace (m_dev, qIndex, fccl);
 
+      m_dev->TriggerTransmit ();
       return false;
     }
   else // Not CBFC
