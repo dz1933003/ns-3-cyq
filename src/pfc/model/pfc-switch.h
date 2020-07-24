@@ -135,7 +135,7 @@ public:
   /**
    * Level 2 flow control type
    */
-  enum L2FlowControlType { UNKNOWN = -1, PFC, CBFC };
+  enum L2FlowControlType { UNKNOWN = -1, PFC, CBFC, CBPFC };
 
   static L2FlowControlType DeviceToL2Type (Ptr<NetDevice> dev);
 
