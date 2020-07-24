@@ -1,0 +1,20 @@
+[
+  {
+    "QueueIndex": [
+      0
+    ],
+    "Ecn": {
+      "kMin": "8MiB",
+      "kMax": "10MiB",
+      "pMax": 1
+    },
+    "Ingress": "2MiB",
+    "Period": "30us"
+  },
+  {
+    "QueueIndex": [
+      1
+    ],
+    "Ingress": "2MiB"
+  }
+]

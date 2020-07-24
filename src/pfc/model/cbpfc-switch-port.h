@@ -163,9 +163,9 @@ private:
    *
    * \param Ptr Dpsk net device
    * \param uint32_t target queue index
-   * \param uint64_t pause time
+   * \param uint16_t pause time
    */
-  TracedCallback<Ptr<DpskNetDevice>, uint32_t, uint64_t> m_pfcRxTrace;
+  TracedCallback<Ptr<DpskNetDevice>, uint32_t, uint16_t> m_pfcRxTrace;
 
 public:
   /// Statistics
