@@ -419,6 +419,96 @@ SwitchMmu::GetCbfcFccl (Ptr<NetDevice> port, uint32_t qIndex)
   return DynamicCast<CbfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->GetFccl ();
 }
 
+/*******************
+ * CBPFC Functions *
+ *******************/
+
+void
+SwitchMmu::ConfigCbpfcBufferSize (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size)
+{
+  const auto type = PfcSwitch::DeviceToL2Type (port);
+  if (type == PfcSwitch::CBFC)
+    {
+      DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->ingressSize = size;
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcBufferSize (Ptr<NetDevice> port, uint64_t size)
+{
+  for (uint32_t i = 0; i <= m_nQueues; i++)
+    {
+      ConfigCbpfcBufferSize (port, i, size);
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcBufferSize (uint32_t qIndex, uint64_t size)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigCbpfcBufferSize (dev, qIndex, size);
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcBufferSize (uint64_t size)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigCbpfcBufferSize (dev, size);
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcFeedbackPeroid (Ptr<NetDevice> port, uint32_t qIndex, Time peroid)
+{
+  const auto type = PfcSwitch::DeviceToL2Type (port);
+  if (type == PfcSwitch::CBFC)
+    {
+      DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->peroid = peroid;
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcFeedbackPeroid (Ptr<NetDevice> port, Time peroid)
+{
+  for (uint32_t i = 0; i <= m_nQueues; i++)
+    {
+      ConfigCbpfcFeedbackPeroid (port, i, peroid);
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcFeedbackPeroid (uint32_t qIndex, Time peroid)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigCbpfcFeedbackPeroid (dev, qIndex, peroid);
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcFeedbackPeroid (Time peroid)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigCbpfcFeedbackPeroid (dev, peroid);
+    }
+}
+
+Time
+SwitchMmu::GetCbpfcFeedbackPeroid (Ptr<NetDevice> port, uint32_t qIndex)
+{
+  return DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->peroid;
+}
+
+uint64_t
+SwitchMmu::GetCbpfcFree (Ptr<NetDevice> port, uint32_t qIndex)
+{
+  return DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->GetFree ();
+}
+
 /*******************************************************
  * Common Functions for all L2 flow control algorithms *
  *******************************************************/

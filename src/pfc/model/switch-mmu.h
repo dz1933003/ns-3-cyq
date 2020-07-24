@@ -27,6 +27,7 @@
 #include "ns3/dpsk-net-device.h"
 #include "pfc-switch-mmu-queue.h"
 #include "cbfc-switch-mmu-queue.h"
+#include "cbpfc-switch-mmu-queue.h"
 
 namespace ns3 {
 
@@ -365,6 +366,90 @@ public:
    * \return FCCL in bytes
    */
   uint64_t GetCbfcFccl (Ptr<NetDevice> port, uint32_t qIndex);
+
+  // CBPFC Functions
+
+  /**
+   * Configurate CBPFC buffer on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param size CBPFC buffer size by byte
+   */
+  void ConfigCbpfcBufferSize (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate CBPFC buffer on all queues of the port
+   *
+   * \param port target port
+   * \param size CBPFC buffer size by byte
+   */
+  void ConfigCbpfcBufferSize (Ptr<NetDevice> port, uint64_t size);
+
+  /**
+   * Configurate CBPFC buffer on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param size CBPFC buffer size by byte
+   */
+  void ConfigCbpfcBufferSize (uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate CBPFC buffer on all ports in the switch
+   *
+   * \param size CBPFC buffer size by byte
+   */
+  void ConfigCbpfcBufferSize (uint64_t size);
+
+  /**
+   * Configurate CBPFC feedback peroid on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param peroid CBPFC feedback peroid
+   */
+  void ConfigCbpfcFeedbackPeroid (Ptr<NetDevice> port, uint32_t qIndex, Time peroid);
+
+  /**
+   * Configurate CBPFC feedback peroid on all queues of the port
+   *
+   * \param port target port
+   * \param peroid CBPFC feedback peroid
+   */
+  void ConfigCbpfcFeedbackPeroid (Ptr<NetDevice> port, Time peroid);
+
+  /**
+   * Configurate CBPFC feedback peroid on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param peroid CBPFC feedback peroid
+   */
+  void ConfigCbpfcFeedbackPeroid (uint32_t qIndex, Time peroid);
+
+  /**
+   * Configurate CBPFC feedback peroid on all ports in the switch
+   *
+   * \param peroid CBPFC feedback peroid
+   */
+  void ConfigCbpfcFeedbackPeroid (Time peroid);
+
+  /**
+   * Get CBPFC feedback peroid on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return CBPFC feedback peroid
+   */
+  Time GetCbpfcFeedbackPeroid (Ptr<NetDevice> port, uint32_t qIndex);
+
+  /**
+   * Get free buffer size on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \return free buffer size in bytes
+   */
+  uint64_t GetCbpfcFree (Ptr<NetDevice> port, uint32_t qIndex);
 
   // Common Functions for all L2 flow control algorithms
 
