@@ -46,6 +46,14 @@ public:
 
   /**
    * \brief Construct a null PFC header
+   * \param type Pause or Resume
+   * \param qIndex target queue index
+   * \param time pause time
+   */
+  PfcHeader (uint32_t type, uint32_t qIndex, uint16_t time);
+
+  /**
+   * \brief Construct a null PFC header
    */
   PfcHeader (void);
 
@@ -55,19 +63,29 @@ public:
   void SetType (uint32_t type);
 
   /**
-   * \param qIndex target queue index
-   */
-  void SetQIndex (uint32_t qIndex);
-
-  /**
    * \return PFC type
    */
   uint32_t GetType (void) const;
 
   /**
+   * \param qIndex target queue index
+   */
+  void SetQIndex (uint32_t qIndex);
+
+  /**
    * \return target queue index
    */
   uint32_t GetQIndex (void) const;
+
+  /**
+   * \param time pause time
+   */
+  void SetTime (uint16_t time);
+
+  /**
+   * \return pause time
+   */
+  uint16_t GetTime (void) const;
 
   /**
    * \brief Get the type ID.
@@ -97,6 +115,7 @@ public:
 private:
   uint32_t m_type; //!< PFC type
   uint32_t m_qIndex; //!< target queue index
+  uint16_t m_time; //!< pause time on this queue
 };
 
 }; // namespace ns3
