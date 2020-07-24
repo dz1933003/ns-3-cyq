@@ -30,6 +30,7 @@
 #include "pfc-switch-tag.h"
 #include "pfc-switch-port.h"
 #include "cbfc-switch-port.h"
+#include "cbpfc-switch-port.h"
 
 namespace ns3 {
 
@@ -163,6 +164,12 @@ PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
         {
           const auto cbfcPortImpl = dpskDev->GetObject<CbfcSwitchPort> ();
           cbfcPortImpl->SetDeviceDequeueHandler (
+              MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
+        }
+      else if (type == CBPFC)
+        {
+          const auto cbpfcPortImpl = dpskDev->GetObject<CbpfcSwitchPort> ();
+          cbpfcPortImpl->SetDeviceDequeueHandler (
               MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
         }
     }
@@ -420,6 +427,47 @@ PfcSwitch::SendCbfcFeedback (Time period, Ptr<DpskNetDevice> dev, uint32_t qInde
   Simulator::Schedule (Time (period), &PfcSwitch::SendCbfcFeedback, this, period, dev, qIndex);
 }
 
+void
+PfcSwitch::InitSendCbpfcFeedback ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  for (const auto &entry : m_devices)
+    {
+      const auto dev = entry.second;
+      const auto type = DeviceToL2Type (dev);
+      if (type == CBPFC)
+        {
+          for (uint32_t i = 0; i < m_nQueues; ++i)
+            {
+              const auto period = m_mmu->GetCbpfcFeedbackPeroid (dev, i);
+              Simulator::ScheduleNow (&PfcSwitch::SendCbpfcFeedback, this, period, dev, i);
+            }
+        }
+    }
+}
+
+void
+PfcSwitch::SendCbpfcFeedback (Time period, Ptr<DpskNetDevice> dev, uint32_t qIndex)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+
+  const uint64_t total_time = m_mmu->GetCbpfcFree (dev, qIndex) / 64;
+  const uint16_t time = total_time > UINT16_MAX ? UINT16_MAX : total_time;
+
+  if (time > 0)
+    {
+      m_mmu->AddCbpfcReserve (dev, qIndex, time);
+
+      PfcHeader pfcHeader (PfcHeader::Resume, qIndex, time);
+      Ptr<Packet> pfc = Create<Packet> (0);
+      pfc->AddHeader (pfcHeader);
+
+      SendFromDevice (dev, pfc, PfcHeader::PROT_NUM, dev->GetAddress (), dev->GetRemote ());
+    }
+
+  Simulator::Schedule (Time (period), &PfcSwitch::SendCbpfcFeedback, this, period, dev, qIndex);
+}
+
 PfcSwitch::L2FlowControlType
 PfcSwitch::DeviceToL2Type (Ptr<NetDevice> dev)
 {
@@ -428,6 +476,8 @@ PfcSwitch::DeviceToL2Type (Ptr<NetDevice> dev)
     return PFC;
   else if (name == "CbfcSwitchPort")
     return CBFC;
+  else if (name == "CbpfcSwitchPort")
+    return CBPFC;
   else
     return UNKNOWN;
 }

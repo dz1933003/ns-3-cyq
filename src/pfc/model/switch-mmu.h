@@ -451,6 +451,15 @@ public:
    */
   uint64_t GetCbpfcFree (Ptr<NetDevice> port, uint32_t qIndex);
 
+  /**
+   * Add reserved buffer size on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param time pause time for reserve
+   */
+  void AddCbpfcReserve (Ptr<NetDevice> port, uint32_t qIndex, uint16_t time);
+
   // Common Functions for all L2 flow control algorithms
 
   /**

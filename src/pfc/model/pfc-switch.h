@@ -133,6 +133,12 @@ public:
   void InitSendCbfcFeedback ();
 
   /**
+   * Initiate sending CBPFC feedback periodically.
+   * Invoke after configuring devices and MMU.
+   */
+  void InitSendCbpfcFeedback ();
+
+  /**
    * Level 2 flow control type
    */
   enum L2FlowControlType { UNKNOWN = -1, PFC, CBFC, CBPFC };
@@ -181,6 +187,15 @@ private:
    * \param qIndex for queue
    */
   void SendCbfcFeedback (Time period, Ptr<DpskNetDevice> dev, uint32_t qIndex);
+
+  /**
+   * Send CBPFC feedback periodically for a queue in one device
+   * 
+   * \param peroid feedback sending peroid
+   * \param dev send from device
+   * \param qIndex for queue
+   */
+  void SendCbpfcFeedback (Time period, Ptr<DpskNetDevice> dev, uint32_t qIndex);
 
   uint32_t m_ecmpSeed; //!< ECMP seed
 

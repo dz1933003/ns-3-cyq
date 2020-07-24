@@ -152,7 +152,7 @@ private:
   uint32_t m_nQueues; //!< queue count of the port (control queue not included)
   std::vector<std::queue<Ptr<Packet>>> m_queues; //!< queues of the port (with control queue)
 
-  std::vector<uint64_t> m_quotas; //!< transmitting quota of queues
+  std::vector<uint64_t> m_quotas; //!< transmitting quota in bytes of queues
 
   uint32_t m_lastQueueIdx; //!< last dequeue queue index (control queue excluded)
 

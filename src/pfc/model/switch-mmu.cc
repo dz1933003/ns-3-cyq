@@ -513,6 +513,12 @@ SwitchMmu::GetCbpfcFree (Ptr<NetDevice> port, uint32_t qIndex)
   return DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->GetFree ();
 }
 
+void
+SwitchMmu::AddCbpfcReserve (Ptr<NetDevice> port, uint32_t qIndex, uint16_t time)
+{
+  DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->reserved += time * 64;
+}
+
 /*******************************************************
  * Common Functions for all L2 flow control algorithms *
  *******************************************************/
