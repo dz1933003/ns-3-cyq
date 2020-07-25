@@ -52,6 +52,7 @@ PfcSwitchPort::GetTypeId (void)
 PfcSwitchPort::PfcSwitchPort ()
     : m_nQueues (0),
       m_lastQueueIdx (0),
+      m_isPassThrough (false),
       m_nInQueueBytes (0),
       m_nInQueuePackets (0),
       m_nTxBytes (0),
@@ -95,6 +96,18 @@ void
 PfcSwitchPort::SetDeviceDequeueHandler (DeviceDequeueNotifier h)
 {
   m_mmuCallback = h;
+}
+
+void
+PfcSwitchPort::SetPassThrough (bool flag)
+{
+  m_isPassThrough = flag;
+}
+
+bool
+PfcSwitchPort::IsPassThrough ()
+{
+  return m_isPassThrough;
 }
 
 Ptr<Packet>
@@ -187,7 +200,6 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = true;
           m_pfcRxTrace (m_dev, qIndex, PfcHeader::Pause, m_pausedStates);
-          return false; // Do not forward up to node
         }
       else if (pfcHeader.GetType () == PfcHeader::Resume) // PFC Resume
         {
@@ -197,12 +209,22 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
           m_pausedStates[qIndex] = false;
           m_pfcRxTrace (m_dev, qIndex, PfcHeader::Resume, m_pausedStates);
           m_dev->TriggerTransmit (); // Trigger device transmitting
-          return false; // Do not forward up to node
         }
       else
         {
           NS_ASSERT_MSG (false, "PfcSwitchPort::Rx: Invalid PFC type");
           return false; // Drop this packet
+        }
+      // Check whether pass through PFC frame
+      if (m_isPassThrough)
+        {
+          p->AddHeader (pfcHeader);
+          p->AddHeader (ethHeader);
+          return true;
+        }
+      else
+        {
+          return false;
         }
     }
   else // Not PFC

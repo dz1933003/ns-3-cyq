@@ -214,6 +214,10 @@ private:
 
   Ptr<SwitchMmu> m_mmu; //!< mmu of this switch
 
+  Ptr<DpskNetDevice> m_passThroughFrom; //!< PFC pass through src device
+
+  Ptr<DpskNetDevice> m_passThroughTo; //!< PFC pass through dest device
+
 public:
   /// Statistics
   std::map<Ptr<DpskNetDevice>, uint32_t> m_nIngressDropPacket;

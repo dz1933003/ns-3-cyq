@@ -87,6 +87,18 @@ public:
    */
   void SetDeviceDequeueHandler (DeviceDequeueNotifier h);
 
+  /**
+   * Set this device pass PFC frames through.
+   *
+   * \param flag true to pass
+   */
+  void SetPassThrough (bool flag);
+
+  /**
+   * Get whether this device pass PFC frames through.
+   */
+  bool IsPassThrough ();
+
 protected:
   /**
    * PFC switch port transmitting logic.
@@ -147,6 +159,8 @@ private:
   std::vector<bool> m_pausedStates; //!< paused state of queues
 
   uint32_t m_lastQueueIdx; //!< last dequeue queue index (control queue excluded)
+
+  bool m_isPassThrough; //!< pass through flag
 
   DeviceDequeueNotifier m_mmuCallback; //!< callback to notify mmu
 

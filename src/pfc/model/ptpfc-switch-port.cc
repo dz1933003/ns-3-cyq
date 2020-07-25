@@ -201,10 +201,9 @@ PtpfcSwitchPort::Receive (Ptr<Packet> p)
         }
       else
         {
-          NS_ASSERT_MSG (false, "PfcSwitchPort::Rx: Invalid PFC type");
+          NS_ASSERT_MSG (false, "PtpfcSwitchPort::Rx: Invalid PFC type");
           return false; // Drop this packet
         }
-      return false;
     }
   else // Not PFC
     {
@@ -255,7 +254,7 @@ PtpfcSwitchPort::Dequeue (uint32_t &qIndex)
     {
       return DequeueRoundRobin (qIndex);
     }
-  else // Dequeue control packets without FCCL check
+  else // Dequeue control packets
     {
       Ptr<Packet> p = m_queues[m_nQueues].front ();
       m_queues[m_nQueues].pop ();
