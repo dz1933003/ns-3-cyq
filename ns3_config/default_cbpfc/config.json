@@ -18,10 +18,13 @@
         "s1",
         "s2"
       ],
-      "PortNumber": 2,
-      "PortType": [
-        "PFC",
-        "CBPFC"
+      "Port": [
+        {
+          "Type": "PFC"
+        },
+        {
+          "Type": "CBPFC"
+        }
       ],
       "Config": {
         "Buffer": "12MiB",

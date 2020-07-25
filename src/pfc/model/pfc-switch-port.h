@@ -87,6 +87,18 @@ public:
    */
   void SetDeviceDequeueHandler (DeviceDequeueNotifier h);
 
+  /**
+   * Set this device pass PFC frames through.
+   *
+   * \param flag true to pass
+   */
+  void SetPassThrough (bool flag);
+
+  /**
+   * Get whether this device pass PFC frames through.
+   */
+  bool IsPassThrough ();
+
 protected:
   /**
    * PFC switch port transmitting logic.
@@ -148,6 +160,8 @@ private:
 
   uint32_t m_lastQueueIdx; //!< last dequeue queue index (control queue excluded)
 
+  bool m_isPassThrough; //!< pass through flag
+
   DeviceDequeueNotifier m_mmuCallback; //!< callback to notify mmu
 
   /**
@@ -156,9 +170,9 @@ private:
    * \param Ptr Dpsk net device
    * \param uint32_t target queue index
    * \param PfcType PFC type
-   * \param vector pause state after received
+   * \param uint16_t pause time
    */
-  TracedCallback<Ptr<DpskNetDevice>, uint32_t, PfcHeader::PfcType, std::vector<bool>> m_pfcRxTrace;
+  TracedCallback<Ptr<DpskNetDevice>, uint32_t, PfcHeader::PfcType, uint16_t> m_pfcRxTrace;
 
 public:
   /// Statistics

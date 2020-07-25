@@ -18,8 +18,8 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#ifndef CBPFC_SWITCH_PORT_H
-#define CBPFC_SWITCH_PORT_H
+#ifndef PTPFC_SWITCH_PORT_H
+#define PTPFC_SWITCH_PORT_H
 
 #include "ns3/dpsk-net-device-impl.h"
 #include "ns3/traced-callback.h"
@@ -31,14 +31,14 @@ namespace ns3 {
 
 /**
  * \ingroup pfc
- * \class CbpfcSwitchPort
- * \brief The Credit Based Flow Control Net Device Logic Implementation.
+ * \class PtpfcSwitchPort
+ * \brief The Pass Through Priority Flow Control Net Device Logic Implementation.
  *
  * Attention: No data packet modify on the port when receive (for mmu statics). Only
  * handle PFC frames.
  * Add Ethenet header when transmit.
  */
-class CbpfcSwitchPort : public DpskNetDeviceImpl
+class PtpfcSwitchPort : public DpskNetDeviceImpl
 {
 public:
   /**
@@ -51,12 +51,12 @@ public:
   /**
    * Constructor
    */
-  CbpfcSwitchPort ();
+  PtpfcSwitchPort ();
 
   /**
    * Destructor
    */
-  virtual ~CbpfcSwitchPort ();
+  virtual ~PtpfcSwitchPort ();
 
   /**
    * Setup queues.
@@ -141,18 +141,10 @@ private:
    */
   Ptr<Packet> Dequeue (uint32_t &qIndex);
 
-  /**
-   * If can dequeue a packet from a queue.
-   *
-   * \param qIndex dequeue queue index
-   * \return true: can dequeue
-   */
-  bool CanDequeue (uint32_t qIndex);
-
   uint32_t m_nQueues; //!< queue count of the port (control queue not included)
   std::vector<std::queue<Ptr<Packet>>> m_queues; //!< queues of the port (with control queue)
 
-  std::vector<uint64_t> m_quotas; //!< transmitting quota in bytes of queues
+  std::vector<bool> m_pausedStates; //!< paused state of queues
 
   uint32_t m_lastQueueIdx; //!< last dequeue queue index (control queue excluded)
 
@@ -184,14 +176,14 @@ private:
   /**
    * Disabled method.
    */
-  CbpfcSwitchPort &operator= (const CbpfcSwitchPort &o);
+  PtpfcSwitchPort &operator= (const PtpfcSwitchPort &o);
 
   /**
    * Disabled method.
    */
-  CbpfcSwitchPort (const CbpfcSwitchPort &o);
+  PtpfcSwitchPort (const PtpfcSwitchPort &o);
 };
 
 } // namespace ns3
 
-#endif /* CBPFC_SWITCH_PORT_H */
+#endif /* PTPFC_SWITCH_PORT_H */

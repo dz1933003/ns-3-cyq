@@ -28,6 +28,7 @@
 #include "pfc-switch-mmu-queue.h"
 #include "cbfc-switch-mmu-queue.h"
 #include "cbpfc-switch-mmu-queue.h"
+#include "ptpfc-switch-mmu-queue.h"
 
 namespace ns3 {
 
@@ -459,6 +460,40 @@ public:
    * \param time pause time for reserve
    */
   void AddCbpfcReserve (Ptr<NetDevice> port, uint32_t qIndex, uint16_t time);
+
+  // PTPFC Functions
+
+  /**
+   * Configurate PTPFC buffer on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param size PTPFC buffer size by byte
+   */
+  void ConfigPtpfcBufferSize (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate PTPFC buffer on all queues of the port
+   *
+   * \param port target port
+   * \param size PTPFC buffer size by byte
+   */
+  void ConfigPtpfcBufferSize (Ptr<NetDevice> port, uint64_t size);
+
+  /**
+   * Configurate PTPFC buffer on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param size PTPFC buffer size by byte
+   */
+  void ConfigPtpfcBufferSize (uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate PTPFC buffer on all ports in the switch
+   *
+   * \param size PTPFC buffer size by byte
+   */
+  void ConfigPtpfcBufferSize (uint64_t size);
 
   // Common Functions for all L2 flow control algorithms
 

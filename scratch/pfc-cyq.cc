@@ -162,18 +162,22 @@ main (int argc, char *argv[])
           switchNodes.insert (node);
           allNodes.insert ({name, node});
           // Install ports
-          for (size_t i = 0; i < sw["PortNumber"]; i++)
+          for (const auto &swPort : sw["Port"])
             {
               const Ptr<DpskNetDevice> dev = CreateObject<DpskNetDevice> ();
               dev->SetAddress (Mac48Address::Allocate ());
               dev->SetTxMode (portTxMode);
               node->AddDevice (dev);
-              std::string portType = sw["PortType"][i];
+              std::string portType = swPort["Type"];
               if (portType == "PFC")
                 {
                   const Ptr<PfcSwitchPort> impl = CreateObject<PfcSwitchPort> ();
                   dev->SetImplementation (impl);
                   impl->SetupQueues (nQueue);
+                  if (swPort.contains ("PassThrough"))
+                    {
+                      impl->SetPassThrough (swPort["PassThrough"]);
+                    }
                 }
               else if (portType == "CBFC")
                 {
@@ -184,6 +188,12 @@ main (int argc, char *argv[])
               else if (portType == "CBPFC")
                 {
                   const Ptr<CbpfcSwitchPort> impl = CreateObject<CbpfcSwitchPort> ();
+                  dev->SetImplementation (impl);
+                  impl->SetupQueues (nQueue);
+                }
+              else if (portType == "PTPFC")
+                {
+                  const Ptr<PtpfcSwitchPort> impl = CreateObject<PtpfcSwitchPort> ();
                   dev->SetImplementation (impl);
                   impl->SetupQueues (nQueue);
                 }
@@ -360,6 +370,14 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                   mmu->ConfigCbpfcFeedbackPeroid (port, index, period);
                 }
             }
+          else if (portType == PfcSwitch::PTPFC)
+            {
+              if (queue.contains ("Ingress"))
+                {
+                  const uint64_t ingress = cyq::DataSize::GetBytes (queue["Ingress"]);
+                  mmu->ConfigPtpfcBufferSize (port, index, ingress);
+                }
+            }
           if (queue.contains ("Ecn"))
             {
               const uint64_t kMin = cyq::DataSize::GetBytes (queue["Ecn"]["kMin"]);
@@ -509,12 +527,8 @@ void TraceBufferUsed (Time interval, Time end, std::string name, uint32_t portIn
 void TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex);
 void TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex);
 
-void TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type,
-                 std::vector<bool> pfcState);
-
+void TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type, uint16_t time);
 void TraceCbfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, uint64_t fccl);
-
-void TraceCbpfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, uint16_t time);
 
 void
 DoTrace (const std::string &configFile)
@@ -566,7 +580,7 @@ DoTrace (const std::string &configFile)
     }
   if (conf.contains ("PfcRx") && conf["PfcRx"]["Enable"] == true)
     {
-      logStreams["PfcRx"] << "Time,Node,IfIndex,qIndex,PfcType,PfcState\n";
+      logStreams["PfcRx"] << "Time,Node,IfIndex,qIndex,PfcType,Time\n";
       for (const auto &target : conf["PfcRx"]["Target"])
         {
           for (const auto &name : target["Name"])
@@ -594,23 +608,6 @@ DoTrace (const std::string &configFile)
                   const auto dev = allPorts[node][portIndex];
                   const auto impl = dev->GetImplementation ();
                   impl->TraceConnectWithoutContext ("CbfcRx", MakeCallback (&TraceCbfcRx));
-                }
-            }
-        }
-    }
-  if (conf.contains ("CbpfcRx") && conf["CbpfcRx"]["Enable"] == true)
-    {
-      logStreams["CbpfcRx"] << "Time,Node,IfIndex,qIndex,Time\n";
-      for (const auto &target : conf["CbpfcRx"]["Target"])
-        {
-          for (const auto &name : target["Name"])
-            {
-              for (const auto &portIndex : target["PortIndex"])
-                {
-                  const auto node = allNodes.left.at (name);
-                  const auto dev = allPorts[node][portIndex];
-                  const auto impl = dev->GetImplementation ();
-                  impl->TraceConnectWithoutContext ("PfcRx", MakeCallback (&TraceCbpfcRx));
                 }
             }
         }
@@ -802,17 +799,12 @@ TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex)
 }
 
 void
-TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type,
-            std::vector<bool> pfcState)
+TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type, uint16_t time)
 {
   const std::string pfcType = (type == PfcHeader::PfcType::Pause) ? "P" : "R";
   logStreams["PfcRx"] << Simulator::Now () << "," << allNodes.right.at (dev->GetNode ()) << ","
-                      << dev->GetIfIndex () << "," << qIndex << "," << pfcType << ",";
-  for (const auto &state : pfcState)
-    {
-      logStreams["PfcRx"] << (state ? "P" : "R");
-    }
-  logStreams["PfcRx"] << "\n";
+                      << dev->GetIfIndex () << "," << qIndex << "," << pfcType << "," << time
+                      << "\n";
 }
 
 void
@@ -820,13 +812,6 @@ TraceCbfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, uint64_t fccl)
 {
   logStreams["CbfcRx"] << Simulator::Now () << "," << allNodes.right.at (dev->GetNode ()) << ","
                        << dev->GetIfIndex () << "," << qIndex << "," << fccl << "\n";
-}
-
-void
-TraceCbpfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, uint16_t time)
-{
-  logStreams["CbpfcRx"] << Simulator::Now () << "," << allNodes.right.at (dev->GetNode ()) << ","
-                        << dev->GetIfIndex () << "," << qIndex << "," << time << "\n";
 }
 
 /*****************

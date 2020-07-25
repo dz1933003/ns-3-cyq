@@ -141,7 +141,7 @@ public:
   /**
    * Level 2 flow control type
    */
-  enum L2FlowControlType { UNKNOWN = -1, PFC, CBFC, CBPFC };
+  enum L2FlowControlType { UNKNOWN = -1, PFC, CBFC, CBPFC, PTPFC };
 
   static L2FlowControlType DeviceToL2Type (Ptr<NetDevice> dev);
 
@@ -213,6 +213,10 @@ private:
   std::unordered_map<uint32_t, std::vector<Ptr<DpskNetDevice>>> m_routeTable;
 
   Ptr<SwitchMmu> m_mmu; //!< mmu of this switch
+
+  Ptr<DpskNetDevice> m_passThroughFrom; //!< PFC pass through src device
+
+  Ptr<DpskNetDevice> m_passThroughTo; //!< PFC pass through dest device
 
 public:
   /// Statistics

@@ -27,13 +27,15 @@
                     "ignoreFailures": true
                 }
             ]
-         },
-         {
+        },
+        {
             "name": "(gdb) pfc-cyq default_cbfc",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/scratch/pfc-cyq",
-            "args": ["ns3_config/default_cbfc/config.json"],
+            "args": [
+                "ns3_config/default_cbfc/config.json"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [
@@ -51,6 +53,32 @@
                     "ignoreFailures": true
                 }
             ]
-         }
+        },
+        {
+            "name": "(gdb) pfc-cyq default_ptpfc",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/scratch/pfc-cyq",
+            "args": [
+                "ns3_config/default_ptpfc/config.json"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "./build/lib/"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
     ]
 }

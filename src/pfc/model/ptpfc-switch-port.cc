@@ -18,7 +18,7 @@
  * Author: Yanqing Chen  <shellqiqi@outlook.com>
  */
 
-#include "pfc-switch-port.h"
+#include "ptpfc-switch-port.h"
 
 #include "ns3/log.h"
 #include "ns3/uinteger.h"
@@ -31,44 +31,43 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("PfcSwitchPort");
+NS_LOG_COMPONENT_DEFINE ("PtpfcSwitchPort");
 
-NS_OBJECT_ENSURE_REGISTERED (PfcSwitchPort);
+NS_OBJECT_ENSURE_REGISTERED (PtpfcSwitchPort);
 
 TypeId
-PfcSwitchPort::GetTypeId (void)
+PtpfcSwitchPort::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::PfcSwitchPort")
+  static TypeId tid = TypeId ("ns3::PtpfcSwitchPort")
                           .SetParent<Object> ()
-                          .SetGroupName ("PfcSwitchPort")
-                          .AddConstructor<PfcSwitchPort> ()
+                          .SetGroupName ("PtpfcSwitchPort")
+                          .AddConstructor<PtpfcSwitchPort> ()
                           .AddTraceSource ("PfcRx", "Receive a PFC packet",
-                                           MakeTraceSourceAccessor (&PfcSwitchPort::m_pfcRxTrace),
+                                           MakeTraceSourceAccessor (&PtpfcSwitchPort::m_pfcRxTrace),
                                            "Ptr<DpskNetDevice>, uint32_t, "
                                            "PfcHeader::PfcType, uint16_t");
   return tid;
 }
 
-PfcSwitchPort::PfcSwitchPort ()
+PtpfcSwitchPort::PtpfcSwitchPort ()
     : m_nQueues (0),
       m_lastQueueIdx (0),
-      m_isPassThrough (false),
       m_nInQueueBytes (0),
       m_nInQueuePackets (0),
       m_nTxBytes (0),
       m_nRxBytes (0)
 {
   NS_LOG_FUNCTION (this);
-  m_name = "PfcSwitchPort";
+  m_name = "PtpfcSwitchPort";
 }
 
-PfcSwitchPort::~PfcSwitchPort ()
+PtpfcSwitchPort::~PtpfcSwitchPort ()
 {
   NS_LOG_FUNCTION (this);
 }
 
 void
-PfcSwitchPort::SetupQueues (uint32_t n)
+PtpfcSwitchPort::SetupQueues (uint32_t n)
 {
   NS_LOG_FUNCTION (n);
   CleanQueues ();
@@ -83,7 +82,7 @@ PfcSwitchPort::SetupQueues (uint32_t n)
 }
 
 void
-PfcSwitchPort::CleanQueues ()
+PtpfcSwitchPort::CleanQueues ()
 {
   NS_LOG_FUNCTION_NOARGS ();
   m_queues.clear ();
@@ -93,25 +92,13 @@ PfcSwitchPort::CleanQueues ()
 }
 
 void
-PfcSwitchPort::SetDeviceDequeueHandler (DeviceDequeueNotifier h)
+PtpfcSwitchPort::SetDeviceDequeueHandler (DeviceDequeueNotifier h)
 {
   m_mmuCallback = h;
 }
 
-void
-PfcSwitchPort::SetPassThrough (bool flag)
-{
-  m_isPassThrough = flag;
-}
-
-bool
-PfcSwitchPort::IsPassThrough ()
-{
-  return m_isPassThrough;
-}
-
 Ptr<Packet>
-PfcSwitchPort::Transmit ()
+PtpfcSwitchPort::Transmit ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
@@ -133,8 +120,8 @@ PfcSwitchPort::Transmit ()
 }
 
 bool
-PfcSwitchPort::Send (Ptr<Packet> packet, const Address &source, const Address &dest,
-                     uint16_t protocolNumber)
+PtpfcSwitchPort::Send (Ptr<Packet> packet, const Address &source, const Address &dest,
+                       uint16_t protocolNumber)
 {
   // Assembly Ethernet header
   EthernetHeader ethHeader;
@@ -172,7 +159,7 @@ PfcSwitchPort::Send (Ptr<Packet> packet, const Address &source, const Address &d
 }
 
 bool
-PfcSwitchPort::Receive (Ptr<Packet> p)
+PtpfcSwitchPort::Receive (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
@@ -200,6 +187,7 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = true;
           m_pfcRxTrace (m_dev, qIndex, PfcHeader::Pause, pfcHeader.GetTime ());
+          return false; // Do not forward up to node
         }
       else if (pfcHeader.GetType () == PfcHeader::Resume) // PFC Resume
         {
@@ -209,22 +197,12 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
           m_pausedStates[qIndex] = false;
           m_pfcRxTrace (m_dev, qIndex, PfcHeader::Resume, pfcHeader.GetTime ());
           m_dev->TriggerTransmit (); // Trigger device transmitting
+          return false; // Do not forward up to node
         }
       else
         {
-          NS_ASSERT_MSG (false, "PfcSwitchPort::Rx: Invalid PFC type");
+          NS_ASSERT_MSG (false, "PtpfcSwitchPort::Rx: Invalid PFC type");
           return false; // Drop this packet
-        }
-      // Check whether pass through PFC frame
-      if (m_isPassThrough)
-        {
-          p->AddHeader (pfcHeader);
-          p->AddHeader (ethHeader);
-          return true;
-        }
-      else
-        {
-          return false;
         }
     }
   else // Not PFC
@@ -234,7 +212,7 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
 }
 
 Ptr<Packet>
-PfcSwitchPort::DequeueRoundRobin (uint32_t &qIndex)
+PtpfcSwitchPort::DequeueRoundRobin (uint32_t &qIndex)
 {
   NS_LOG_FUNCTION_NOARGS ();
   if (m_nInQueuePackets == 0 || m_nQueues == 0)
@@ -242,7 +220,7 @@ PfcSwitchPort::DequeueRoundRobin (uint32_t &qIndex)
       NS_LOG_LOGIC ("Queues empty");
       return 0;
     }
-  else
+  else // Not control queues
     {
       for (uint32_t i = 0; i < m_nQueues; i++)
         {
@@ -268,7 +246,7 @@ PfcSwitchPort::DequeueRoundRobin (uint32_t &qIndex)
 }
 
 Ptr<Packet>
-PfcSwitchPort::Dequeue (uint32_t &qIndex)
+PtpfcSwitchPort::Dequeue (uint32_t &qIndex)
 {
   NS_LOG_FUNCTION_NOARGS ();
 
@@ -292,7 +270,7 @@ PfcSwitchPort::Dequeue (uint32_t &qIndex)
 }
 
 void
-PfcSwitchPort::DoDispose ()
+PtpfcSwitchPort::DoDispose ()
 {
   NS_LOG_FUNCTION (this);
   m_queues.clear ();

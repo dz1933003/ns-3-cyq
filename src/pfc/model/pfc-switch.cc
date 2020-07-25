@@ -31,6 +31,7 @@
 #include "pfc-switch-port.h"
 #include "cbfc-switch-port.h"
 #include "cbpfc-switch-port.h"
+#include "ptpfc-switch-port.h"
 
 namespace ns3 {
 
@@ -55,6 +56,8 @@ PfcSwitch::PfcSwitch ()
   m_name = "PfcSwitch";
   m_nDevices = 0;
   m_mmu = 0;
+  m_passThroughFrom = 0;
+  m_passThroughTo = 0;
 }
 
 PfcSwitch::~PfcSwitch ()
@@ -86,6 +89,14 @@ PfcSwitch::ReceiveFromDevice (Ptr<NetDevice> device, Ptr<const Packet> packet, u
   Ptr<Packet> p = packet->Copy ();
   EthernetHeader ethHeader;
   p->RemoveHeader (ethHeader);
+
+  if (m_passThroughFrom != 0 && m_passThroughTo != 0 &&
+      ethHeader.GetLengthType () == PfcHeader::PROT_NUM) // PFC protocol number
+    {
+      SendFromDevice (m_passThroughTo, p, PfcHeader::PROT_NUM, m_passThroughTo->GetAddress (),
+                      m_passThroughTo->GetRemote ());
+      return;
+    }
 
   Ptr<DpskNetDevice> inDev = DynamicCast<DpskNetDevice> (device);
   Ptr<DpskNetDevice> outDev = DynamicCast<DpskNetDevice> (GetOutDev (p));
@@ -159,6 +170,11 @@ PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
           const auto pfcPortImpl = dpskDev->GetObject<PfcSwitchPort> ();
           pfcPortImpl->SetDeviceDequeueHandler (
               MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
+          // PFC pass through source device register (only one)
+          if (pfcPortImpl->IsPassThrough ())
+            {
+              m_passThroughFrom = DynamicCast<DpskNetDevice> (dev);
+            }
         }
       else if (type == CBFC)
         {
@@ -171,6 +187,14 @@ PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
           const auto cbpfcPortImpl = dpskDev->GetObject<CbpfcSwitchPort> ();
           cbpfcPortImpl->SetDeviceDequeueHandler (
               MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
+        }
+      else if (type == PTPFC)
+        {
+          const auto ptpfcPortImpl = dpskDev->GetObject<PtpfcSwitchPort> ();
+          ptpfcPortImpl->SetDeviceDequeueHandler (
+              MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
+          // PFC pass through destination device register (only one)
+          m_passThroughTo = DynamicCast<DpskNetDevice> (dev);
         }
     }
 
@@ -478,6 +502,8 @@ PfcSwitch::DeviceToL2Type (Ptr<NetDevice> dev)
     return CBFC;
   else if (name == "CbpfcSwitchPort")
     return CBPFC;
+  else if (name == "PtpfcSwitchPort")
+    return PTPFC;
   else
     return UNKNOWN;
 }
