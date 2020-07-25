@@ -478,6 +478,8 @@ PfcSwitch::DeviceToL2Type (Ptr<NetDevice> dev)
     return CBFC;
   else if (name == "CbpfcSwitchPort")
     return CBPFC;
+  else if (name == "PtpfcSwitchPort")
+    return PTPFC;
   else
     return UNKNOWN;
 }
