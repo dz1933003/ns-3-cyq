@@ -174,6 +174,13 @@ main (int argc, char *argv[])
                   const Ptr<PfcSwitchPort> impl = CreateObject<PfcSwitchPort> ();
                   dev->SetImplementation (impl);
                   impl->SetupQueues (nQueue);
+                  if (sw.contains ("PassThrough"))
+                    {
+                      if (i == sw["PassThrough"])
+                        {
+                          impl->SetPassThrough (true);
+                        }
+                    }
                 }
               else if (portType == "CBFC")
                 {
@@ -184,6 +191,12 @@ main (int argc, char *argv[])
               else if (portType == "CBPFC")
                 {
                   const Ptr<CbpfcSwitchPort> impl = CreateObject<CbpfcSwitchPort> ();
+                  dev->SetImplementation (impl);
+                  impl->SetupQueues (nQueue);
+                }
+              else if (portType == "PTPFC")
+                {
+                  const Ptr<PtpfcSwitchPort> impl = CreateObject<PtpfcSwitchPort> ();
                   dev->SetImplementation (impl);
                   impl->SetupQueues (nQueue);
                 }
@@ -358,6 +371,14 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                 {
                   const Time period (queue["Period"].get<std::string> ());
                   mmu->ConfigCbpfcFeedbackPeroid (port, index, period);
+                }
+            }
+          else if (portType == PfcSwitch::PTPFC)
+            {
+              if (queue.contains ("Ingress"))
+                {
+                  const uint64_t ingress = cyq::DataSize::GetBytes (queue["Ingress"]);
+                  mmu->ConfigPtpfcBufferSize (port, index, ingress);
                 }
             }
           if (queue.contains ("Ecn"))
