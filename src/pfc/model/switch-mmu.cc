@@ -67,6 +67,10 @@ SwitchMmu::AggregateDevice (Ptr<DpskNetDevice> dev)
         {
           m_switchMmuQueueConfig[dev].push_back (CreateObject<CbfcSwitchMmuQueue> ());
         }
+      else if (devType == PfcSwitch::CBPFC)
+        {
+          m_switchMmuQueueConfig[dev].push_back (CreateObject<CbpfcSwitchMmuQueue> ());
+        }
       m_ecnConfig[dev].push_back ({0, 0, 0., false});
     }
 }
@@ -245,7 +249,7 @@ SwitchMmu::GetHeadroomSize (Ptr<NetDevice> port, uint32_t qIndex)
     {
       return DynamicCast<PfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->headroom;
     }
-  else if (type == PfcSwitch::CBFC)
+  else
     {
       return 0;
     }
@@ -419,6 +423,102 @@ SwitchMmu::GetCbfcFccl (Ptr<NetDevice> port, uint32_t qIndex)
   return DynamicCast<CbfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->GetFccl ();
 }
 
+/*******************
+ * CBPFC Functions *
+ *******************/
+
+void
+SwitchMmu::ConfigCbpfcBufferSize (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size)
+{
+  const auto type = PfcSwitch::DeviceToL2Type (port);
+  if (type == PfcSwitch::CBPFC)
+    {
+      DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->ingressSize = size;
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcBufferSize (Ptr<NetDevice> port, uint64_t size)
+{
+  for (uint32_t i = 0; i <= m_nQueues; i++)
+    {
+      ConfigCbpfcBufferSize (port, i, size);
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcBufferSize (uint32_t qIndex, uint64_t size)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigCbpfcBufferSize (dev, qIndex, size);
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcBufferSize (uint64_t size)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigCbpfcBufferSize (dev, size);
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcFeedbackPeroid (Ptr<NetDevice> port, uint32_t qIndex, Time peroid)
+{
+  const auto type = PfcSwitch::DeviceToL2Type (port);
+  if (type == PfcSwitch::CBPFC)
+    {
+      DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->peroid = peroid;
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcFeedbackPeroid (Ptr<NetDevice> port, Time peroid)
+{
+  for (uint32_t i = 0; i <= m_nQueues; i++)
+    {
+      ConfigCbpfcFeedbackPeroid (port, i, peroid);
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcFeedbackPeroid (uint32_t qIndex, Time peroid)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigCbpfcFeedbackPeroid (dev, qIndex, peroid);
+    }
+}
+
+void
+SwitchMmu::ConfigCbpfcFeedbackPeroid (Time peroid)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigCbpfcFeedbackPeroid (dev, peroid);
+    }
+}
+
+Time
+SwitchMmu::GetCbpfcFeedbackPeroid (Ptr<NetDevice> port, uint32_t qIndex)
+{
+  return DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->peroid;
+}
+
+uint64_t
+SwitchMmu::GetCbpfcFree (Ptr<NetDevice> port, uint32_t qIndex)
+{
+  return DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->GetFree ();
+}
+
+void
+SwitchMmu::AddCbpfcReserve (Ptr<NetDevice> port, uint32_t qIndex, uint16_t time)
+{
+  DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->reserved += time * 64;
+}
+
 /*******************************************************
  * Common Functions for all L2 flow control algorithms *
  *******************************************************/
@@ -456,6 +556,13 @@ SwitchMmu::CheckIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t
   else if (portType == PfcSwitch::CBFC)
     {
       auto queueConfig = DynamicCast<CbfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+      if (pSize + queueConfig->ingressUsed > queueConfig->ingressSize)
+        return false;
+      return true;
+    }
+  else if (portType == PfcSwitch::CBPFC)
+    {
+      auto queueConfig = DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
       if (pSize + queueConfig->ingressUsed > queueConfig->ingressSize)
         return false;
       return true;
@@ -514,6 +621,12 @@ SwitchMmu::UpdateIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_
       queueConfig->rxAbr += pSize;
       queueConfig->ingressUsed += pSize;
     }
+  else if (portType == PfcSwitch::CBPFC)
+    {
+      auto queueConfig = DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+      queueConfig->ingressUsed += pSize;
+      queueConfig->reserved -= pSize;
+    }
   // Unknown port type
 }
 
@@ -541,6 +654,10 @@ SwitchMmu::RemoveFromIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uin
   else if (portType == PfcSwitch::CBFC)
     {
       DynamicCast<CbfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->ingressUsed -= pSize;
+    }
+  else if (portType == PfcSwitch::CBPFC)
+    {
+      DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->ingressUsed -= pSize;
     }
   // Unknown port type
 }
@@ -678,6 +795,14 @@ SwitchMmu::Dump ()
           else if (portType == PfcSwitch::CBFC)
             {
               auto queueConfig = DynamicCast<CbfcSwitchMmuQueue> (m_switchMmuQueueConfig[dev][i]);
+
+              ss << "Dev: " << dev << " Queue: " << i << '\n';
+              ss << "IngressSize: " << queueConfig->ingressSize << '\n';
+              ss << "FeedbackPeriod: " << queueConfig->peroid << '\n';
+            }
+          else if (portType == PfcSwitch::CBPFC)
+            {
+              auto queueConfig = DynamicCast<CbpfcSwitchMmuQueue> (m_switchMmuQueueConfig[dev][i]);
 
               ss << "Dev: " << dev << " Queue: " << i << '\n';
               ss << "IngressSize: " << queueConfig->ingressSize << '\n';

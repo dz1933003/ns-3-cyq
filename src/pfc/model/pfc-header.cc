@@ -31,12 +31,18 @@ namespace ns3 {
 
 NS_OBJECT_ENSURE_REGISTERED (PfcHeader);
 
-PfcHeader::PfcHeader (uint32_t type, uint32_t qIndex) : m_type (type), m_qIndex (qIndex)
+PfcHeader::PfcHeader (uint32_t type, uint32_t qIndex) : PfcHeader (type, qIndex, 0)
 {
   NS_LOG_FUNCTION (type << qIndex);
 }
 
-PfcHeader::PfcHeader () : m_type (0), m_qIndex (0)
+PfcHeader::PfcHeader (uint32_t type, uint32_t qIndex, uint16_t time)
+    : m_type (type), m_qIndex (qIndex), m_time (time)
+{
+  NS_LOG_FUNCTION (type << qIndex << time);
+}
+
+PfcHeader::PfcHeader () : PfcHeader (0, 0, 0)
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
@@ -69,6 +75,20 @@ PfcHeader::GetQIndex () const
   return m_qIndex;
 }
 
+void
+PfcHeader::SetTime (uint16_t time)
+{
+  NS_LOG_FUNCTION (time);
+  m_time = time;
+}
+
+uint16_t
+PfcHeader::GetTime (void) const
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  return m_time;
+}
+
 TypeId
 PfcHeader::GetTypeId (void)
 {
@@ -86,13 +106,13 @@ void
 PfcHeader::Print (std::ostream &os) const
 {
   NS_LOG_FUNCTION (&os);
-  os << "pause=" << PfcTypeToString (m_type) << ", queue=" << m_qIndex;
+  os << "pause=" << PfcTypeToString (m_type) << ", queue=" << m_qIndex << ", time=" << m_time;
 }
 
 uint32_t
 PfcHeader::GetSerializedSize (void) const
 {
-  return sizeof (m_type) + sizeof (m_qIndex);
+  return sizeof (m_type) + sizeof (m_qIndex) + sizeof (m_time);
 }
 
 void
@@ -101,6 +121,7 @@ PfcHeader::Serialize (Buffer::Iterator start) const
   NS_LOG_FUNCTION (&start);
   start.WriteU32 (m_type);
   start.WriteU32 (m_qIndex);
+  start.WriteU16 (m_time);
 }
 
 uint32_t
@@ -109,6 +130,7 @@ PfcHeader::Deserialize (Buffer::Iterator start)
   NS_LOG_FUNCTION (&start);
   m_type = start.ReadU32 ();
   m_qIndex = start.ReadU32 ();
+  m_time = start.ReadU16 ();
   return GetSerializedSize ();
 }
 
