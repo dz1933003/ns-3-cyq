@@ -44,7 +44,8 @@ CbpfcSwitchPort::GetTypeId (void)
                           .AddConstructor<CbpfcSwitchPort> ()
                           .AddTraceSource ("PfcRx", "Receive a PFC packet",
                                            MakeTraceSourceAccessor (&CbpfcSwitchPort::m_pfcRxTrace),
-                                           "Ptr<DpskNetDevice>, uint32_t, uint64_t");
+                                           "Ptr<DpskNetDevice>, uint32_t, "
+                                           "PfcHeader::PfcType, uint16_t");
   return tid;
 }
 
@@ -184,7 +185,7 @@ CbpfcSwitchPort::Receive (Ptr<Packet> p)
 
       const auto quota = time * 64;
       m_quotas[qIndex] += quota;
-      m_pfcRxTrace (m_dev, qIndex, time);
+      m_pfcRxTrace (m_dev, qIndex, PfcHeader::Resume, time);
 
       m_dev->TriggerTransmit ();
       return false;

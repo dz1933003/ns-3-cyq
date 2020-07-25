@@ -45,7 +45,7 @@ PfcSwitchPort::GetTypeId (void)
                           .AddTraceSource ("PfcRx", "Receive a PFC packet",
                                            MakeTraceSourceAccessor (&PfcSwitchPort::m_pfcRxTrace),
                                            "Ptr<DpskNetDevice>, uint32_t, "
-                                           "PfcHeader::PfcType, std::vector<bool>");
+                                           "PfcHeader::PfcType, uint16_t");
   return tid;
 }
 
@@ -199,7 +199,7 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
           uint32_t pfcQIndex = pfcHeader.GetQIndex ();
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = true;
-          m_pfcRxTrace (m_dev, qIndex, PfcHeader::Pause, m_pausedStates);
+          m_pfcRxTrace (m_dev, qIndex, PfcHeader::Pause, pfcHeader.GetTime ());
         }
       else if (pfcHeader.GetType () == PfcHeader::Resume) // PFC Resume
         {
@@ -207,7 +207,7 @@ PfcSwitchPort::Receive (Ptr<Packet> p)
           uint32_t pfcQIndex = pfcHeader.GetQIndex ();
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = false;
-          m_pfcRxTrace (m_dev, qIndex, PfcHeader::Resume, m_pausedStates);
+          m_pfcRxTrace (m_dev, qIndex, PfcHeader::Resume, pfcHeader.GetTime ());
           m_dev->TriggerTransmit (); // Trigger device transmitting
         }
       else
