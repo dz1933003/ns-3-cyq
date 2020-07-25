@@ -162,24 +162,21 @@ main (int argc, char *argv[])
           switchNodes.insert (node);
           allNodes.insert ({name, node});
           // Install ports
-          for (size_t i = 0; i < sw["PortNumber"]; i++)
+          for (const auto &swPort : sw["Port"])
             {
               const Ptr<DpskNetDevice> dev = CreateObject<DpskNetDevice> ();
               dev->SetAddress (Mac48Address::Allocate ());
               dev->SetTxMode (portTxMode);
               node->AddDevice (dev);
-              std::string portType = sw["PortType"][i];
+              std::string portType = swPort["Type"];
               if (portType == "PFC")
                 {
                   const Ptr<PfcSwitchPort> impl = CreateObject<PfcSwitchPort> ();
                   dev->SetImplementation (impl);
                   impl->SetupQueues (nQueue);
-                  if (sw.contains ("PassThrough"))
+                  if (swPort.contains ("PassThrough"))
                     {
-                      if (i == sw["PassThrough"])
-                        {
-                          impl->SetPassThrough (true);
-                        }
+                      impl->SetPassThrough (swPort["PassThrough"]);
                     }
                 }
               else if (portType == "CBFC")

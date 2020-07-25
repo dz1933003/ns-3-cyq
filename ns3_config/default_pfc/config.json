@@ -17,10 +17,13 @@
       "Name": [
         "s1"
       ],
-      "PortNumber": 2,
-      "PortType": [
-        "PFC",
-        "PFC"
+      "Port": [
+        {
+          "Type": "PFC"
+        },
+        {
+          "Type": "PFC"
+        }
       ],
       "Config": {
         "Buffer": "12MiB",

@@ -18,10 +18,13 @@
         "s1",
         "s2"
       ],
-      "PortNumber": 2,
-      "PortType": [
-        "PFC",
-        "PFC"
+      "Port": [
+        {
+          "Type": "PFC"
+        },
+        {
+          "Type": "PFC"
+        }
       ],
       "Config": {
         "Buffer": "12MiB",
@@ -33,12 +36,15 @@
         "s3",
         "s4"
       ],
-      "PortNumber": 2,
-      "PortType": [
-        "PFC",
-        "PTPFC"
+      "Port": [
+        {
+          "Type": "PFC",
+          "PassThrough": true
+        },
+        {
+          "Type": "PTPFC"
+        }
       ],
-      "PassThrough": 0,
       "Config": {
         "Buffer": "12MiB",
         "ConfigFile": "ns3_config/default_ptpfc/switch-bridge-port.json"
