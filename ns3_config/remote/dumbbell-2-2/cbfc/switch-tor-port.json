@@ -1,0 +1,14 @@
+[
+  {
+    "PortIndex": 0,
+    "QueueConfigFile": "ns3_config/remote/dumbbell-2-2/cbfc/switch-tor-pfc-queue.json"
+  },
+  {
+    "PortIndex": 1,
+    "QueueConfigFile": "ns3_config/remote/dumbbell-2-2/cbfc/switch-tor-pfc-queue.json"
+  },
+  {
+    "PortIndex": 2,
+    "QueueConfigFile": "ns3_config/remote/dumbbell-2-2/cbfc/switch-tor-pfc-queue.json"
+  }
+]

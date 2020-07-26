@@ -1,0 +1,9 @@
+[
+  {
+    "QueueIndex": [
+      0
+    ],
+    "Ingress": "11MB",
+    "Period": "30us"
+  }
+]

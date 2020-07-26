@@ -1,0 +1,23 @@
+{
+  "Fct": {
+    "Enable": true
+  },
+  "Switch": {
+    "Enable": true,
+    "IngressDropPacket": {
+      "Enable": true,
+      "Interval": "1s",
+      "Start": "0s",
+      "End": "3s"
+    },
+    "BufferUsed": {
+      "Enable": false
+    }
+  },
+  "TxByte": {
+    "Enable": false
+  },
+  "RxByte": {
+    "Enable": false
+  }
+}
