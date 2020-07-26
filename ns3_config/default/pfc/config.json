@@ -15,25 +15,24 @@
   "Switch": [
     {
       "Name": [
-        "s1",
-        "s2"
+        "s1"
       ],
       "Port": [
         {
           "Type": "PFC"
         },
         {
-          "Type": "CBPFC"
+          "Type": "PFC"
         }
       ],
       "Config": {
         "Buffer": "12MiB",
-        "ConfigFile": "ns3_config/default_cbpfc/switch-port.json"
+        "ConfigFile": "ns3_config/default/pfc/switch-port.json"
       }
     }
   ],
-  "LinkConfigFile": "ns3_config/default_cbpfc/link.csv",
-  "FlowConfigFile": "ns3_config/default_cbpfc/flow.csv",
-  "TraceConfigFile": "ns3_config/default_cbpfc/trace.json",
-  "LogOutputFolder": "ns3_log/default_cbpfc"
+  "LinkConfigFile": "ns3_config/default/pfc/link.csv",
+  "FlowConfigFile": "ns3_config/default/pfc/flow.csv",
+  "TraceConfigFile": "ns3_config/default/pfc/trace.json",
+  "LogOutputFolder": "ns3_log/default/pfc"
 }

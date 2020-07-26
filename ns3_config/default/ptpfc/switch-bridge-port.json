@@ -1,0 +1,10 @@
+[
+  {
+    "PortIndex": 0,
+    "QueueConfigFile": "ns3_config/default/ptpfc/switch-pfc-queue.json"
+  },
+  {
+    "PortIndex": 1,
+    "QueueConfigFile": "ns3_config/default/ptpfc/switch-ptpfc-queue.json"
+  }
+]

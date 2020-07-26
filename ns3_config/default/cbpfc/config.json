@@ -23,17 +23,17 @@
           "Type": "PFC"
         },
         {
-          "Type": "CBFC"
+          "Type": "CBPFC"
         }
       ],
       "Config": {
         "Buffer": "12MiB",
-        "ConfigFile": "ns3_config/default_cbfc/switch-port.json"
+        "ConfigFile": "ns3_config/default/cbpfc/switch-port.json"
       }
     }
   ],
-  "LinkConfigFile": "ns3_config/default_cbfc/link.csv",
-  "FlowConfigFile": "ns3_config/default_cbfc/flow.csv",
-  "TraceConfigFile": "ns3_config/default_cbfc/trace.json",
-  "LogOutputFolder": "ns3_log/default_cbfc"
+  "LinkConfigFile": "ns3_config/default/cbpfc/link.csv",
+  "FlowConfigFile": "ns3_config/default/cbpfc/flow.csv",
+  "TraceConfigFile": "ns3_config/default/cbpfc/trace.json",
+  "LogOutputFolder": "ns3_log/default/cbpfc"
 }

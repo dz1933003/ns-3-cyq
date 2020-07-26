@@ -1,0 +1,10 @@
+[
+  {
+    "PortIndex": 0,
+    "QueueConfigFile": "ns3_config/default/cbpfc/switch-pfc-queue.json"
+  },
+  {
+    "PortIndex": 1,
+    "QueueConfigFile": "ns3_config/default/cbpfc/switch-cbpfc-queue.json"
+  }
+]

@@ -28,7 +28,7 @@
       ],
       "Config": {
         "Buffer": "12MiB",
-        "ConfigFile": "ns3_config/default_ptpfc/switch-tor-port.json"
+        "ConfigFile": "ns3_config/default/ptpfc/switch-tor-port.json"
       }
     },
     {
@@ -47,12 +47,12 @@
       ],
       "Config": {
         "Buffer": "12MiB",
-        "ConfigFile": "ns3_config/default_ptpfc/switch-bridge-port.json"
+        "ConfigFile": "ns3_config/default/ptpfc/switch-bridge-port.json"
       }
     }
   ],
-  "LinkConfigFile": "ns3_config/default_ptpfc/link.csv",
-  "FlowConfigFile": "ns3_config/default_ptpfc/flow.csv",
-  "TraceConfigFile": "ns3_config/default_ptpfc/trace.json",
-  "LogOutputFolder": "ns3_log/default_ptpfc"
+  "LinkConfigFile": "ns3_config/default/ptpfc/link.csv",
+  "FlowConfigFile": "ns3_config/default/ptpfc/flow.csv",
+  "TraceConfigFile": "ns3_config/default/ptpfc/trace.json",
+  "LogOutputFolder": "ns3_log/default/ptpfc"
 }
