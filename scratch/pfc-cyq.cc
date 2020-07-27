@@ -40,6 +40,7 @@ using json = nlohmann::json;
 
 static const uint32_t CYQ_MTU = 1500;
 static DpskHelper dpskHelper;
+static std::string traceTag = "";
 
 uint32_t nQueue;
 uint32_t ecmpSeed;
@@ -103,13 +104,16 @@ NS_LOG_COMPONENT_DEFINE ("PFC CYQ");
 int
 main (int argc, char *argv[])
 {
-  if (argc != 2)
+  if (argc < 2)
     {
       NS_LOG_UNCOND ("ERROR: No config file");
       return 1;
     }
 
   std::ifstream file (argv[1]);
+  if (argc == 3)
+    traceTag = argv[2];
+
   json conf = json::parse (file);
 
   const auto sim_start = std::chrono::system_clock::now ();
@@ -825,8 +829,9 @@ DoLog ()
     {
       const auto &name = streamItem.first;
       const auto &ss = streamItem.second;
-      const std::string filePath =
-          outputFolder + "/" + cyq::Time::GetCurrTimeStr ("%Y%m%d%H%M%S") + "_" + name + ".csv";
+      const std::string filePath = outputFolder + "/" +
+                                   ((traceTag.empty ()) ? "" : (traceTag + "_")) +
+                                   cyq::Time::GetCurrTimeStr ("%Y%m%d%H%M%S") + "_" + name + ".csv";
       std::ofstream file (filePath);
       file << ss.str ();
       file.close ();
