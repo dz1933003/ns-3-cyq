@@ -56,8 +56,8 @@
       }
     }
   ],
-  "LinkConfigFile": "ns3_config/remote/dumbbell-2-2/ptpfc/link.csv",
-  "FlowConfigFile": "ns3_config/remote/dumbbell-2-2/ptpfc/flow.csv",
+  "LinkConfigFile": "ns3_config/remote/dumbbell-2-2/link.csv",
+  "FlowConfigFile": "ns3_config/remote/dumbbell-2-2/flow.csv",
   "TraceConfigFile": "ns3_config/remote/dumbbell-2-2/ptpfc/trace.json",
   "LogOutputFolder": "ns3_log/remote/dumbbell-2-2/ptpfc"
 }
