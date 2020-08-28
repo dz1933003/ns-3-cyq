@@ -4,6 +4,6 @@
       0
     ],
     "Ingress": "11MB",
-    "Period": "30us"
+    "Period": "50us"
   }
 ]

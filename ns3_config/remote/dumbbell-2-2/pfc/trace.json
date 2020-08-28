@@ -11,7 +11,7 @@
       "End": "3s"
     },
     "BufferUsed": {
-      "Enable": true,
+      "Enable": false,
       "Interval": "100us",
       "Start": "1.000s",
       "End": "1.200s",
@@ -28,7 +28,7 @@
     }
   },
   "TxByte": {
-    "Enable": true,
+    "Enable": false,
     "Interval": "100us",
     "Start": "1.000s",
     "End": "1.200s",
@@ -44,7 +44,7 @@
     ]
   },
   "RxByte": {
-    "Enable": true,
+    "Enable": false,
     "Interval": "100us",
     "Start": "1.000s",
     "End": "1.200s",

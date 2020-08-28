@@ -11,13 +11,52 @@
       "End": "3s"
     },
     "BufferUsed": {
-      "Enable": false
+      "Enable": false,
+      "Interval": "100us",
+      "Start": "1.000s",
+      "End": "1.200s",
+      "Target": [
+        {
+          "Name": [
+            "sw1"
+          ],
+          "PortIndex": [
+            1
+          ]
+        }
+      ]
     }
   },
   "TxByte": {
-    "Enable": false
+    "Enable": false,
+    "Interval": "100us",
+    "Start": "1.000s",
+    "End": "1.200s",
+    "Target": [
+      {
+        "Name": [
+          "sw1"
+        ],
+        "PortIndex": [
+          0
+        ]
+      }
+    ]
   },
   "RxByte": {
-    "Enable": false
+    "Enable": false,
+    "Interval": "100us",
+    "Start": "1.000s",
+    "End": "1.200s",
+    "Target": [
+      {
+        "Name": [
+          "sw1"
+        ],
+        "PortIndex": [
+          1
+        ]
+      }
+    ]
   }
 }
