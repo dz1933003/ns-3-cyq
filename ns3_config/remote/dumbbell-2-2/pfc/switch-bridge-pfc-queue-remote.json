@@ -3,7 +3,7 @@
     "QueueIndex": [
       0
     ],
-    "Headroom": "6250KB",
-    "Reserve": "4750KB"
+    "Headroom": "6MB",
+    "Reserve": "5MB"
   }
 ]
