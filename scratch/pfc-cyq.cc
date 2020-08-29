@@ -763,6 +763,10 @@ TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex)
         {
           txByte = port->GetObject<CbpfcSwitchPort> ()->m_nTxBytes;
         }
+      else if (portType == PfcSwitch::PTPFC)
+        {
+          txByte = port->GetObject<PtpfcSwitchPort> ()->m_nTxBytes;
+        }
     }
   logStreams["TxByte"] << Simulator::Now () << "," << name << "," << portIndex << "," << txByte
                        << "\n";
@@ -794,6 +798,10 @@ TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex)
       else if (portType == PfcSwitch::CBPFC)
         {
           rxByte = port->GetObject<CbpfcSwitchPort> ()->m_nRxBytes;
+        }
+      else if (portType == PfcSwitch::PTPFC)
+        {
+          rxByte = port->GetObject<PtpfcSwitchPort> ()->m_nRxBytes;
         }
     }
   logStreams["RxByte"] << Simulator::Now () << "," << name << "," << portIndex << "," << rxByte
