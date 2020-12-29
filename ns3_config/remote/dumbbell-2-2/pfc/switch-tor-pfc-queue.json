@@ -1,0 +1,9 @@
+[
+  {
+    "QueueIndex": [
+      0
+    ],
+    "Headroom": "1MB",
+    "Reserve": "3MB"
+  }
+]

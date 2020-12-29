@@ -32,6 +32,7 @@
 #include "cbfc-switch-port.h"
 #include "cbpfc-switch-port.h"
 #include "ptpfc-switch-port.h"
+#include "nopfc-switch-port.h"
 
 namespace ns3 {
 
@@ -195,6 +196,12 @@ PfcSwitch::InstallDpsk (Ptr<Dpsk> dpsk)
               MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
           // PFC pass through destination device register (only one)
           m_passThroughTo = DynamicCast<DpskNetDevice> (dev);
+        }
+      else if (type == NOPFC)
+        {
+          const auto noPfcPortImpl = dpskDev->GetObject<NoPfcSwitchPort> ();
+          noPfcPortImpl->SetDeviceDequeueHandler (
+              MakeCallback (&PfcSwitch::DeviceDequeueHandler, this));
         }
     }
 
@@ -504,6 +511,8 @@ PfcSwitch::DeviceToL2Type (Ptr<NetDevice> dev)
     return CBPFC;
   else if (name == "PtpfcSwitchPort")
     return PTPFC;
+  else if (name == "NoPfcSwitchPort")
+    return NOPFC;
   else
     return UNKNOWN;
 }

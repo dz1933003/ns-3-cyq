@@ -75,6 +75,10 @@ SwitchMmu::AggregateDevice (Ptr<DpskNetDevice> dev)
         {
           m_switchMmuQueueConfig[dev].push_back (CreateObject<PtpfcSwitchMmuQueue> ());
         }
+      else if (devType == PfcSwitch::NOPFC)
+        {
+          m_switchMmuQueueConfig[dev].push_back (CreateObject<NoPfcSwitchMmuQueue> ());
+        }
       m_ecnConfig[dev].push_back ({0, 0, 0., false});
     }
 }
@@ -524,7 +528,7 @@ SwitchMmu::AddCbpfcReserve (Ptr<NetDevice> port, uint32_t qIndex, uint16_t time)
 }
 
 /*******************
- * CBPFC Functions *
+ * PTPFC Functions *
  *******************/
 
 void
@@ -561,6 +565,47 @@ SwitchMmu::ConfigPtpfcBufferSize (uint64_t size)
   for (const auto &dev : m_devices)
     {
       ConfigPtpfcBufferSize (dev, size);
+    }
+}
+
+/*******************
+ * No PFC Functions *
+ *******************/
+
+void
+SwitchMmu::ConfigNoPfcBufferSize (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size)
+{
+  const auto type = PfcSwitch::DeviceToL2Type (port);
+  if (type == PfcSwitch::NOPFC)
+    {
+      DynamicCast<NoPfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->ingressSize = size;
+    }
+}
+
+void
+SwitchMmu::ConfigNoPfcBufferSize (Ptr<NetDevice> port, uint64_t size)
+{
+  for (uint32_t i = 0; i <= m_nQueues; i++)
+    {
+      ConfigNoPfcBufferSize (port, i, size);
+    }
+}
+
+void
+SwitchMmu::ConfigNoPfcBufferSize (uint32_t qIndex, uint64_t size)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigNoPfcBufferSize (dev, qIndex, size);
+    }
+}
+
+void
+SwitchMmu::ConfigNoPfcBufferSize (uint64_t size)
+{
+  for (const auto &dev : m_devices)
+    {
+      ConfigNoPfcBufferSize (dev, size);
     }
 }
 
@@ -615,6 +660,13 @@ SwitchMmu::CheckIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t
   else if (portType == PfcSwitch::PTPFC)
     {
       auto queueConfig = DynamicCast<PtpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+      if (pSize + queueConfig->ingressUsed > queueConfig->ingressSize)
+        return false;
+      return true;
+    }
+  else if (portType == PfcSwitch::NOPFC)
+    {
+      auto queueConfig = DynamicCast<NoPfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
       if (pSize + queueConfig->ingressUsed > queueConfig->ingressSize)
         return false;
       return true;
@@ -684,6 +736,11 @@ SwitchMmu::UpdateIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_
       auto queueConfig = DynamicCast<PtpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
       queueConfig->ingressUsed += pSize;
     }
+  else if (portType == PfcSwitch::NOPFC)
+    {
+      auto queueConfig = DynamicCast<NoPfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
+      queueConfig->ingressUsed += pSize;
+    }
   // Unknown port type
 }
 
@@ -719,6 +776,10 @@ SwitchMmu::RemoveFromIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uin
   else if (portType == PfcSwitch::PTPFC)
     {
       DynamicCast<PtpfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->ingressUsed -= pSize;
+    }
+  else if (portType == PfcSwitch::NOPFC)
+    {
+      DynamicCast<NoPfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex])->ingressUsed -= pSize;
     }
   // Unknown port type
 }
@@ -872,6 +933,13 @@ SwitchMmu::Dump ()
           else if (portType == PfcSwitch::PTPFC)
             {
               auto queueConfig = DynamicCast<PtpfcSwitchMmuQueue> (m_switchMmuQueueConfig[dev][i]);
+
+              ss << "Dev: " << dev << " Queue: " << i << '\n';
+              ss << "IngressSize: " << queueConfig->ingressSize << '\n';
+            }
+          else if (portType == PfcSwitch::NOPFC)
+            {
+              auto queueConfig = DynamicCast<NoPfcSwitchMmuQueue> (m_switchMmuQueueConfig[dev][i]);
 
               ss << "Dev: " << dev << " Queue: " << i << '\n';
               ss << "IngressSize: " << queueConfig->ingressSize << '\n';

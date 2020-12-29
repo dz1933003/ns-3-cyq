@@ -29,6 +29,7 @@
 #include "cbfc-switch-mmu-queue.h"
 #include "cbpfc-switch-mmu-queue.h"
 #include "ptpfc-switch-mmu-queue.h"
+#include "nopfc-switch-mmu-queue.h"
 
 namespace ns3 {
 
@@ -494,6 +495,40 @@ public:
    * \param size PTPFC buffer size by byte
    */
   void ConfigPtpfcBufferSize (uint64_t size);
+
+  // No PFC Functions
+
+  /**
+   * Configurate No PFC buffer on one queue
+   *
+   * \param port target port
+   * \param qIndex target queue index
+   * \param size No PFC buffer size by byte
+   */
+  void ConfigNoPfcBufferSize (Ptr<NetDevice> port, uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate No PFC buffer on all queues of the port
+   *
+   * \param port target port
+   * \param size No PFC buffer size by byte
+   */
+  void ConfigNoPfcBufferSize (Ptr<NetDevice> port, uint64_t size);
+
+  /**
+   * Configurate No PFC buffer on one queue of all the ports
+   *
+   * \param qIndex target queue index
+   * \param size No PFC buffer size by byte
+   */
+  void ConfigNoPfcBufferSize (uint32_t qIndex, uint64_t size);
+
+  /**
+   * Configurate No PFC buffer on all ports in the switch
+   *
+   * \param size No PFC buffer size by byte
+   */
+  void ConfigNoPfcBufferSize (uint64_t size);
 
   // Common Functions for all L2 flow control algorithms
 

@@ -1,0 +1,63 @@
+{
+  "Global": {
+    "QueueNumber": 1,
+    "EcmpSeed": 1
+  },
+  "Host": [
+    {
+      "Name": [
+        "s0",
+        "s1",
+        "s2",
+        "s3"
+      ],
+      "PortNumber": 1
+    }
+  ],
+  "Switch": [
+    {
+      "Name": [
+        "sw0",
+        "sw1"
+      ],
+      "Port": [
+        {
+          "Type": "PFC",
+          "PassThrough": true
+        },
+        {
+          "Type": "PTPFC"
+        }
+      ],
+      "Config": {
+        "Buffer": "12MB",
+        "ConfigFile": "ns3_config/remote/dumbbell-2-2/ptpfc/switch-bridge-port.json"
+      }
+    },
+    {
+      "Name": [
+        "sw2",
+        "sw3"
+      ],
+      "Port": [
+        {
+          "Type": "PFC"
+        },
+        {
+          "Type": "PFC"
+        },
+        {
+          "Type": "PFC"
+        }
+      ],
+      "Config": {
+        "Buffer": "12MB",
+        "ConfigFile": "ns3_config/remote/dumbbell-2-2/ptpfc/switch-tor-port.json"
+      }
+    }
+  ],
+  "LinkConfigFile": "ns3_config/remote/dumbbell-2-2/link.csv",
+  "FlowConfigFile": "ns3_config/remote/dumbbell-2-2/flow.csv",
+  "TraceConfigFile": "ns3_config/remote/dumbbell-2-2/ptpfc/trace.json",
+  "LogOutputFolder": "ns3_log/remote/dumbbell-2-2/ptpfc"
+}

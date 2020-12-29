@@ -1,0 +1,10 @@
+[
+  {
+    "PortIndex": 0,
+    "QueueConfigFile": "ns3_config/remote/dumbbell-2-2/cbfc/switch-bridge-pfc-queue.json"
+  },
+  {
+    "PortIndex": 1,
+    "QueueConfigFile": "ns3_config/remote/dumbbell-2-2/cbfc/switch-bridge-cbfc-queue.json"
+  }
+]

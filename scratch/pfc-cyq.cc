@@ -40,6 +40,7 @@ using json = nlohmann::json;
 
 static const uint32_t CYQ_MTU = 1500;
 static DpskHelper dpskHelper;
+static std::string traceTag = "";
 
 uint32_t nQueue;
 uint32_t ecmpSeed;
@@ -103,13 +104,16 @@ NS_LOG_COMPONENT_DEFINE ("PFC CYQ");
 int
 main (int argc, char *argv[])
 {
-  if (argc != 2)
+  if (argc < 2)
     {
       NS_LOG_UNCOND ("ERROR: No config file");
       return 1;
     }
 
   std::ifstream file (argv[1]);
+  if (argc == 3)
+    traceTag = argv[2];
+
   json conf = json::parse (file);
 
   const auto sim_start = std::chrono::system_clock::now ();
@@ -142,6 +146,7 @@ main (int argc, char *argv[])
               const Ptr<PfcHostPort> impl = CreateObject<PfcHostPort> ();
               dev->SetImplementation (impl);
               impl->SetupQueues (nQueue);
+              impl->EnablePfc (host.contains ("PfcEnable") ? host["PfcEnable"].get<bool> () : true);
               allPorts[node].push_back (dev);
             }
           // Install DPSK
@@ -194,6 +199,12 @@ main (int argc, char *argv[])
               else if (portType == "PTPFC")
                 {
                   const Ptr<PtpfcSwitchPort> impl = CreateObject<PtpfcSwitchPort> ();
+                  dev->SetImplementation (impl);
+                  impl->SetupQueues (nQueue);
+                }
+              else if (portType == "NOPFC")
+                {
+                  const Ptr<NoPfcSwitchPort> impl = CreateObject<NoPfcSwitchPort> ();
                   dev->SetImplementation (impl);
                   impl->SetupQueues (nQueue);
                 }
@@ -376,6 +387,14 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                 {
                   const uint64_t ingress = cyq::DataSize::GetBytes (queue["Ingress"]);
                   mmu->ConfigPtpfcBufferSize (port, index, ingress);
+                }
+            }
+          else if (portType == PfcSwitch::NOPFC)
+            {
+              if (queue.contains ("Ingress"))
+                {
+                  const uint64_t ingress = cyq::DataSize::GetBytes (queue["Ingress"]);
+                  mmu->ConfigNoPfcBufferSize (port, index, ingress);
                 }
             }
           if (queue.contains ("Ecn"))
@@ -763,6 +782,10 @@ TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex)
         {
           txByte = port->GetObject<PtpfcSwitchPort> ()->m_nTxBytes;
         }
+      else if (portType == PfcSwitch::NOPFC)
+        {
+          txByte = port->GetObject<NoPfcSwitchPort> ()->m_nTxBytes;
+        }
     }
   logStreams["TxByte"] << Simulator::Now () << "," << name << "," << portIndex << "," << txByte
                        << "\n";
@@ -799,6 +822,10 @@ TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex)
         {
           rxByte = port->GetObject<PtpfcSwitchPort> ()->m_nRxBytes;
         }
+      else if (portType == PfcSwitch::NOPFC)
+        {
+          rxByte = port->GetObject<NoPfcSwitchPort> ()->m_nRxBytes;
+        }
     }
   logStreams["RxByte"] << Simulator::Now () << "," << name << "," << portIndex << "," << rxByte
                        << "\n";
@@ -833,8 +860,9 @@ DoLog ()
     {
       const auto &name = streamItem.first;
       const auto &ss = streamItem.second;
-      const std::string filePath =
-          outputFolder + "/" + cyq::Time::GetCurrTimeStr ("%Y%m%d%H%M%S") + "_" + name + ".csv";
+      const std::string filePath = outputFolder + "/" +
+                                   ((traceTag.empty ()) ? "" : (traceTag + "_")) +
+                                   cyq::Time::GetCurrTimeStr ("%Y%m%d%H%M%S") + "_" + name + ".csv";
       std::ofstream file (filePath);
       file << ss.str ();
       file.close ();
