@@ -146,6 +146,7 @@ main (int argc, char *argv[])
               const Ptr<PfcHostPort> impl = CreateObject<PfcHostPort> ();
               dev->SetImplementation (impl);
               impl->SetupQueues (nQueue);
+              impl->EnablePfc (host.contains ("PfcEnable") ? host["PfcEnable"].get<bool> () : true);
               allPorts[node].push_back (dev);
             }
           // Install DPSK
@@ -198,6 +199,12 @@ main (int argc, char *argv[])
               else if (portType == "PTPFC")
                 {
                   const Ptr<PtpfcSwitchPort> impl = CreateObject<PtpfcSwitchPort> ();
+                  dev->SetImplementation (impl);
+                  impl->SetupQueues (nQueue);
+                }
+              else if (portType == "NOPFC")
+                {
+                  const Ptr<NoPfcSwitchPort> impl = CreateObject<NoPfcSwitchPort> ();
                   dev->SetImplementation (impl);
                   impl->SetupQueues (nQueue);
                 }
@@ -380,6 +387,14 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                 {
                   const uint64_t ingress = cyq::DataSize::GetBytes (queue["Ingress"]);
                   mmu->ConfigPtpfcBufferSize (port, index, ingress);
+                }
+            }
+          else if (portType == PfcSwitch::NOPFC)
+            {
+              if (queue.contains ("Ingress"))
+                {
+                  const uint64_t ingress = cyq::DataSize::GetBytes (queue["Ingress"]);
+                  mmu->ConfigNoPfcBufferSize (port, index, ingress);
                 }
             }
           if (queue.contains ("Ecn"))
@@ -767,6 +782,10 @@ TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex)
         {
           txByte = port->GetObject<PtpfcSwitchPort> ()->m_nTxBytes;
         }
+      else if (portType == PfcSwitch::NOPFC)
+        {
+          txByte = port->GetObject<NoPfcSwitchPort> ()->m_nTxBytes;
+        }
     }
   logStreams["TxByte"] << Simulator::Now () << "," << name << "," << portIndex << "," << txByte
                        << "\n";
@@ -802,6 +821,10 @@ TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex)
       else if (portType == PfcSwitch::PTPFC)
         {
           rxByte = port->GetObject<PtpfcSwitchPort> ()->m_nRxBytes;
+        }
+      else if (portType == PfcSwitch::NOPFC)
+        {
+          rxByte = port->GetObject<NoPfcSwitchPort> ()->m_nRxBytes;
         }
     }
   logStreams["RxByte"] << Simulator::Now () << "," << name << "," << portIndex << "," << rxByte
