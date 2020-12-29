@@ -71,6 +71,13 @@ public:
   void CleanQueues ();
 
   /**
+   * Enable or disable PFC.
+   * 
+   * \param flag PFC enable flag
+   */
+  void EnablePfc (bool flag);
+
+  /**
    * Add RDMA queue pair for transmitting
    *
    * \param qp queue pair to send
@@ -132,6 +139,7 @@ protected:
 
 private:
   uint32_t m_nQueues; //!< queue count of the port (control queue not included)
+  bool m_pfcEnabled; //!< PFC enabled
 
   std::vector<bool> m_pausedStates; //!< paused state of queues
 

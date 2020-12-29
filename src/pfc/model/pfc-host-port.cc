@@ -56,7 +56,7 @@ PfcHostPort::GetTypeId (void)
   return tid;
 }
 
-PfcHostPort::PfcHostPort () : m_nTxBytes (0), m_nRxBytes (0)
+PfcHostPort::PfcHostPort () : m_pfcEnabled (true), m_nTxBytes (0), m_nRxBytes (0)
 {
   NS_LOG_FUNCTION (this);
   m_name = "PfcHostPort";
@@ -77,6 +77,13 @@ PfcHostPort::SetupQueues (uint32_t n)
     {
       m_pausedStates.push_back (false);
     }
+}
+
+void
+PfcHostPort::EnablePfc (bool flag)
+{
+  NS_LOG_FUNCTION (flag);
+  m_pfcEnabled = flag;
 }
 
 void
@@ -114,7 +121,7 @@ PfcHostPort::Transmit ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
-  if (m_pausedStates[m_nQueues] == false &&
+  if ((m_pausedStates[m_nQueues] == false || m_pfcEnabled == false) &&
       m_controlQueue.empty () == false) // can send control packets
     {
       Ptr<Packet> p = m_controlQueue.front ();
@@ -128,8 +135,8 @@ PfcHostPort::Transmit ()
     {
       uint32_t qIdx = (m_lastQpIndex + i) % flowCnt;
       auto qp = m_txQueuePairs[qIdx];
-      if (m_pausedStates[qp->m_priority] == false && qp->IsFinished () == false &&
-          qp->m_startTime <= Simulator::Now ())
+      if ((m_pausedStates[qp->m_priority] == false || m_pfcEnabled == false) &&
+          qp->IsFinished () == false && qp->m_startTime <= Simulator::Now ())
         {
           m_lastQpIndex = qIdx;
           auto p = GenData (qp);
@@ -165,6 +172,11 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
   if (ethHeader.GetLengthType () == PfcHeader::PROT_NUM) // PFC protocol number
     {
+      if (m_pfcEnabled == false)
+        {
+          return false; // Drop because PFC disabled
+        }
+
       // Pop PFC header
       PfcHeader pfcHeader;
       p->RemoveHeader (pfcHeader);
