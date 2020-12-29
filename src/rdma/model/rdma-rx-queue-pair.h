@@ -24,6 +24,7 @@
 #include "ns3/object.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/simulator.h"
+#include <deque>
 
 namespace ns3 {
 
@@ -36,6 +37,13 @@ public:
   uint16_t m_priority;
 
   uint64_t m_receivedSize;
+
+  struct
+  {
+    enum IRN_STATE { ACK, NACK };
+    std::deque<IRN_STATE> pkg_state;
+    uint64_t base_seq;
+  } m_irn;
 
   static TypeId GetTypeId (void);
   RdmaRxQueuePair ();
