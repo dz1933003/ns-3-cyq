@@ -98,6 +98,34 @@ public:
    */
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> GetRdmaRxQueuePairs ();
 
+  /**
+   * L2 retransmission mode
+   */
+  enum L2_RTX_MODE {
+    NONE, // No retransmission
+    B20, // Back to zero (Not implemented)
+    B2N, // Back to N (Not implemented)
+    IRN // Selective ACK
+  };
+
+  /**
+   * Set L2 retransmission mode
+   *
+   * \param mode L2 retransmission mode
+   */
+  void SetL2RetransmissionMode (uint32_t mode);
+
+  // IRN related configurations
+
+  /**
+   * Setup IRN configurations
+   *
+   * \param size bitmap size
+   * \param rtoh timeout high
+   * \param rtol timeout low
+   */
+  void SetupIrn (uint32_t size, Time rtoh, Time rtol);
+
 protected:
   /**
    * PFC host port transmitting logic.
@@ -150,6 +178,15 @@ private:
 
   uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
 
+  uint32_t m_l2RetrasmissionMode; //!< L2 retransmission mode
+
+  struct
+  {
+    uint32_t maxBitmapSize; //!< Maximum bitmap size
+    Time rtoHigh; //!< Retransmission timeout high
+    Time rtoLow; //!< Retransmission timeout low
+  } m_irn; //!< IRN configuration
+
   /**
    * Generate data packet of target transmitting queue pair
    *
@@ -157,6 +194,16 @@ private:
    * \return data packet
    */
   Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * Generate ACK or SACK packet of target transmitting queue pair
+   *
+   * \param qp queue pair
+   * \param seq ack seq number
+   * \param ack true for ACK and false for SACK
+   * \return data packet
+   */
+  Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, bool ack);
 
   /**
    * The trace source fired for received a PFC packet.

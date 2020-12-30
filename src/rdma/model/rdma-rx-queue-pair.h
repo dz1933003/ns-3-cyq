@@ -38,11 +38,18 @@ public:
 
   uint64_t m_receivedSize;
 
+  enum IRN_STATE { ACK, NACK };
+
   struct
   {
-    enum IRN_STATE { ACK, NACK };
     std::deque<IRN_STATE> pkg_state;
-    uint64_t base_seq;
+    uint32_t base_seq = 1;
+
+    uint32_t
+    GetNextSequenceNumber () const
+    {
+      return base_seq + pkg_state.size ();
+    }
   } m_irn;
 
   static TypeId GetTypeId (void);
