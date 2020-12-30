@@ -108,11 +108,11 @@ public:
   virtual uint32_t Deserialize (Buffer::Iterator start);
 
 private:
-  uint16_t m_sourcePort; //!< Source port
-  uint16_t m_destinationPort; //!< Destination port
+  uint16_t m_sourcePort = 0; //!< Source port
+  uint16_t m_destinationPort = 0; //!< Destination port
 
-  uint32_t m_sequenceNumber; //!< Sequence Number
-  uint8_t m_flags; //!< NONE/ACK/SACK
+  uint32_t m_sequenceNumber = 0; //!< Sequence Number
+  uint8_t m_flags = NONE; //!< NONE/ACK/SACK
 };
 
 }; // namespace ns3

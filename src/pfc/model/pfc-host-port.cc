@@ -27,6 +27,7 @@
 #include "ns3/ipv4-header.h"
 #include "ns3/pfc-header.h"
 #include "ns3/udp-header.h"
+#include "ns3/qbb-header.h"
 #include "ns3/dpsk-net-device.h"
 
 namespace ns3 {
@@ -209,13 +210,13 @@ PfcHostPort::Receive (Ptr<Packet> p)
   else // Not PFC
     {
       Ipv4Header ip;
-      UdpHeader udp;
+      QbbHeader qbb;
       p->RemoveHeader (ip);
-      p->RemoveHeader (udp);
+      p->RemoveHeader (qbb);
       auto sIp = ip.GetSource ();
       auto dIp = ip.GetDestination ();
-      uint16_t sPort = udp.GetSourcePort ();
-      uint16_t dPort = udp.GetDestinationPort ();
+      uint16_t sPort = qbb.GetSourcePort ();
+      uint16_t dPort = qbb.GetDestinationPort ();
       uint16_t dscp = ip.GetDscp ();
       uint32_t payloadSize = p->GetSize ();
 
@@ -254,10 +255,10 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp)
 
   Ptr<Packet> p = Create<Packet> (payloadSize);
 
-  UdpHeader udp;
-  udp.SetSourcePort (qp->m_sPort);
-  udp.SetDestinationPort (qp->m_dPort);
-  p->AddHeader (udp);
+  QbbHeader qbb;
+  qbb.SetSourcePort (qp->m_sPort);
+  qbb.SetDestinationPort (qp->m_dPort);
+  p->AddHeader (qbb);
 
   Ipv4Header ip;
   ip.SetSource (qp->m_sIp);
