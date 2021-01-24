@@ -84,6 +84,27 @@ RdmaTxQueuePair::GetHash (void)
   return Hash32 (buf.bytes, sizeof (buf));
 }
 
+uint32_t
+RdmaTxQueuePair::GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const uint16_t &sPort,
+                          const uint16_t &dPort)
+{
+  union {
+    struct
+    {
+      uint32_t sIp;
+      uint32_t dIp;
+      uint16_t sPort;
+      uint16_t dPort;
+    };
+    char bytes[12];
+  } buf;
+  buf.sIp = sIp.Get ();
+  buf.dIp = dIp.Get ();
+  buf.sPort = sPort;
+  buf.dPort = dPort;
+  return Hash32 (buf.bytes, sizeof (buf));
+}
+
 bool
 RdmaTxQueuePair::IsFinished ()
 {

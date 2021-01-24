@@ -159,6 +159,14 @@ public:
   void PauseTransmit ();
 
   /**
+   * ReSending a Packet Down the Wire.
+   *
+   * The ReTransmit method is used  to retransmit a loss packet.
+   * p is the packet that need to be transmitted.
+   */
+  bool ReTransmit(Ptr<Packet> p);
+
+  /**
    * Set the implementation.
    *
    * \param impl the implementation of net device
