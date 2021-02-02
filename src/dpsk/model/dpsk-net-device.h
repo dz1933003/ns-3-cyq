@@ -33,6 +33,7 @@
 #include "ns3/data-rate.h"
 #include "ns3/ptr.h"
 #include "ns3/mac48-address.h"
+#include "queue"
 
 namespace ns3 {
 
@@ -159,6 +160,21 @@ public:
   void PauseTransmit ();
 
   /**
+   * ReSending a Packet Down the Wire.
+   *
+   * The ReTransmit method is used  to retransmit a loss packet.
+   * p is the packet that need to be transmitted.
+   */
+  bool ReTransmit(Ptr<Packet> p);
+
+  bool ACKTransimitStart(Ptr<Packet> p);
+
+  void SetRetransmitMode(bool f);
+  bool GetRetransmitMode();
+  void SetSeq(uint32_t seq);
+  uint32_t  GetSeq();
+
+  /**
    * Set the implementation.
    *
    * \param impl the implementation of net device
@@ -242,6 +258,8 @@ public:
    * \return transmit mode
    */
   TxMode GetTxMode (void) const;
+
+  std::queue<ns3::Ptr<ns3::Packet>> ReTransmitP;
 
   /**
    * Set Transmit mode.
@@ -564,6 +582,8 @@ private:
   uint32_t m_mtu;
 
   Ptr<Packet> m_currentPkt; //!< Current packet processed
+  bool RetransmitMode;
+  uint32_t m_seq;
 };
 
 } // namespace ns3

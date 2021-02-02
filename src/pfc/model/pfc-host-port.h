@@ -126,6 +126,8 @@ public:
    */
   void SetupIrn (uint32_t size, Time rtoh, Time rtol);
 
+  void TimeOutRetran(Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq);
+
 protected:
   /**
    * PFC host port transmitting logic.
@@ -175,6 +177,7 @@ private:
 
   std::vector<Ptr<RdmaTxQueuePair>> m_txQueuePairs; //!< transmit queue pairs
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> m_rxQueuePairs; //!< hash and received queue pairs
+  std::map<uint32_t, Ptr<RdmaTxQueuePair>> m_transmittedQP; //!< hash and transmitted queue pairs
 
   uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
 
@@ -195,6 +198,7 @@ private:
    */
   Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp);
 
+  Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq);
   /**
    * Generate ACK or SACK packet of target transmitting queue pair
    *

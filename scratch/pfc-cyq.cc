@@ -147,6 +147,8 @@ main (int argc, char *argv[])
               dev->SetImplementation (impl);
               impl->SetupQueues (nQueue);
               impl->EnablePfc (host.contains ("PfcEnable") ? host["PfcEnable"].get<bool> () : true);
+              impl->SetL2RetransmissionMode(PfcHostPort::L2_RTX_MODE::IRN);
+              impl->SetupIrn(900,ns3::Time("210000ns"),ns3::Time("180000ns"));
               allPorts[node].push_back (dev);
             }
           // Install DPSK
@@ -656,6 +658,7 @@ void
 TraceQueuePairTxComplete (Ptr<RdmaTxQueuePair> qp)
 {
   txCompleteCnt++;
+  //NS_LOG_UNCOND ("\nTraceQueuePairTxComplete txCompleteCnt:"<<txCompleteCnt);
   CheckQueuePair ();
 }
 

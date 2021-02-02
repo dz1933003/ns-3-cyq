@@ -52,6 +52,8 @@ public:
     }
   } m_irn;
 
+  std::vector<uint32_t> SackSeq;
+
   static TypeId GetTypeId (void);
   RdmaRxQueuePair ();
   RdmaRxQueuePair (Ipv4Address sIp, Ipv4Address dIp, uint16_t sPort, uint16_t dPort, uint64_t size,
@@ -62,6 +64,7 @@ public:
   static uint32_t GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const uint16_t &sPort,
                            const uint16_t &dPort);
   bool IsFinished ();
+  bool SackSeqFind(uint32_t seq);
 };
 
 } // namespace ns3

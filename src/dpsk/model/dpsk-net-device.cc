@@ -173,7 +173,8 @@ DpskNetDevice::DpskNetDevice ()
       m_txMachineState (READY),
       m_channel (0),
       m_linkUp (false),
-      m_currentPkt (0)
+      m_currentPkt (0),
+      RetransmitMode(false)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -320,7 +321,64 @@ DpskNetDevice::PauseTransmit ()
 }
 
 bool
+DpskNetDevice::ReTransmit(Ptr<Packet> p)
+{
+  m_snifferTrace (p);
+  m_promiscSnifferTrace (p);
+  //NS_LOG_UNCOND("\nRetransmit1");
+  //return TransmitStart (p);
+  //NS_LOG_UNCOND("\nRetransmit");
+  NS_ASSERT_MSG (m_txMachineState == READY, "Must be READY to transmit");
+  m_txMachineState = BUSY;
+  m_currentPkt = p;
+  m_phyTxBeginTrace (m_currentPkt);
+
+  Time txTime = m_bps.CalculateBytesTxTime (p->GetSize ());
+  Time txCompleteTime = txTime + m_tInterframeGap;
+
+  NS_LOG_LOGIC ("Schedule TransmitCompleteEvent in " << txCompleteTime.GetSeconds () << "sec");
+  Simulator::Schedule (txCompleteTime, &DpskNetDevice::TransmitComplete, this);
+
+  bool result = m_channel->TransmitStart (p, this, txTime);
+  if (result == false)
+    {
+      m_phyTxDropTrace (p);
+    }
+  return result;
+}
+
+bool
 DpskNetDevice::TransmitStart (Ptr<Packet> p)
+{
+  NS_LOG_FUNCTION (this << p);
+  NS_LOG_LOGIC ("UID is " << p->GetUid () << ")");
+
+  //
+  // This function is called to start the process of transmitting a packet.
+  // We need to tell the channel that we've started wiggling the wire and
+  // schedule an event that will be executed when the transmission is complete.
+  //
+  NS_ASSERT_MSG (m_txMachineState == READY, "Must be READY to transmit");
+  m_txMachineState = BUSY;
+  m_currentPkt = p;
+  m_phyTxBeginTrace (m_currentPkt);
+
+  Time txTime = m_bps.CalculateBytesTxTime (p->GetSize ());
+  Time txCompleteTime = txTime + m_tInterframeGap;
+
+  NS_LOG_LOGIC ("Schedule TransmitCompleteEvent in " << txCompleteTime.GetSeconds () << "sec");
+  Simulator::Schedule (txCompleteTime, &DpskNetDevice::TransmitComplete, this);
+
+  bool result = m_channel->TransmitStart (p, this, txTime);
+  if (result == false)
+    {
+      m_phyTxDropTrace (p);
+    }
+  return result;
+}
+
+bool 
+DpskNetDevice::ACKTransimitStart(Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this << p);
   NS_LOG_LOGIC ("UID is " << p->GetUid () << ")");
@@ -415,6 +473,30 @@ DpskNetDevice::TransmitComplete (void)
     {
       NS_ASSERT_MSG (false, "DpskNetDevice::TransmitComplete(): m_txMode outbound");
     }
+}
+
+void
+DpskNetDevice::SetRetransmitMode(bool f)
+{
+  RetransmitMode = f;
+}
+
+bool
+DpskNetDevice::GetRetransmitMode()
+{
+  return RetransmitMode;
+}
+
+void 
+DpskNetDevice::SetSeq(uint32_t seq)
+{
+  m_seq = seq;
+}
+
+uint32_t 
+DpskNetDevice::GetSeq()
+{
+  return m_seq;
 }
 
 bool
@@ -679,6 +761,7 @@ DpskNetDevice::SendFrom (Ptr<Packet> packet, const Address &source, const Addres
       bool status = m_sendInterceptor (packet, source, dest, protocolNumber); // DPSK send process
       if (status == false)
         {
+          NS_LOG_UNCOND("\nSendFrom active");
           m_macTxDropTrace (packet);
           return false;
         }

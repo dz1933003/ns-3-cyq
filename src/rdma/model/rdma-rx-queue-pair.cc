@@ -96,4 +96,15 @@ RdmaRxQueuePair::IsFinished ()
   return m_receivedSize >= m_size;
 }
 
+bool
+RdmaRxQueuePair::SackSeqFind(uint32_t seq)
+{
+  for(uint32_t i=0; i<SackSeq.size(); i++)
+  {
+    if(SackSeq[i] == seq)
+      return true;
+  }
+  return false;
+}
+
 } // namespace ns3
