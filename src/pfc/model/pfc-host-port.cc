@@ -147,6 +147,7 @@ PfcHostPort::Transmit ()
       m_nTxBytes += p->GetSize ();
       return p;
     }
+
   
   if (RetranPkg.empty() == false)
   {
@@ -190,7 +191,6 @@ bool
 PfcHostPort::Send (Ptr<Packet> packet, const Address &source, const Address &dest,
                    uint16_t protocolNumber)
 {
-  // cyq: No active send now
   return false;
 }
 
@@ -502,6 +502,7 @@ PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
   qbb.SetDestinationPort (qp->m_dPort);
   qbb.SetSequenceNumber (seq);
   qbb.SetFlags (QbbHeader::NONE);
+
   if (m_l2RetrasmissionMode == IRN)
     {
       if(qp->m_irn.pkg_state.size() > 3)
@@ -509,6 +510,7 @@ PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
       else
         Simulator::Schedule (m_irn.rtoLow, &PfcHostPort::TimeOutRetran, this, qp, payloadSize, seq);
     }
+
   p->AddHeader (qbb);
 
   Ipv4Header ip;
@@ -532,7 +534,6 @@ PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
 void
 PfcHostPort::TimeOutRetran(Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
 {
-   NS_LOG_UNCOND("\ntime out occur"<<seq);
   if(qp->m_irn.RetransmitMode == false && seq >= qp->m_irn.base_seq && qp->m_irn.pkg_state[seq-qp->m_irn.base_seq] == RdmaTxQueuePair::IRN_STATE::UNACK)
   {
     Ptr<Packet> p = ReGenData(qp,siz,seq);
@@ -540,7 +541,6 @@ PfcHostPort::TimeOutRetran(Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
     {
       RetranPkg.push_back(p);
       m_dev->TriggerTransmit();
-      NS_LOG_UNCOND("\ntime out retransmission"<<seq);
     }
   }
   

@@ -129,7 +129,7 @@ public:
   
   void TimeOutRetran(Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq);//time out retransmit function
   bool FindRetranPkg(Ptr<Packet> p);//judge if a pack has been added to RetranPkg
-  
+
 protected:
   /**
    * PFC host port transmitting logic.
@@ -201,6 +201,7 @@ private:
    */
   Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp);
 
+  Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq);
   /**
    * Generate data packet of target transmitting queue pair in  IRN mode
    *
@@ -209,7 +210,6 @@ private:
    */
   Ptr<Packet> IRN_GenData (Ptr<RdmaTxQueuePair> qp);
 
-  Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq);
   /**
    * Generate ACK or SACK packet of target transmitting queue pair
    *
