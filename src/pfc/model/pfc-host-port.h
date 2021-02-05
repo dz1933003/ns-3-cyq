@@ -126,6 +126,10 @@ public:
    */
   void SetupIrn (uint32_t size, Time rtoh, Time rtol);
 
+  
+  void TimeOutRetran(Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq);//time out retransmit function
+  bool FindRetranPkg(Ptr<Packet> p);//judge if a pack has been added to RetranPkg
+  
 protected:
   /**
    * PFC host port transmitting logic.
@@ -175,7 +179,8 @@ private:
 
   std::vector<Ptr<RdmaTxQueuePair>> m_txQueuePairs; //!< transmit queue pairs
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> m_rxQueuePairs; //!< hash and received queue pairs
-  std::map<uint32_t, Ptr<RdmaTxQueuePair>> m_transmittedQP; //!< hash and transmitted queue pairs
+  std::map<uint32_t, uint32_t> m_transmittedQP; //!< hash and transmitted queue pairs
+  std::vector<Ptr<Packet>> RetranPkg;//packs that need to be retransmitted
 
   uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
 
@@ -195,6 +200,14 @@ private:
    * \return data packet
    */
   Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * Generate data packet of target transmitting queue pair in  IRN mode
+   *
+   * \param qp queue pair
+   * \return data packet
+   */
+  Ptr<Packet> IRN_GenData (Ptr<RdmaTxQueuePair> qp);
 
   Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq);
   /**
