@@ -320,14 +320,6 @@ DpskNetDevice::PauseTransmit ()
 }
 
 bool
-DpskNetDevice::ReTransmit(Ptr<Packet> p)
-{
-  m_snifferTrace (p);
-  m_promiscSnifferTrace (p);
-  return TransmitStart (p);
-}
-
-bool
 DpskNetDevice::TransmitStart (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this << p);
