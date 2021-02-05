@@ -98,10 +98,10 @@ RdmaTxQueuePair::GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const 
     };
     char bytes[12];
   } buf;
-  buf.sIp = sIp.Get ();
-  buf.dIp = dIp.Get ();
-  buf.sPort = sPort;
-  buf.dPort = dPort;
+  buf.sIp = dIp.Get ();
+  buf.dIp = sIp.Get ();
+  buf.sPort = dPort;
+  buf.dPort = sPort;
   return Hash32 (buf.bytes, sizeof (buf));
 }
 

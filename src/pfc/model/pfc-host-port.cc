@@ -147,9 +147,16 @@ PfcHostPort::Transmit ()
       m_nTxBytes += p->GetSize ();
       return p;
     }
-
+  
+  if (RetranPkg.empty() == false)
+  {
+    Ptr<Packet> p = RetranPkg[0];
+    RetranPkg.erase(RetranPkg.begin());
+    return p;
+  }
+  
   uint32_t flowCnt = m_txQueuePairs.size ();
-  for (uint32_t i = 0; i < flowCnt; i++)
+  for (uint32_t i = 0; i < flowCnt; i++)//TODO
     {
       uint32_t qIdx = (m_lastQpIndex + i) % flowCnt;
       auto qp = m_txQueuePairs[qIdx];
@@ -158,10 +165,16 @@ PfcHostPort::Transmit ()
           (m_l2RetrasmissionMode != IRN || qp->m_irn.pkg_state.size () < m_irn.maxBitmapSize))
         {
           m_lastQpIndex = qIdx;
-          auto p = GenData (qp);
+          Ptr<Packet> p;
+          if(m_l2RetrasmissionMode == IRN)
+            p = IRN_GenData(qp);
+          else
+            p = GenData (qp);
           uint32_t key = qp->GetHash();
           if(m_transmittedQP.find(key) == m_transmittedQP.end())
-            m_transmittedQP.insert({key, qp});
+          {
+            m_transmittedQP.insert({key, qIdx});
+          }
           if (qp->IsFinished ())
             m_queuePairTxCompleteTrace (qp);
           m_nTxBytes += p->GetSize ();
@@ -198,7 +211,6 @@ PfcHostPort::Receive (Ptr<Packet> p)
         {
           return false; // Drop because PFC disabled
         }
-
       // Pop PFC header
       PfcHeader pfcHeader;
       p->RemoveHeader (pfcHeader);
@@ -245,6 +257,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
       if (flags == QbbHeader::NONE)
         {
+          //NS_LOG_UNCOND("\nReceive a packet");
           uint32_t key = RdmaRxQueuePair::GetHash (sIp, dIp, sPort, dPort);
           auto qpItr = m_rxQueuePairs.find (key);
           Ptr<RdmaRxQueuePair> qp;
@@ -263,19 +276,40 @@ PfcHostPort::Receive (Ptr<Packet> p)
             }
           if (m_l2RetrasmissionMode == IRN)
             {
+              while(seq >= qp->m_irn.GetNextSequenceNumber())
+                  {
+                    qp->m_irn.pkg_state.push_back(RdmaRxQueuePair::IRN_STATE::NACK);
+                  }
               // Already received or expected new packet
-              if (seq <= qp->m_irn.GetNextSequenceNumber ())
+              if (seq <= qp->m_irn.base_seq)
                 {
-                  // TODO cyq: Send ACK and trigger transmit
                   Ptr<Packet> p = GenACK(qp,seq,true);
-                  m_dev->Send(p, m_dev->GetRemote (), 0x0800);
+                  m_controlQueue.push(p);
+                  if(seq < qp->m_irn.base_seq || qp->m_irn.pkg_state[seq-qp->m_irn.base_seq] == RdmaRxQueuePair::IRN_STATE::ACK)//TODO lc:handle packets recerved repeatedly
+                    qp->m_receivedSize -= payloadSize;
+                  
+                  qp->m_irn.pkg_state[seq-qp->m_irn.base_seq] = RdmaRxQueuePair::IRN_STATE::ACK;
+                  while(qp->m_irn.pkg_state.empty() == false && qp->m_irn.pkg_state[0] == RdmaRxQueuePair::IRN_STATE::ACK)
+                  {
+                    qp->m_irn.pkg_state.pop_front();
+                    qp->m_irn.base_seq++;
+                  }
+                  NS_LOG_UNCOND("\nGenACK send"<<seq<<qp->m_irn.base_seq);
                   m_dev->TriggerTransmit ();
                 }
               else // out of order
                 {
-                  // TODO cyq: Send SACK and trigger transmit
                   Ptr<Packet> p = GenACK(qp,seq,false);
-                  m_dev->Send(p, m_dev->GetRemote (), 0x0800);//0x0800表示ipv4类型的包
+                  m_controlQueue.push(p);
+                  if(qp->m_irn.pkg_state[seq-qp->m_irn.base_seq] == RdmaRxQueuePair::IRN_STATE::ACK)//TODO lc:handle packets recerved repeatedly
+                    qp->m_receivedSize -= payloadSize;
+                  qp->m_irn.pkg_state[seq - qp->m_irn.base_seq] = RdmaRxQueuePair::IRN_STATE::ACK;
+                  while(qp->m_irn.pkg_state.empty() == false && qp->m_irn.pkg_state[0] == RdmaRxQueuePair::IRN_STATE::ACK)
+                  {
+                    qp->m_irn.pkg_state.pop_front();
+                    qp->m_irn.base_seq++;
+                  }
+                  NS_LOG_UNCOND("\nGenSACK send"<<seq<<qp->m_irn.base_seq);
                   m_dev->TriggerTransmit ();
                 }
             }
@@ -287,36 +321,48 @@ PfcHostPort::Receive (Ptr<Packet> p)
         {
           // TODO cyq: Handle ACK
           uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
-          auto qpItr = m_transmittedQP.find(key);
-          Ptr<RdmaTxQueuePair> qp = qpItr -> second;
-          qp->m_irn.pkg_state[seq-qp->m_irn.base_seq] = RdmaTxQueuePair::IRN_STATE::ACK;
-          while(qp->m_irn.pkg_state.size() > 0)
+          uint32_t index = m_transmittedQP[key];
+          Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
+          if(seq >= qp->m_irn.base_seq)
+            qp->m_irn.pkg_state[seq-(qp->m_irn.base_seq)] = RdmaTxQueuePair::IRN_STATE::ACK;
+          if(qp->m_irn.RetransmitMode == true && (seq > qp->m_irn.m_seq))
           {
-            if(qp->m_irn.pkg_state[0] == RdmaTxQueuePair::IRN_STATE::ACK)
-            {
-              qp->m_irn.pkg_state.pop_front();
-              qp->m_irn.pkg_payload.pop_front();
-              qp->m_irn.base_seq++;
-            }
+            qp->m_irn.RetransmitMode = false;
           }
+          while(qp->m_irn.pkg_state.size() > 0 && qp->m_irn.pkg_state[0] == RdmaTxQueuePair::IRN_STATE::ACK)
+          {
+            qp->m_irn.pkg_state.pop_front();
+            qp->m_irn.pkg_payload.pop_front();
+            qp->m_irn.base_seq++;
+          }
+          NS_LOG_UNCOND("\nReceive and handle ACK"<<seq<<" "<<qp->m_irn.base_seq);
+          m_dev->TriggerTransmit();
           return false; // Not data so no need to send to node
         }
       else if (flags == QbbHeader::SACK)
         {
           // TODO cyq: Handle SACK
           uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
-          auto qpItr = m_transmittedQP.find(key);
-          Ptr<RdmaTxQueuePair> qp = qpItr -> second;
-          qp->m_irn.pkg_state[seq-qp->m_irn.base_seq] = RdmaTxQueuePair::IRN_STATE::ACK;
-          for(uint32_t i=0; i < seq-qp->m_irn.base_seq; i++)
+          uint32_t index = m_transmittedQP[key];
+          Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
+          qp->m_irn.pkg_state[seq-(qp->m_irn.base_seq)] = RdmaTxQueuePair::IRN_STATE::ACK;
+          if(qp->m_irn.RetransmitMode == false)
           {
-            if(qp->m_irn.pkg_state[i] == RdmaTxQueuePair::IRN_STATE::UNACK)
+            for(uint32_t i=0; i < (seq-(qp->m_irn.base_seq)); i++)
             {
-              uint32_t siz = qp->m_irn.pkg_payload[i];
-              Ptr<Packet> p = ReGenData(qp,siz,seq);
-              m_dev->ReTransmit(p);
+              if(qp->m_irn.pkg_state[i] == RdmaTxQueuePair::IRN_STATE::UNACK)
+              {
+                uint32_t siz = qp->m_irn.pkg_payload[i];
+                uint32_t rtseq = i+(qp->m_irn.base_seq);
+                Ptr<Packet> p = ReGenData(qp,siz,rtseq);
+                if(FindRetranPkg(p) == false)
+                  RetranPkg.push_back(p);
+              }
             }
+            qp->m_irn.m_seq = seq;
+            qp->m_irn.RetransmitMode = true;
           }
+          m_dev->TriggerTransmit();
           return false; // Not data so no need to send to node
         }
       else
@@ -324,6 +370,53 @@ PfcHostPort::Receive (Ptr<Packet> p)
           return false; // Drop because unknown flags
         }
     }
+}
+
+Ptr<Packet>
+PfcHostPort::IRN_GenData (Ptr<RdmaTxQueuePair> qp)
+{
+  NS_LOG_FUNCTION (qp);
+
+  const uint32_t remainSize = qp->GetRemainBytes ();
+  const uint32_t mtu = m_dev->GetMtu ();
+  uint32_t payloadSize = (remainSize > mtu) ? mtu : remainSize;
+
+  qp->m_sentSize += payloadSize;
+
+  Ptr<Packet> p = Create<Packet> (payloadSize);
+
+  QbbHeader qbb;
+  qbb.SetSourcePort (qp->m_sPort);
+  qbb.SetDestinationPort (qp->m_dPort);
+  
+
+  qbb.SetSequenceNumber (qp->m_irn.GetNextSequenceNumber ());
+  qbb.SetFlags (QbbHeader::NONE);
+  qp->m_irn.pkg_state.push_back (RdmaTxQueuePair::IRN_STATE::UNACK);
+  qp->m_irn.pkg_payload.push_back (payloadSize);
+  if(qp->m_irn.pkg_state.size() > 3)
+    Simulator::Schedule (m_irn.rtoHigh, &PfcHostPort::TimeOutRetran, this, qp, payloadSize, qp->m_irn.GetNextSequenceNumber());
+  else
+    Simulator::Schedule (m_irn.rtoLow, &PfcHostPort::TimeOutRetran, this, qp, payloadSize, qp->m_irn.GetNextSequenceNumber());
+  
+   p->AddHeader (qbb);
+
+  Ipv4Header ip;
+  ip.SetSource (qp->m_sIp);
+  ip.SetDestination (qp->m_dIp);
+  ip.SetProtocol (0x11); // UDP
+  ip.SetPayloadSize (p->GetSize ());
+  ip.SetTtl (64);
+  ip.SetDscp (Ipv4Header::DscpType (qp->m_priority));
+  p->AddHeader (ip);
+
+  EthernetHeader eth;
+  eth.SetSource (Mac48Address::ConvertFrom (m_dev->GetAddress ()));
+  eth.SetDestination (Mac48Address::ConvertFrom (m_dev->GetRemote ()));
+  eth.SetLengthType (0x0800); // IPv4
+  p->AddHeader (eth);
+
+  return p;
 }
 
 Ptr<Packet>
@@ -342,15 +435,6 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp)
   QbbHeader qbb;
   qbb.SetSourcePort (qp->m_sPort);
   qbb.SetDestinationPort (qp->m_dPort);
-  if (m_l2RetrasmissionMode == IRN)
-    {
-      qbb.SetSequenceNumber (qp->m_irn.GetNextSequenceNumber ());
-      qbb.SetFlags (QbbHeader::NONE);
-      qp->m_irn.pkg_state.push_back (RdmaTxQueuePair::IRN_STATE::UNACK);
-      qp->m_irn.pkg_payload.push_back (payloadSize);
-      // TODO cyq: setup timer
-      // TODO cyq: move irn conf out of this function
-    }
   p->AddHeader (qbb);
 
   Ipv4Header ip;
@@ -418,8 +502,13 @@ PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
   qbb.SetDestinationPort (qp->m_dPort);
   qbb.SetSequenceNumber (seq);
   qbb.SetFlags (QbbHeader::NONE);
-      // TODO cyq: setup timer
-      // TODO cyq: move irn conf out of this function
+  if (m_l2RetrasmissionMode == IRN)
+    {
+      if(qp->m_irn.pkg_state.size() > 3)
+        Simulator::Schedule (m_irn.rtoHigh, &PfcHostPort::TimeOutRetran, this, qp, payloadSize, seq);
+      else
+        Simulator::Schedule (m_irn.rtoLow, &PfcHostPort::TimeOutRetran, this, qp, payloadSize, seq);
+    }
   p->AddHeader (qbb);
 
   Ipv4Header ip;
@@ -438,6 +527,35 @@ PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
   p->AddHeader (eth);
 
   return p;
+}
+
+void
+PfcHostPort::TimeOutRetran(Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
+{
+   NS_LOG_UNCOND("\ntime out occur"<<seq);
+  if(qp->m_irn.RetransmitMode == false && seq >= qp->m_irn.base_seq && qp->m_irn.pkg_state[seq-qp->m_irn.base_seq] == RdmaTxQueuePair::IRN_STATE::UNACK)
+  {
+    Ptr<Packet> p = ReGenData(qp,siz,seq);
+    if(FindRetranPkg(p) == false)
+    {
+      RetranPkg.push_back(p);
+      m_dev->TriggerTransmit();
+      NS_LOG_UNCOND("\ntime out retransmission"<<seq);
+    }
+  }
+  
+  return;
+}
+
+bool 
+PfcHostPort::FindRetranPkg(Ptr<Packet> p)
+{
+  for(uint32_t i=0; i<RetranPkg.size(); i++)
+  {
+    if(p == RetranPkg[i])
+      return true;
+  }
+  return false;
 }
 
 void
