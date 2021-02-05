@@ -24,6 +24,7 @@
 #include <map>
 #include <set>
 #include <chrono>
+#include <string>
 
 #include <boost/bimap.hpp>
 
@@ -147,6 +148,13 @@ main (int argc, char *argv[])
               dev->SetImplementation (impl);
               impl->SetupQueues (nQueue);
               impl->EnablePfc (host.contains ("PfcEnable") ? host["PfcEnable"].get<bool> () : true);
+              impl->SetL2RetransmissionMode(host["L2RetransmissionMode"]);
+              uint32_t size = host["maxBitmapSize"];
+              std::string h = host["rtoHigh"];
+              std::string l = host["rtoLow"];
+              Time rtohigh(h);
+              Time rtolow(l);
+              impl->SetupIrn(size,rtohigh,rtolow);
               allPorts[node].push_back (dev);
             }
           // Install DPSK
@@ -656,6 +664,7 @@ void
 TraceQueuePairTxComplete (Ptr<RdmaTxQueuePair> qp)
 {
   txCompleteCnt++;
+  //NS_LOG_UNCOND ("\nTraceQueuePairTxComplete txCompleteCnt:"<<txCompleteCnt);
   CheckQueuePair ();
 }
 
