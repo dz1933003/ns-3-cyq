@@ -46,8 +46,8 @@ public:
     std::deque<IRN_STATE> pkg_state;
     std::deque<uint64_t> pkg_payload;
     uint32_t base_seq = 1;
-    bool RetransmitMode = false;//if in retransmission mode
-    uint32_t m_seq;//exit retransmission mode if ACKseq > m_seq
+    bool retransmit_mode = false; //if in retransmission mode
+    uint32_t m_seq; //exit retransmission mode if ACKseq > m_seq
 
     uint32_t
     GetNextSequenceNumber () const

@@ -148,13 +148,13 @@ main (int argc, char *argv[])
               dev->SetImplementation (impl);
               impl->SetupQueues (nQueue);
               impl->EnablePfc (host.contains ("PfcEnable") ? host["PfcEnable"].get<bool> () : true);
-              impl->SetL2RetransmissionMode(host["L2RetransmissionMode"]);
+              impl->SetL2RetransmissionMode (host["L2RetransmissionMode"]);
               uint32_t size = host["maxBitmapSize"];
               std::string h = host["rtoHigh"];
               std::string l = host["rtoLow"];
-              Time rtohigh(h);
-              Time rtolow(l);
-              impl->SetupIrn(size,rtohigh,rtolow);
+              Time rtoHigh (h);
+              Time rtoLow (l);
+              impl->SetupIrn (size, rtoHigh, rtoLow);
               allPorts[node].push_back (dev);
             }
           // Install DPSK

@@ -148,16 +148,15 @@ PfcHostPort::Transmit ()
       return p;
     }
 
-  
-  if (RetranPkg.empty() == false)
-  {
-    Ptr<Packet> p = RetranPkg[0];
-    RetranPkg.erase(RetranPkg.begin());
-    return p;
-  }
-  
+  if (m_retranPkg.empty () == false)
+    {
+      Ptr<Packet> p = m_retranPkg[0];
+      m_retranPkg.erase (m_retranPkg.begin ());
+      return p;
+    }
+
   uint32_t flowCnt = m_txQueuePairs.size ();
-  for (uint32_t i = 0; i < flowCnt; i++)//TODO
+  for (uint32_t i = 0; i < flowCnt; i++) //TODO
     {
       uint32_t qIdx = (m_lastQpIndex + i) % flowCnt;
       auto qp = m_txQueuePairs[qIdx];
@@ -167,15 +166,15 @@ PfcHostPort::Transmit ()
         {
           m_lastQpIndex = qIdx;
           Ptr<Packet> p;
-          if(m_l2RetrasmissionMode == IRN)
-            p = IRN_GenData(qp);
+          if (m_l2RetrasmissionMode == IRN)
+            p = IRN_GenData (qp);
           else
             p = GenData (qp);
-          uint32_t key = qp->GetHash();
-          if(m_transmittedQP.find(key) == m_transmittedQP.end())
-          {
-            m_transmittedQP.insert({key, qIdx});
-          }
+          uint32_t key = qp->GetHash ();
+          if (m_transmittedQP.find (key) == m_transmittedQP.end ())
+            {
+              m_transmittedQP.insert ({key, qIdx});
+            }
           if (qp->IsFinished ())
             m_queuePairTxCompleteTrace (qp);
           m_nTxBytes += p->GetSize ();
@@ -276,40 +275,44 @@ PfcHostPort::Receive (Ptr<Packet> p)
             }
           if (m_l2RetrasmissionMode == IRN)
             {
-              while(seq >= qp->m_irn.GetNextSequenceNumber())
-                  {
-                    qp->m_irn.pkg_state.push_back(RdmaRxQueuePair::IRN_STATE::NACK);
-                  }
+              while (seq >= qp->m_irn.GetNextSequenceNumber ())
+                {
+                  qp->m_irn.pkg_state.push_back (RdmaRxQueuePair::IRN_STATE::NACK);
+                }
               // Already received or expected new packet
               if (seq <= qp->m_irn.base_seq)
                 {
-                  Ptr<Packet> p = GenACK(qp,seq,true);
-                  m_controlQueue.push(p);
-                  if(seq < qp->m_irn.base_seq || qp->m_irn.pkg_state[seq-qp->m_irn.base_seq] == RdmaRxQueuePair::IRN_STATE::ACK)//TODO lc:handle packets recerved repeatedly
+                  Ptr<Packet> p = GenACK (qp, seq, true);
+                  m_controlQueue.push (p);
+                  if (seq < qp->m_irn.base_seq ||
+                      qp->m_irn.pkg_state[seq - qp->m_irn.base_seq] ==
+                          RdmaRxQueuePair::IRN_STATE::
+                              ACK) //TODO lc:handle packets recerved repeatedly
                     qp->m_receivedSize -= payloadSize;
-                  
-                  qp->m_irn.pkg_state[seq-qp->m_irn.base_seq] = RdmaRxQueuePair::IRN_STATE::ACK;
-                  while(qp->m_irn.pkg_state.empty() == false && qp->m_irn.pkg_state[0] == RdmaRxQueuePair::IRN_STATE::ACK)
-                  {
-                    qp->m_irn.pkg_state.pop_front();
-                    qp->m_irn.base_seq++;
-                  }
-                  NS_LOG_UNCOND("\nGenACK send"<<seq<<qp->m_irn.base_seq);
+
+                  qp->m_irn.pkg_state[seq - qp->m_irn.base_seq] = RdmaRxQueuePair::IRN_STATE::ACK;
+                  while (qp->m_irn.pkg_state.empty () == false &&
+                         qp->m_irn.pkg_state[0] == RdmaRxQueuePair::IRN_STATE::ACK)
+                    {
+                      qp->m_irn.pkg_state.pop_front ();
+                      qp->m_irn.base_seq++;
+                    }
                   m_dev->TriggerTransmit ();
                 }
               else // out of order
                 {
-                  Ptr<Packet> p = GenACK(qp,seq,false);
-                  m_controlQueue.push(p);
-                  if(qp->m_irn.pkg_state[seq-qp->m_irn.base_seq] == RdmaRxQueuePair::IRN_STATE::ACK)//TODO lc:handle packets recerved repeatedly
+                  Ptr<Packet> p = GenACK (qp, seq, false);
+                  m_controlQueue.push (p);
+                  if (qp->m_irn.pkg_state[seq - qp->m_irn.base_seq] ==
+                      RdmaRxQueuePair::IRN_STATE::ACK) //TODO lc:handle packets recerved repeatedly
                     qp->m_receivedSize -= payloadSize;
                   qp->m_irn.pkg_state[seq - qp->m_irn.base_seq] = RdmaRxQueuePair::IRN_STATE::ACK;
-                  while(qp->m_irn.pkg_state.empty() == false && qp->m_irn.pkg_state[0] == RdmaRxQueuePair::IRN_STATE::ACK)
-                  {
-                    qp->m_irn.pkg_state.pop_front();
-                    qp->m_irn.base_seq++;
-                  }
-                  NS_LOG_UNCOND("\nGenSACK send"<<seq<<qp->m_irn.base_seq);
+                  while (qp->m_irn.pkg_state.empty () == false &&
+                         qp->m_irn.pkg_state[0] == RdmaRxQueuePair::IRN_STATE::ACK)
+                    {
+                      qp->m_irn.pkg_state.pop_front ();
+                      qp->m_irn.base_seq++;
+                    }
                   m_dev->TriggerTransmit ();
                 }
             }
@@ -323,20 +326,20 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
           uint32_t index = m_transmittedQP[key];
           Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
-          if(seq >= qp->m_irn.base_seq)
-            qp->m_irn.pkg_state[seq-(qp->m_irn.base_seq)] = RdmaTxQueuePair::IRN_STATE::ACK;
-          if(qp->m_irn.RetransmitMode == true && (seq > qp->m_irn.m_seq))
-          {
-            qp->m_irn.RetransmitMode = false;
-          }
-          while(qp->m_irn.pkg_state.size() > 0 && qp->m_irn.pkg_state[0] == RdmaTxQueuePair::IRN_STATE::ACK)
-          {
-            qp->m_irn.pkg_state.pop_front();
-            qp->m_irn.pkg_payload.pop_front();
-            qp->m_irn.base_seq++;
-          }
-          NS_LOG_UNCOND("\nReceive and handle ACK"<<seq<<" "<<qp->m_irn.base_seq);
-          m_dev->TriggerTransmit();
+          if (seq >= qp->m_irn.base_seq)
+            qp->m_irn.pkg_state[seq - (qp->m_irn.base_seq)] = RdmaTxQueuePair::IRN_STATE::ACK;
+          if (qp->m_irn.retransmit_mode == true && (seq > qp->m_irn.m_seq))
+            {
+              qp->m_irn.retransmit_mode = false;
+            }
+          while (qp->m_irn.pkg_state.size () > 0 &&
+                 qp->m_irn.pkg_state[0] == RdmaTxQueuePair::IRN_STATE::ACK)
+            {
+              qp->m_irn.pkg_state.pop_front ();
+              qp->m_irn.pkg_payload.pop_front ();
+              qp->m_irn.base_seq++;
+            }
+          m_dev->TriggerTransmit ();
           return false; // Not data so no need to send to node
         }
       else if (flags == QbbHeader::SACK)
@@ -345,24 +348,25 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
           uint32_t index = m_transmittedQP[key];
           Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
-          qp->m_irn.pkg_state[seq-(qp->m_irn.base_seq)] = RdmaTxQueuePair::IRN_STATE::ACK;
-          if(qp->m_irn.RetransmitMode == false)
-          {
-            for(uint32_t i=0; i < (seq-(qp->m_irn.base_seq)); i++)
+          qp->m_irn.pkg_state[seq - (qp->m_irn.base_seq)] = RdmaTxQueuePair::IRN_STATE::ACK;
+          if (qp->m_irn.retransmit_mode == false)
             {
-              if(qp->m_irn.pkg_state[i] == RdmaTxQueuePair::IRN_STATE::UNACK)
-              {
-                uint32_t siz = qp->m_irn.pkg_payload[i];
-                uint32_t rtseq = i+(qp->m_irn.base_seq);
-                Ptr<Packet> p = ReGenData(qp,siz,rtseq);
-                if(FindRetranPkg(p) == false)
-                  RetranPkg.push_back(p);
-              }
+              NS_LOG_UNCOND ("\nReceive and handle SACK" << seq << " " << qp->m_irn.base_seq);
+              for (uint32_t i = 0; i < (seq - (qp->m_irn.base_seq)); i++)
+                {
+                  if (qp->m_irn.pkg_state[i] == RdmaTxQueuePair::IRN_STATE::UNACK)
+                    {
+                      uint32_t siz = qp->m_irn.pkg_payload[i];
+                      uint32_t rtseq = i + (qp->m_irn.base_seq);
+                      Ptr<Packet> p = ReGenData (qp, siz, rtseq);
+                      if (FindRetranPkg (p) == false)
+                        m_retranPkg.push_back (p);
+                    }
+                }
+              qp->m_irn.m_seq = seq;
+              qp->m_irn.retransmit_mode = true;
             }
-            qp->m_irn.m_seq = seq;
-            qp->m_irn.RetransmitMode = true;
-          }
-          m_dev->TriggerTransmit();
+          m_dev->TriggerTransmit ();
           return false; // Not data so no need to send to node
         }
       else
@@ -388,18 +392,19 @@ PfcHostPort::IRN_GenData (Ptr<RdmaTxQueuePair> qp)
   QbbHeader qbb;
   qbb.SetSourcePort (qp->m_sPort);
   qbb.SetDestinationPort (qp->m_dPort);
-  
 
   qbb.SetSequenceNumber (qp->m_irn.GetNextSequenceNumber ());
   qbb.SetFlags (QbbHeader::NONE);
   qp->m_irn.pkg_state.push_back (RdmaTxQueuePair::IRN_STATE::UNACK);
   qp->m_irn.pkg_payload.push_back (payloadSize);
-  if(qp->m_irn.pkg_state.size() > 3)
-    Simulator::Schedule (m_irn.rtoHigh, &PfcHostPort::TimeOutRetran, this, qp, payloadSize, qp->m_irn.GetNextSequenceNumber());
+  if (qp->m_irn.pkg_state.size () > 3)
+    Simulator::Schedule (m_irn.rtoHigh, &PfcHostPort::TimeOutRetran, this, qp, payloadSize,
+                         qp->m_irn.GetNextSequenceNumber ());
   else
-    Simulator::Schedule (m_irn.rtoLow, &PfcHostPort::TimeOutRetran, this, qp, payloadSize, qp->m_irn.GetNextSequenceNumber());
-  
-   p->AddHeader (qbb);
+    Simulator::Schedule (m_irn.rtoLow, &PfcHostPort::TimeOutRetran, this, qp, payloadSize,
+                         qp->m_irn.GetNextSequenceNumber ());
+
+  p->AddHeader (qbb);
 
   Ipv4Header ip;
   ip.SetSource (qp->m_sIp);
@@ -492,7 +497,6 @@ PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
 {
   NS_LOG_FUNCTION (qp);
 
-  
   uint32_t payloadSize = siz;
 
   Ptr<Packet> p = Create<Packet> (payloadSize);
@@ -505,8 +509,9 @@ PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
 
   if (m_l2RetrasmissionMode == IRN)
     {
-      if(qp->m_irn.pkg_state.size() > 3)
-        Simulator::Schedule (m_irn.rtoHigh, &PfcHostPort::TimeOutRetran, this, qp, payloadSize, seq);
+      if (qp->m_irn.pkg_state.size () > 3)
+        Simulator::Schedule (m_irn.rtoHigh, &PfcHostPort::TimeOutRetran, this, qp, payloadSize,
+                             seq);
       else
         Simulator::Schedule (m_irn.rtoLow, &PfcHostPort::TimeOutRetran, this, qp, payloadSize, seq);
     }
@@ -532,29 +537,31 @@ PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
 }
 
 void
-PfcHostPort::TimeOutRetran(Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
+PfcHostPort::TimeOutRetran (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq)
 {
-  if(qp->m_irn.RetransmitMode == false && seq >= qp->m_irn.base_seq && qp->m_irn.pkg_state[seq-qp->m_irn.base_seq] == RdmaTxQueuePair::IRN_STATE::UNACK)
-  {
-    Ptr<Packet> p = ReGenData(qp,siz,seq);
-    if(FindRetranPkg(p) == false)
+  if (qp->m_irn.retransmit_mode == false && seq >= qp->m_irn.base_seq &&
+      qp->m_irn.pkg_state[seq - qp->m_irn.base_seq] == RdmaTxQueuePair::IRN_STATE::UNACK)
     {
-      RetranPkg.push_back(p);
-      m_dev->TriggerTransmit();
+      NS_LOG_UNCOND ("\ntime out retransmit" << seq);
+      Ptr<Packet> p = ReGenData (qp, siz, seq);
+      if (FindRetranPkg (p) == false)
+        {
+          m_retranPkg.push_back (p);
+          m_dev->TriggerTransmit ();
+        }
     }
-  }
-  
+
   return;
 }
 
-bool 
-PfcHostPort::FindRetranPkg(Ptr<Packet> p)
+bool
+PfcHostPort::FindRetranPkg (Ptr<Packet> p)
 {
-  for(uint32_t i=0; i<RetranPkg.size(); i++)
-  {
-    if(p == RetranPkg[i])
-      return true;
-  }
+  for (uint32_t i = 0; i < m_retranPkg.size (); i++)
+    {
+      if (p == m_retranPkg[i])
+        return true;
+    }
   return false;
 }
 
