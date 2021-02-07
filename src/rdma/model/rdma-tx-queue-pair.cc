@@ -22,6 +22,9 @@
 
 #include "ns3/hash.h"
 #include "ns3/log.h"
+#include "ns3/ethernet-header.h"
+#include "ns3/ipv4-header.h"
+#include "ns3/qbb-header.h"
 
 namespace ns3 {
 

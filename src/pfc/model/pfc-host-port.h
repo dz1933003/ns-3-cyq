@@ -126,23 +126,6 @@ public:
    */
   void SetupIrn (uint32_t size, Time rtoh, Time rtol);
 
-  /**
-   * when time out occur this function retransmit packet
-   * 
-   * \param qp time out packet
-   * \param size packet size
-   * \param seq packet seq
-   */
-  void TimeOutRetran (Ptr<RdmaTxQueuePair> qp, uint32_t size, uint32_t seq);
-
-  /**
-   * judge if a packet has been added to the vector m_rtxPacketQueue
-   * 
-   * \param p packet needs to be find in vector m_rtxPacketQueue
-   * \return true if p in m_rtxPacketQueue else return false
-   */
-  bool FindRetranPkg (Ptr<Packet> p); //judge if a pack has been added to RetranPkg
-
 protected:
   /**
    * PFC host port transmitting logic.
@@ -205,6 +188,8 @@ private:
     uint32_t maxBitmapSize; //!< Maximum bitmap size
     Time rtoHigh; //!< Retransmission timeout high
     Time rtoLow; //!< Retransmission timeout low
+
+    std::map<Ptr<Packet>, Ptr<RdmaTxQueuePair>> waitingPackets; //!< Packets waiting for timing
   } m_irn; //!< IRN configuration
 
   /**
@@ -219,19 +204,11 @@ private:
    * Generate data packet that needs to be retransmitted
    * 
    * \param qp queue pair
-   * \param size packet size
    * \param seq packet seq
+   * \param size packet size
    * \return data packet
    */
-  Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t size, uint32_t seq);
-
-  /**
-   * Generate data packet of target transmitting queue pair in IRN mode
-   *
-   * \param qp queue pair
-   * \return data packet
-   */
-  Ptr<Packet> IRN_GenData (Ptr<RdmaTxQueuePair> qp);
+  Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t seq, uint32_t size);
 
   /**
    * Generate ACK or SACK packet of target transmitting queue pair
@@ -242,6 +219,10 @@ private:
    * \return data packet
    */
   Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, bool ack);
+
+  EventId IrnTimer (Ptr<Packet> p);
+
+  void IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t seq);
 
   /**
    * The trace source fired for received a PFC packet.

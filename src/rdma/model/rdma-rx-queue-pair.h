@@ -38,17 +38,74 @@ public:
 
   uint64_t m_receivedSize;
 
-  enum IRN_STATE { ACK, NACK };
+  enum IRN_STATE { ACK, NACK, UNDEF };
 
   struct
   {
     std::deque<IRN_STATE> pkg_state;
     uint32_t base_seq = 1;
+    bool retransmit_mode = false;
+
+    uint32_t latestSackSeq = 0;
+
+    IRN_STATE
+    GetIrnState (const uint32_t &seq) const
+    {
+      if (seq >= GetNextSequenceNumber ())
+        return IRN_STATE::UNDEF;
+      else if (seq >= base_seq)
+        return pkg_state[seq - base_seq];
+      else
+        return IRN_STATE::ACK;
+    }
+
+    void
+    MoveWindow ()
+    {
+      while (!pkg_state.empty () && pkg_state.front () == IRN_STATE::ACK)
+        {
+          pkg_state.pop_front ();
+          base_seq++;
+        }
+    }
+
+    void
+    UpdateIrnState (const uint32_t &seq)
+    {
+      // Packet not seen before
+      if (GetIrnState (seq) == IRN_STATE::UNDEF)
+        {
+          // Sequence number out of order
+          if (seq > GetNextSequenceNumber ())
+            {
+              retransmit_mode = true;
+              latestSackSeq = seq;
+              while (seq > GetNextSequenceNumber ())
+                pkg_state.push_back (IRN_STATE::NACK);
+            }
+          pkg_state.push_back (IRN_STATE::ACK);
+        }
+      // Retransmission packet
+      else if (GetIrnState (seq) == IRN_STATE::NACK)
+        {
+          if (seq >= latestSackSeq)
+            retransmit_mode = false;
+          pkg_state[seq - base_seq] = IRN_STATE::ACK;
+        }
+      // If is ACKed, do nothing.
+      MoveWindow ();
+    }
 
     uint32_t
     GetNextSequenceNumber () const
     {
       return base_seq + pkg_state.size ();
+    }
+
+    bool
+    IsReceived (const uint32_t &seq) const
+    {
+      return GetIrnState (seq) == IRN_STATE::ACK;
     }
   } m_irn;
 
