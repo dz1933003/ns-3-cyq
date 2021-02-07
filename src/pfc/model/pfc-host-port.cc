@@ -427,7 +427,7 @@ PfcHostPort::GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, bool ack)
   ip.SetProtocol (0x11); // UDP
   ip.SetPayloadSize (p->GetSize ());
   ip.SetTtl (64);
-  ip.SetDscp (Ipv4Header::DscpType (qp->m_priority)); // XXX cyq: highest prio?
+  ip.SetDscp (Ipv4Header::DscpType (m_nQueues)); // highest priority
   p->AddHeader (ip);
 
   EthernetHeader eth;
