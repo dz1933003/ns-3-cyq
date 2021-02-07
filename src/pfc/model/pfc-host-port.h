@@ -130,17 +130,16 @@ public:
    * when time out occur this function retransmit packet
    * 
    * \param qp time out packet
-   * \param siz packet size
+   * \param size packet size
    * \param seq packet seq
    */
-  void TimeOutRetran (Ptr<RdmaTxQueuePair> qp, uint32_t siz,
-                      uint32_t seq);
-  
+  void TimeOutRetran (Ptr<RdmaTxQueuePair> qp, uint32_t size, uint32_t seq);
+
   /**
-   * judge if a packet has been added to the vector m_retranPkg
+   * judge if a packet has been added to the vector m_rtxPacketQueue
    * 
-   * \param p packet needs to be find in vector m_retranPkg
-   * \return true if p in m_retranPkg else return false
+   * \param p packet needs to be find in vector m_rtxPacketQueue
+   * \return true if p in m_rtxPacketQueue else return false
    */
   bool FindRetranPkg (Ptr<Packet> p); //judge if a pack has been added to RetranPkg
 
@@ -191,14 +190,15 @@ private:
 
   std::queue<Ptr<Packet>> m_controlQueue; //!< control queue
 
+  std::map<uint32_t, uint32_t> m_txQueuePairTable; //!< hash and transmitted queue pairs
   std::vector<Ptr<RdmaTxQueuePair>> m_txQueuePairs; //!< transmit queue pairs
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> m_rxQueuePairs; //!< hash and received queue pairs
-  std::map<uint32_t, uint32_t> m_transmittedQP; //!< hash and transmitted queue pairs
-  std::vector<Ptr<Packet>> m_retranPkg; //packs that need to be retransmitted
+
+  std::deque<Ptr<Packet>> m_rtxPacketQueue; //!< packets that need to be retransmitted
 
   uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
 
-  uint32_t m_l2RetrasmissionMode; //!< L2 retransmission mode
+  uint32_t m_l2RetransmissionMode; //!< L2 retransmission mode
 
   struct
   {
@@ -219,14 +219,14 @@ private:
    * Generate data packet that needs to be retransmitted
    * 
    * \param qp queue pair
-   * \param siz packet size
+   * \param size packet size
    * \param seq packet seq
    * \return data packet
    */
-  Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t siz, uint32_t seq);
+  Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t size, uint32_t seq);
 
   /**
-   * Generate data packet of target transmitting queue pair in  IRN mode
+   * Generate data packet of target transmitting queue pair in IRN mode
    *
    * \param qp queue pair
    * \return data packet
