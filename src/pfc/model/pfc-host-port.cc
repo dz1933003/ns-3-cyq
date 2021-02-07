@@ -154,16 +154,23 @@ PfcHostPort::Transmit ()
     }
 
   // Retransmit packet
-  if (m_rtxPacketQueue.empty () == false)
+  while (m_rtxPacketQueue.empty () == false)
     {
       const auto p = m_rtxPacketQueue.front ().first;
       const auto qp = m_rtxPacketQueue.front ().second.first;
       const auto seq = m_rtxPacketQueue.front ().second.second;
+      const auto state = qp->m_irn.GetIrnState (seq);
       m_rtxPacketQueue.pop_front ();
       // Set up IRN timer
       if (m_l2RetransmissionMode == IRN)
-        IrnTimer (qp, seq);
-      return p;
+        {
+          if (state == RdmaTxQueuePair::NACK || state == RdmaTxQueuePair::UNACK)
+            {
+              auto id = IrnTimer (qp, seq);
+              qp->m_irn.SetRtxEvent (seq, id);
+              return p;
+            }
+        }
     }
 
   // Transmit data packet
@@ -189,7 +196,10 @@ PfcHostPort::Transmit ()
           m_nTxBytes += p->GetSize ();
           // Set up IRN timer
           if (m_l2RetransmissionMode == IRN)
-            IrnTimer (qp, seq);
+            {
+              auto id = IrnTimer (qp, seq);
+              qp->m_irn.SetRtxEvent (seq, id);
+            }
           return p;
         }
     }
@@ -395,8 +405,10 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_seq)
       o_seq = seq;
       qbb.SetSequenceNumber (seq);
       qbb.SetFlags (QbbHeader::NONE);
+      // TODO cyq: add state by one function
       qp->m_irn.pkg_state.push_back (RdmaTxQueuePair::IRN_STATE::UNACK);
       qp->m_irn.pkg_payload.push_back (payloadSize);
+      qp->m_irn.pkg_rtxEvent.push_back (EventId ());
       // TODO cyq: move irn conf out of this function
     }
   p->AddHeader (qbb);

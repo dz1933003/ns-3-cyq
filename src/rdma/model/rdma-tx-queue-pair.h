@@ -46,6 +46,7 @@ public:
   {
     std::deque<IRN_STATE> pkg_state;
     std::deque<uint64_t> pkg_payload;
+    std::deque<EventId> pkg_rtxEvent;
     uint32_t base_seq = 1;
 
     IRN_STATE
@@ -78,7 +79,8 @@ public:
       while (!pkg_state.empty () && pkg_state.front () == IRN_STATE::ACK)
         {
           pkg_state.pop_front ();
-          pkg_payload.pop_front();
+          pkg_payload.pop_front ();
+          pkg_rtxEvent.pop_front ();
           base_seq++;
         }
     }
@@ -94,6 +96,8 @@ public:
       else if (GetIrnState (seq) == IRN_STATE::UNACK || GetIrnState (seq) == IRN_STATE::NACK)
         {
           pkg_state[seq - base_seq] = IRN_STATE::ACK;
+          // Cancel timer
+          Simulator::Cancel (pkg_rtxEvent[seq - base_seq]);
         }
       // If is ACK, do nothing.
       MoveWindow ();
@@ -118,6 +122,8 @@ public:
               pkg_state[index] = IRN_STATE::NACK;
               rtxSeqList.push_back (index + base_seq);
             }
+          // Cancel timer
+          Simulator::Cancel (pkg_rtxEvent[index]);
         }
       else if (GetIrnState (seq) == IRN_STATE::NACK || GetIrnState (seq) == IRN_STATE::ACK)
         {
@@ -126,6 +132,21 @@ public:
         }
       MoveWindow ();
       return rtxSeqList;
+    }
+
+    void
+    SetRtxEvent (const uint32_t &seq, const EventId &id)
+    {
+      if (seq >= base_seq && seq < GetNextSequenceNumber ())
+        {
+          Simulator::Cancel (pkg_rtxEvent[seq - base_seq]);
+          pkg_rtxEvent[seq - base_seq] = id;
+        }
+      else
+        {
+          NS_ASSERT_MSG (false, "RdmaTxQueuePair::m_irn::SetRtxEvent: "
+                                "Invalid sequence number");
+        }
     }
 
     uint32_t
