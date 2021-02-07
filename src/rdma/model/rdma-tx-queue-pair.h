@@ -78,6 +78,7 @@ public:
       while (!pkg_state.empty () && pkg_state.front () == IRN_STATE::ACK)
         {
           pkg_state.pop_front ();
+          pkg_payload.pop_front();
           base_seq++;
         }
     }

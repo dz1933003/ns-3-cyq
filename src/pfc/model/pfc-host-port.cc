@@ -440,7 +440,7 @@ PfcHostPort::GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, bool ack)
 }
 
 Ptr<Packet>
-PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t size, uint32_t seq)
+PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t seq, uint32_t size)
 {
   NS_LOG_FUNCTION (qp);
 
@@ -509,7 +509,7 @@ PfcHostPort::IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t seq)
   const auto state = qp->m_irn.GetIrnState (seq);
   if (state == RdmaTxQueuePair::NACK || state == RdmaTxQueuePair::UNACK)
     {
-      m_rtxPacketQueue.push_back (ReGenData (qp, qp->m_irn.GetPayloadSize (seq), seq));
+      m_rtxPacketQueue.push_back (ReGenData (qp, seq, qp->m_irn.GetPayloadSize (seq)));
       m_dev->TriggerTransmit ();
     }
 }
