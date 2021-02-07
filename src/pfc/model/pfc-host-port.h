@@ -177,7 +177,8 @@ private:
   std::vector<Ptr<RdmaTxQueuePair>> m_txQueuePairs; //!< transmit queue pairs
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> m_rxQueuePairs; //!< hash and received queue pairs
 
-  std::deque<Ptr<Packet>> m_rtxPacketQueue; //!< packets that need to be retransmitted
+  std::deque<std::pair<Ptr<Packet>, std::pair<Ptr<RdmaTxQueuePair>, uint32_t>>>
+      m_rtxPacketQueue; //!< packets that need to be retransmitted
 
   uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
 
@@ -201,6 +202,15 @@ private:
   Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp);
 
   /**
+   * Generate data packet of target transmitting queue pair
+   *
+   * \param qp queue pair
+   * \param o_seq output sequence number
+   * \return data packet
+   */
+  Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_seq);
+
+  /**
    * Generate data packet that needs to be retransmitted
    * 
    * \param qp queue pair
@@ -220,7 +230,7 @@ private:
    */
   Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, bool ack);
 
-  EventId IrnTimer (Ptr<Packet> p);
+  EventId IrnTimer (Ptr<RdmaTxQueuePair> qp, uint32_t seq);
 
   void IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t seq);
 

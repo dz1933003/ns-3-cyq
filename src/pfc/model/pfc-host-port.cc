@@ -156,11 +156,13 @@ PfcHostPort::Transmit ()
   // Retransmit packet
   if (m_rtxPacketQueue.empty () == false)
     {
-      Ptr<Packet> p = m_rtxPacketQueue.front ();
+      const auto p = m_rtxPacketQueue.front ().first;
+      const auto qp = m_rtxPacketQueue.front ().second.first;
+      const auto seq = m_rtxPacketQueue.front ().second.second;
       m_rtxPacketQueue.pop_front ();
       // Set up IRN timer
       if (m_l2RetransmissionMode == IRN)
-        IrnTimer (p);
+        IrnTimer (qp, seq);
       return p;
     }
 
@@ -180,13 +182,14 @@ PfcHostPort::Transmit ()
           (m_l2RetransmissionMode != IRN || qp->m_irn.pkg_state.size () < m_irn.maxBitmapSize))
         {
           m_lastQpIndex = qIdx;
-          auto p = GenData (qp);
+          uint32_t seq;
+          auto p = GenData (qp, seq);
           if (qp->IsFinished ())
             m_queuePairTxCompleteTrace (qp);
           m_nTxBytes += p->GetSize ();
           // Set up IRN timer
           if (m_l2RetransmissionMode == IRN)
-            IrnTimer (p);
+            IrnTimer (qp, seq);
           return p;
         }
     }
@@ -350,7 +353,8 @@ PfcHostPort::Receive (Ptr<Packet> p)
           const auto rtxSeqList = qp->m_irn.SackIrnState (seq);
           for (const auto &s : rtxSeqList)
             {
-              m_rtxPacketQueue.push_back (ReGenData (qp, s, qp->m_irn.GetPayloadSize (s)));
+              m_rtxPacketQueue.push_back (
+                  {ReGenData (qp, s, qp->m_irn.GetPayloadSize (s)), {qp, seq}});
             }
           m_dev->TriggerTransmit ();
           return false; // Not data so no need to send to node
@@ -364,6 +368,13 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
 Ptr<Packet>
 PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp)
+{
+  uint32_t tmp;
+  return GenData (qp, tmp);
+}
+
+Ptr<Packet>
+PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_seq)
 {
   NS_LOG_FUNCTION (qp);
 
@@ -381,6 +392,7 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp)
   if (m_l2RetransmissionMode == IRN)
     {
       const auto seq = qp->m_irn.GetNextSequenceNumber ();
+      o_seq = seq;
       qbb.SetSequenceNumber (seq);
       qbb.SetFlags (QbbHeader::NONE);
       qp->m_irn.pkg_state.push_back (RdmaTxQueuePair::IRN_STATE::UNACK);
@@ -474,25 +486,8 @@ PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t seq, uint32_t size)
 }
 
 EventId
-PfcHostPort::IrnTimer (Ptr<Packet> p)
+PfcHostPort::IrnTimer (Ptr<RdmaTxQueuePair> qp, uint32_t seq)
 {
-  auto pkt = p->Copy ();
-  EthernetHeader ethHeader;
-  Ipv4Header ip;
-  QbbHeader qbb;
-  pkt->RemoveHeader (ethHeader);
-  pkt->RemoveHeader (ip);
-  pkt->RemoveHeader (qbb);
-  const auto sIp = ip.GetSource ();
-  const auto dIp = ip.GetDestination ();
-  const uint16_t sPort = qbb.GetSourcePort ();
-  const uint16_t dPort = qbb.GetDestinationPort ();
-  const auto seq = qbb.GetSequenceNumber ();
-
-  const auto hash = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
-  const auto index = m_txQueuePairTable[hash];
-  const auto qp = m_txQueuePairs[index];
-
   if (qp->m_irn.pkg_state.size () <= 3) // TODO cyq: configure this using config file
     {
       return Simulator::Schedule (m_irn.rtoLow, &PfcHostPort::IrnTimerHandler, this, qp, seq);
@@ -509,7 +504,7 @@ PfcHostPort::IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t seq)
   const auto state = qp->m_irn.GetIrnState (seq);
   if (state == RdmaTxQueuePair::NACK || state == RdmaTxQueuePair::UNACK)
     {
-      m_rtxPacketQueue.push_back (ReGenData (qp, seq, qp->m_irn.GetPayloadSize (seq)));
+      m_rtxPacketQueue.push_back ({ReGenData (qp, seq, qp->m_irn.GetPayloadSize (seq)), {qp, seq}});
       m_dev->TriggerTransmit ();
     }
 }
