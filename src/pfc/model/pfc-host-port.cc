@@ -166,9 +166,9 @@ PfcHostPort::Transmit ()
 
   // Transmit data packet
   uint32_t flowCnt = m_txQueuePairs.size ();
-  for (uint32_t i = 0; i < flowCnt; i++) // TODO cyq: round robin start with adding 1
+  for (uint32_t i = 0; i < flowCnt; i++)
     {
-      uint32_t qIdx = (m_lastQpIndex + i) % flowCnt;
+      uint32_t qIdx = (m_lastQpIndex + i + 1) % flowCnt;
       auto qp = m_txQueuePairs[qIdx];
       // Sending constrains:
       // 1. PFC RESUME.
