@@ -426,10 +426,7 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_seq)
       o_seq = seq;
       qbb.SetSequenceNumber (seq);
       qbb.SetFlags (QbbHeader::NONE);
-      // TODO cyq: add state by one function
-      qp->m_irn.pkg_state.push_back (RdmaTxQueuePair::IRN_STATE::UNACK);
-      qp->m_irn.pkg_payload.push_back (payloadSize);
-      qp->m_irn.pkg_rtxEvent.push_back (EventId ());
+      qp->m_irn.SendNewPacket(payloadSize);
       // XXX cyq: move irn conf out of this function
     }
   p->AddHeader (qbb);

@@ -49,6 +49,14 @@ public:
     std::deque<EventId> pkg_rtxEvent;
     uint32_t base_seq = 1;
 
+    void
+    SendNewPacket (uint32_t payloadSize)
+    {
+      pkg_state.push_back (RdmaTxQueuePair::IRN_STATE::UNACK);
+      pkg_payload.push_back (payloadSize);
+      pkg_rtxEvent.push_back (EventId ());
+    }
+
     IRN_STATE
     GetIrnState (const uint32_t &seq) const
     {
