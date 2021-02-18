@@ -38,26 +38,30 @@ using json = nlohmann::json;
  * Global simulation variables *
  *******************************/
 
-static const uint32_t CYQ_MTU = 1500;
+static const uint32_t CYQ_MTU = 1500; // Global MTU
 static DpskHelper dpskHelper;
-static std::string traceTag = "";
+static std::string traceTag = ""; // Prefix for log file name
 
-uint32_t nQueue;
-uint32_t ecmpSeed;
-DpskNetDevice::TxMode portTxMode;
-boost::bimap<std::string, Ptr<Node>> allNodes;
-std::map<Ptr<Node>, std::vector<Ptr<DpskNetDevice>>> allPorts;
-boost::bimap<Ptr<Node>, Ipv4Address> allIpv4Addresses;
-std::set<Ptr<Node>> hostNodes;
-std::set<Ptr<Node>> switchNodes;
-std::map<uint32_t, Ptr<RdmaTxQueuePair>> allTxQueuePairs;
-std::map<uint32_t, Ptr<RdmaRxQueuePair>> allRxQueuePairs;
+uint32_t nQueue; // Global interface queue number (control queue is not counted)
+uint32_t ecmpSeed; // ECMP seed
+DpskNetDevice::TxMode portTxMode; // Global interface transmission mode (active or passive)
+boost::bimap<std::string, Ptr<Node>> allNodes; // Node name to Node pointer
+std::map<Ptr<Node>, std::vector<Ptr<DpskNetDevice>>> allPorts; // Node pointer to its interfaces
+boost::bimap<Ptr<Node>, Ipv4Address> allIpv4Addresses; // Node pointer to its IPv4 addr
+std::set<Ptr<Node>> hostNodes; // Nodes that are hosts
+std::set<Ptr<Node>> switchNodes; // Nodes that are switches
+std::map<Ptr<ns3::NetDevice>, uint64_t>
+    dataQueueSize; // Switch iface to data queue size string (Support No PFC only)
+std::map<uint32_t, Ptr<RdmaTxQueuePair>> allTxQueuePairs; // Tx QP hash to its pointer
+std::map<uint32_t, Ptr<RdmaRxQueuePair>> allRxQueuePairs; // Rx QP hash to its pointer
 
-uint32_t txCompleteCnt = 0;
-uint32_t rxCompleteCnt = 0;
+uint32_t txCompleteCnt = 0; // Tx QP completion counter
+uint32_t rxCompleteCnt = 0; // Rx QP completion counter
 
-uint64_t maxBdp = 0;
-Time maxRtt (0);
+uint64_t maxBdp = 0; // Topology max BDP
+Time maxRtt (0); // Topology max RTT
+uint64_t maxQueueBdp = 0; // Topology max BDP with queuing
+Time maxQueueRtt (0); // Topology max RTT with queuing
 
 std::string outputFolder; // Log output folder
 
@@ -70,11 +74,13 @@ struct Interface
   Ptr<DpskNetDevice> device;
   Time delay;
   DataRate bandwidth;
+  uint64_t queueSize;
 };
 std::map<Ptr<Node>, std::map<Ptr<Node>, Interface>> onewayOutDev;
 std::map<Ptr<Node>, std::map<Ptr<Node>, std::vector<Ptr<Node>>>> nextHopTable;
 std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairDelay;
 std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairTxDelay;
+std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairQueueTxDelay;
 std::map<Ptr<Node>, std::map<Ptr<Node>, DataRate>> pairBandwidth;
 std::map<Ptr<Node>, std::map<Ptr<Node>, uint64_t>> pairBdp; // byte
 std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairRtt;
@@ -268,8 +274,18 @@ main (int argc, char *argv[])
       channel->SetAttribute ("Delay", TimeValue (delay));
       s_dev->Attach (channel);
       d_dev->Attach (channel);
-      onewayOutDev[s_node][d_node] = {.device = s_dev, .delay = delay, .bandwidth = dataRate};
-      onewayOutDev[d_node][s_node] = {.device = d_dev, .delay = delay, .bandwidth = dataRate};
+      onewayOutDev[s_node][d_node] = {
+          .device = s_dev,
+          .delay = delay,
+          .bandwidth = dataRate,
+          .queueSize =
+              dataQueueSize.find (d_dev) == dataQueueSize.end () ? 0 : dataQueueSize[s_dev]};
+      onewayOutDev[d_node][s_node] = {
+          .device = d_dev,
+          .delay = delay,
+          .bandwidth = dataRate,
+          .queueSize =
+              dataQueueSize.find (s_dev) == dataQueueSize.end () ? 0 : dataQueueSize[d_dev]};
     }
 
   NS_LOG_UNCOND ("====Route====");
@@ -278,6 +294,8 @@ main (int argc, char *argv[])
   CalculateRttBdp ();
   NS_LOG_UNCOND ("Max RTT: " << maxRtt);
   NS_LOG_UNCOND ("Max BDP: " << maxBdp);
+  NS_LOG_UNCOND ("Max queuing RTT: " << maxQueueRtt);
+  NS_LOG_UNCOND ("Max queuing BDP: " << maxQueueBdp);
 
   NS_LOG_UNCOND ("====Flow====");
   io::CSVReader<7> flowConfig (conf["FlowConfigFile"]);
@@ -410,6 +428,7 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                 {
                   const uint64_t ingress = cyq::DataSize::GetBytes (queue["Ingress"]);
                   mmu->ConfigNoPfcBufferSize (port, index, ingress);
+                  dataQueueSize.insert ({port, ingress});
                 }
             }
           if (queue.contains ("Ecn"))
@@ -443,12 +462,14 @@ CalculateRoute (Ptr<Node> host)
   std::map<Ptr<Node>, int> distances; // Distance from the host to each node
   std::map<Ptr<Node>, Time> delays; // Delay from the host to each node
   std::map<Ptr<Node>, Time> txDelays; // Transmit delay from the host to each node
+  std::map<Ptr<Node>, Time> queueTxDelays; // Transmit delay from the host to each node (with queue)
   std::map<Ptr<Node>, DataRate> bandwidths; // Bandwidth from the host to each node
   // Init BFS
   bfsQueue.push_back (host);
   distances[host] = 0;
   delays[host] = Time (0);
   txDelays[host] = Time (0);
+  queueTxDelays[host] = Time (0);
   bandwidths[host] = DataRate (UINT64_MAX);
   // Do BFS
   for (size_t i = 0; i < bfsQueue.size (); i++)
@@ -465,6 +486,9 @@ CalculateRoute (Ptr<Node> host)
               delays[nextNode] = delays[currNode] + nextInterface.delay;
               txDelays[nextNode] =
                   txDelays[currNode] + nextInterface.bandwidth.CalculateBytesTxTime (CYQ_MTU);
+              queueTxDelays[nextNode] =
+                  queueTxDelays[currNode] +
+                  nextInterface.bandwidth.CalculateBytesTxTime (CYQ_MTU + nextInterface.queueSize);
               bandwidths[nextNode] = std::min (bandwidths[currNode], nextInterface.bandwidth);
               // Only enqueue switch because we do not want packets to go through host as middle point
               if (switchNodes.find (nextNode) != switchNodes.end ())
@@ -481,6 +505,8 @@ CalculateRoute (Ptr<Node> host)
     pairDelay[it.first][host] = it.second;
   for (const auto &it : txDelays)
     pairTxDelay[it.first][host] = it.second;
+  for (const auto &it : queueTxDelays)
+    pairQueueTxDelay[it.first][host] = it.second;
   for (const auto &it : bandwidths)
     pairBandwidth[it.first][host] = it.second;
 }
@@ -530,13 +556,17 @@ CalculateRttBdp ()
             {
               const auto delay = pairDelay[src][dst];
               const auto txDelay = pairTxDelay[src][dst];
+              const auto queueTxDelay = pairQueueTxDelay[src][dst];
               const auto rtt = delay + txDelay + delay;
+              const auto queueRtt = delay + queueTxDelay + delay;
               const auto bandwidth = pairBandwidth[src][dst];
               const uint64_t bdp = rtt.GetSeconds () * bandwidth.GetBitRate () / 8;
+              const uint64_t queueBdp = queueRtt.GetSeconds () * bandwidth.GetBitRate () / 8;
               pairRtt[src][dst] = rtt;
-              pairBandwidth[src][dst] = bdp;
               maxBdp = std::max (bdp, maxBdp);
               maxRtt = std::max (rtt, maxRtt);
+              maxQueueBdp = std::max (queueBdp, maxQueueBdp);
+              maxQueueRtt = std::max (queueRtt, maxQueueRtt);
             }
         }
     }

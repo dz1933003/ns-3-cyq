@@ -345,13 +345,6 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   // Send SACK and trigger transmit
                   m_controlQueue.push (GenACK (qp, seq, false));
                   m_dev->TriggerTransmit ();
-
-                  // for (uint32_t i = 0; i < qp->m_irn.pkg_state.size (); i++)
-                  //   {
-                  //     if (qp->m_irn.pkg_state[i] == RdmaRxQueuePair::NACK)
-                  //       std::cout << i + qp->m_irn.base_seq << " ";
-                  //   }
-                  // std::cout << std::endl;
                 }
             }
           else
@@ -372,6 +365,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t index = m_txQueuePairTable[key];
           Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
           qp->m_irn.AckIrnState (seq);
+          m_dev->TriggerTransmit (); // Because BDP-FC needs to check new bitmap and send
           return false; // Not data so no need to send to node
         }
       else if (flags == QbbHeader::SACK)
@@ -426,7 +420,7 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_seq)
       o_seq = seq;
       qbb.SetSequenceNumber (seq);
       qbb.SetFlags (QbbHeader::NONE);
-      qp->m_irn.SendNewPacket(payloadSize);
+      qp->m_irn.SendNewPacket (payloadSize);
       // XXX cyq: move irn conf out of this function
     }
   p->AddHeader (qbb);

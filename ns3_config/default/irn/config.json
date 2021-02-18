@@ -13,9 +13,9 @@
       "PfcEnable": false,
       "L2Retransmission": {
         "Mode": "IRN",
-        "MaxBitmapSize": 900,
-        "RtoHigh": "60000ns",
-        "RtoLow": "40000ns",
+        "MaxBitmapSize": 100,
+        "RtoHigh": "176531ns",
+        "RtoLow": "8758ns",
         "RtoLowThreshold": 3
       }
     }
