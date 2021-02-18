@@ -11,10 +11,13 @@
       ],
       "PortNumber": 1,
       "PfcEnable": false,
-      "L2RetransmissionMode": "IRN",
-      "MaxBitmapSize": 900,
-      "RtoHigh": "60000ns",
-      "RtoLow": "40000ns"
+      "L2Retransmission": {
+        "Mode": "IRN",
+        "MaxBitmapSize": 900,
+        "RtoHigh": "60000ns",
+        "RtoLow": "40000ns",
+        "RtoLowThreshold": 3
+      }
     }
   ],
   "Switch": [

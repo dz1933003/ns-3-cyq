@@ -131,8 +131,9 @@ public:
    * \param size bitmap size
    * \param rtoh timeout high
    * \param rtol timeout low
+   * \param n timeout low threshold packets of a flow
    */
-  void SetupIrn (uint32_t size, Time rtoh, Time rtol);
+  void SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n);
 
 protected:
   /**
@@ -197,6 +198,7 @@ private:
     uint32_t maxBitmapSize; //!< Maximum bitmap size
     Time rtoHigh; //!< Retransmission timeout high
     Time rtoLow; //!< Retransmission timeout low
+    uint32_t rtoLowThreshold; //!< Retransmission timeout low threshold
   } m_irn; //!< IRN configuration
 
   /**

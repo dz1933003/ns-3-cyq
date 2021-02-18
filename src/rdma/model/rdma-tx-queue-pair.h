@@ -121,7 +121,7 @@ public:
             {
               pkg_state[index] = IRN_STATE::NACK;
               rtxSeqList.push_back (index + base_seq);
-              // Cancel timer
+              // Cancel timer (because we will set timer when retransmitting)
               Simulator::Cancel (pkg_rtxEvent[index]);
             }
         }

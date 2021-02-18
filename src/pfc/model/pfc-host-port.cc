@@ -143,12 +143,13 @@ PfcHostPort::L2RtxModeStringToNum (const std::string &mode)
 }
 
 void
-PfcHostPort::SetupIrn (uint32_t size, Time rtoh, Time rtol)
+PfcHostPort::SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n)
 {
   NS_LOG_FUNCTION (size << rtoh << rtol);
   m_irn.maxBitmapSize = size;
   m_irn.rtoHigh = rtoh;
   m_irn.rtoLow = rtol;
+  m_irn.rtoLowThreshold = n;
 }
 
 Ptr<Packet>
@@ -166,7 +167,7 @@ PfcHostPort::Transmit ()
       return p;
     }
 
-  // Retransmit packet
+  // Retransmit packet (for IRN only now)
   while (m_rtxPacketQueue.empty () == false)
     {
       const auto p = m_rtxPacketQueue.front ().first;
@@ -429,7 +430,7 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_seq)
       qp->m_irn.pkg_state.push_back (RdmaTxQueuePair::IRN_STATE::UNACK);
       qp->m_irn.pkg_payload.push_back (payloadSize);
       qp->m_irn.pkg_rtxEvent.push_back (EventId ());
-      // TODO cyq: move irn conf out of this function
+      // XXX cyq: move irn conf out of this function
     }
   p->AddHeader (qbb);
 
@@ -520,7 +521,7 @@ PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t seq, uint32_t size)
 EventId
 PfcHostPort::IrnTimer (Ptr<RdmaTxQueuePair> qp, uint32_t seq)
 {
-  if (qp->m_irn.pkg_state.size () <= 3) // TODO cyq: configure this using config file
+  if (qp->m_irn.pkg_state.size () <= m_irn.rtoLowThreshold)
     {
       return Simulator::Schedule (m_irn.rtoLow, &PfcHostPort::IrnTimerHandler, this, qp, seq);
     }
