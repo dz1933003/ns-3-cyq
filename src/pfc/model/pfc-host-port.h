@@ -115,6 +115,14 @@ public:
    */
   void SetL2RetransmissionMode (uint32_t mode);
 
+  /**
+   * Convert L2 retransmission mode string to number
+   *
+   * \param mode L2 retransmission mode name
+   * \return mode number
+   */
+  static uint32_t L2RtxModeStringToNum (const std::string &mode);
+
   // IRN related configurations
 
   /**
@@ -189,8 +197,6 @@ private:
     uint32_t maxBitmapSize; //!< Maximum bitmap size
     Time rtoHigh; //!< Retransmission timeout high
     Time rtoLow; //!< Retransmission timeout low
-
-    std::map<Ptr<Packet>, Ptr<RdmaTxQueuePair>> waitingPackets; //!< Packets waiting for timing
   } m_irn; //!< IRN configuration
 
   /**

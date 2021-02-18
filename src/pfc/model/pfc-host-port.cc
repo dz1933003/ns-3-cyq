@@ -129,6 +129,19 @@ PfcHostPort::SetL2RetransmissionMode (uint32_t mode)
   m_l2RetransmissionMode = mode;
 }
 
+uint32_t
+PfcHostPort::L2RtxModeStringToNum (const std::string &mode)
+{
+  NS_LOG_FUNCTION (mode);
+  if (mode == "NONE")
+    return NONE;
+  else if (mode == "IRN")
+    return IRN;
+  else
+    NS_ASSERT_MSG (false, "PfcHostPort::L2RtxModeStringToNum: "
+                          "Unknown L2 retransmission mode");
+}
+
 void
 PfcHostPort::SetupIrn (uint32_t size, Time rtoh, Time rtol)
 {
@@ -331,6 +344,13 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   // Send SACK and trigger transmit
                   m_controlQueue.push (GenACK (qp, seq, false));
                   m_dev->TriggerTransmit ();
+
+                  // for (uint32_t i = 0; i < qp->m_irn.pkg_state.size (); i++)
+                  //   {
+                  //     if (qp->m_irn.pkg_state[i] == RdmaRxQueuePair::NACK)
+                  //       std::cout << i + qp->m_irn.base_seq << " ";
+                  //   }
+                  // std::cout << std::endl;
                 }
             }
           else

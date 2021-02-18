@@ -55,12 +55,12 @@
             ]
         },
         {
-            "name": "(gdb) pfc-cyq default/nopfc",
+            "name": "(gdb) pfc-cyq default/irn",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/scratch/pfc-cyq",
             "args": [
-                "ns3_config/default/nopfc/config.json"
+                "ns3_config/default/irn/config.json"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

@@ -147,14 +147,20 @@ main (int argc, char *argv[])
               dev->SetImplementation (impl);
               impl->SetupQueues (nQueue);
               impl->EnablePfc (host.contains ("PfcEnable") ? host["PfcEnable"].get<bool> () : true);
-              // TODO cyq: check field existed
-              impl->SetL2RetransmissionMode (host["L2RetransmissionMode"]);
-              uint32_t size = host["maxBitmapSize"];
-              std::string h = host["rtoHigh"];
-              std::string l = host["rtoLow"];
-              Time rtoHigh (h);
-              Time rtoLow (l);
-              impl->SetupIrn (size, rtoHigh, rtoLow);
+              // L2 retransmission mode settings
+              const auto l2RtxMode =
+                  host.contains ("L2RetransmissionMode")
+                      ? PfcHostPort::L2RtxModeStringToNum (host["L2RetransmissionMode"])
+                      : PfcHostPort::L2_RTX_MODE::NONE;
+              impl->SetL2RetransmissionMode (l2RtxMode);
+              if (l2RtxMode == PfcHostPort::L2_RTX_MODE::IRN)
+                {
+                  const uint32_t size = host["MaxBitmapSize"];
+                  // TODO cyq: set these by topology
+                  const Time rtoHigh (host["RtoHigh"].get<std::string> ());
+                  const Time rtoLow (host["RtoLow"].get<std::string> ());
+                  impl->SetupIrn (size, rtoHigh, rtoLow);
+                }
               allPorts[node].push_back (dev);
             }
           // Install DPSK

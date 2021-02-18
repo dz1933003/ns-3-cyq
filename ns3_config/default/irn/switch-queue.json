@@ -3,12 +3,12 @@
     "QueueIndex": [
       0
     ],
-    "Ingress": "2MiB"
+    "Ingress": "1MiB"
   },
   {
     "QueueIndex": [
       1
     ],
-    "Ingress": "2MiB"
+    "Ingress": "1MiB"
   }
 ]

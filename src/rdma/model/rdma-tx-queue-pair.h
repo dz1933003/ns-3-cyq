@@ -121,9 +121,9 @@ public:
             {
               pkg_state[index] = IRN_STATE::NACK;
               rtxSeqList.push_back (index + base_seq);
+              // Cancel timer
+              Simulator::Cancel (pkg_rtxEvent[index]);
             }
-          // Cancel timer
-          Simulator::Cancel (pkg_rtxEvent[index]);
         }
       else if (GetIrnState (seq) == IRN_STATE::NACK || GetIrnState (seq) == IRN_STATE::ACK)
         {
