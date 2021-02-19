@@ -162,7 +162,6 @@ main (int argc, char *argv[])
               if (l2RtxMode == PfcHostPort::L2_RTX_MODE::IRN)
                 {
                   const uint32_t size = host["L2Retransmission"]["MaxBitmapSize"];
-                  // TODO cyq: set these by topology
                   const Time rtoHigh (host["L2Retransmission"]["RtoHigh"].get<std::string> ());
                   const Time rtoLow (host["L2Retransmission"]["RtoLow"].get<std::string> ());
                   const uint32_t n = host["L2Retransmission"]["RtoLowThreshold"];

@@ -406,7 +406,10 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_seq)
 
   const uint32_t remainSize = qp->GetRemainBytes ();
   const uint32_t mtu = m_dev->GetMtu ();
-  uint32_t payloadSize = (remainSize > mtu) ? mtu : remainSize;
+  const uint32_t maxPayloadSize = mtu - QbbHeader ().GetSerializedSize () -
+                                  Ipv4Header ().GetSerializedSize () -
+                                  EthernetHeader ().GetSerializedSize ();
+  uint32_t payloadSize = (remainSize > maxPayloadSize) ? maxPayloadSize : remainSize;
 
   qp->m_sentSize += payloadSize;
 
