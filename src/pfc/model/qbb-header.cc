@@ -72,6 +72,18 @@ QbbHeader::SetSequenceNumber (uint32_t sequenceNumber)
   m_sequenceNumber = sequenceNumber;
 }
 
+uint32_t
+QbbHeader::GetAckNumber (void) const
+{
+  return m_ackNumber;
+}
+
+void
+QbbHeader::SetAckNumber (uint32_t ackNumber)
+{
+  m_ackNumber = ackNumber;
+}
+
 uint8_t
 QbbHeader::GetFlags (void) const
 {
@@ -117,15 +129,15 @@ void
 QbbHeader::Print (std::ostream &os) const
 {
   NS_LOG_FUNCTION (&os);
-  os << FlagsToString (m_flags) << " seq=" << m_sequenceNumber << " " << m_sourcePort << " > "
-     << m_destinationPort;
+  os << FlagsToString (m_flags) << " seq=" << m_sequenceNumber << " ack=" << m_ackNumber << " "
+     << m_sourcePort << " > " << m_destinationPort;
 }
 
 uint32_t
 QbbHeader::GetSerializedSize (void) const
 {
   return sizeof (m_sourcePort) + sizeof (m_destinationPort) + sizeof (m_sequenceNumber) +
-         sizeof (m_flags);
+         sizeof (m_ackNumber) + sizeof (m_flags);
 }
 
 void
@@ -135,6 +147,7 @@ QbbHeader::Serialize (Buffer::Iterator start) const
   start.WriteU16 (m_sourcePort);
   start.WriteU16 (m_destinationPort);
   start.WriteU32 (m_sequenceNumber);
+  start.WriteU32 (m_ackNumber);
   start.WriteU8 (m_flags);
 }
 
@@ -145,6 +158,7 @@ QbbHeader::Deserialize (Buffer::Iterator start)
   m_sourcePort = start.ReadU16 ();
   m_destinationPort = start.ReadU16 ();
   m_sequenceNumber = start.ReadU32 ();
+  m_ackNumber = start.ReadU32 ();
   m_flags = start.ReadU8 ();
   return GetSerializedSize ();
 }

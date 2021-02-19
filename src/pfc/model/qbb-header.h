@@ -62,7 +62,7 @@ public:
   void SetDestinationPort (uint16_t port);
 
   /**
-   * \return the destination port for this header
+   * \return the sequence number for this header
    */
   uint32_t GetSequenceNumber (void) const;
 
@@ -71,6 +71,17 @@ public:
    * \param sequenceNumber the sequence number for this header
    */
   void SetSequenceNumber (uint32_t sequenceNumber);
+
+  /**
+   * \return the ACK number for this header
+   */
+  uint32_t GetAckNumber (void) const;
+
+  /**
+   * \brief Set the ACK Number
+   * \param ackNumber the ACK number for this header
+   */
+  void SetAckNumber (uint32_t ackNumber);
 
   /**
    * Flag types.
@@ -111,7 +122,8 @@ private:
   uint16_t m_sourcePort = 0; //!< Source port
   uint16_t m_destinationPort = 0; //!< Destination port
 
-  uint32_t m_sequenceNumber = 0; //!< Sequence Number
+  uint32_t m_sequenceNumber = 0; //!< Sequence Number for data packet & SACK for IRN
+  uint32_t m_ackNumber = 0; //!< Expected sequence number for IRN
   uint8_t m_flags = NONE; //!< NONE/ACK/SACK
 };
 

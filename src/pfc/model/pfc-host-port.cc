@@ -145,7 +145,7 @@ PfcHostPort::L2RtxModeStringToNum (const std::string &mode)
 void
 PfcHostPort::SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n)
 {
-  NS_LOG_FUNCTION (size << rtoh << rtol);
+  NS_LOG_FUNCTION (size << rtoh << rtol << n);
   m_irn.maxBitmapSize = size;
   m_irn.rtoHigh = rtoh;
   m_irn.rtoLow = rtol;
