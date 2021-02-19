@@ -230,17 +230,39 @@ private:
   Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t seq, uint32_t size);
 
   /**
-   * Generate ACK or SACK packet of target transmitting queue pair
+   * Generate ACK packet of target transmitting queue pair
    *
    * \param qp queue pair
-   * \param seq ack seq number
-   * \param ack true for ACK and false for SACK
-   * \return data packet
+   * \param seq ack sequence number of this packet
+   * \return ACK packet
    */
-  Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, bool ack);
+  Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq);
 
+  /**
+   * Generate SACK packet of target transmitting queue pair
+   *
+   * \param qp queue pair
+   * \param seq ack sequence number of this packet
+   * \param exp cumulative acknowledgment (expected sequence number)
+   * \return SACK packet
+   */
+  Ptr<Packet> GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, uint32_t exp);
+
+  /**
+   * Schedule IRN retransmission timer for each packet of one queue pair
+   * 
+   * \param qp queue pair
+   * \param seq sequence number of this data packet
+   * \return NS3 event id
+   */
   EventId IrnTimer (Ptr<RdmaTxQueuePair> qp, uint32_t seq);
 
+  /**
+   * Generate IRN retransmission packet to retransmission queue
+   * 
+   * \param qp queue pair
+   * \param seq sequence number of this data packet
+   */
   void IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t seq);
 
   /**

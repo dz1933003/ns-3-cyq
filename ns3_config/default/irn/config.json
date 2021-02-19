@@ -13,10 +13,10 @@
       "PfcEnable": false,
       "L2Retransmission": {
         "Mode": "IRN",
-        "MaxBitmapSize": 100,
-        "RtoHigh": "176531ns",
-        "RtoLow": "8758ns",
-        "RtoLowThreshold": 3
+        "MaxBitmapSize": 3,
+        "RtoHigh": "858179ns",
+        "RtoLow": "19318ns",
+        "RtoLowThreshold": 1
       }
     }
   ],

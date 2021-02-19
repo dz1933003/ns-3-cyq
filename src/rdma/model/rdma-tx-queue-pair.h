@@ -40,7 +40,12 @@ public:
 
   uint64_t m_sentSize;
 
-  enum IRN_STATE { UNACK, ACK, NACK, UNDEF };
+  enum IRN_STATE {
+    UNACK, // Not acked
+    ACK, // Acked
+    NACK, // Lost
+    UNDEF // Out of window
+  };
 
   struct
   {
@@ -111,10 +116,9 @@ public:
       MoveWindow ();
     }
 
-    std::vector<uint32_t>
-    SackIrnState (const uint32_t &seq)
+    void
+    SackIrnState (const uint32_t &seq, const uint32_t &ack)
     {
-      std::vector<uint32_t> rtxSeqList;
       if (GetIrnState (seq) == IRN_STATE::UNDEF)
         {
           NS_ASSERT_MSG (false, "RdmaTxQueuePair::m_irn::SackIrnState: "
@@ -122,15 +126,15 @@ public:
         }
       else if (GetIrnState (seq) == IRN_STATE::UNACK)
         {
+          auto expIndex = ack - base_seq;
           auto index = seq - base_seq;
           pkg_state[index] = IRN_STATE::ACK;
           // Set NACK sequence
-          for (index--; index > 0 && pkg_state[index] != IRN_STATE::UNACK; index--)
+          for (auto i = expIndex; i < index; i++)
             {
-              pkg_state[index] = IRN_STATE::NACK;
-              rtxSeqList.push_back (index + base_seq);
+              pkg_state[i] = IRN_STATE::NACK;
               // Cancel timer (because we will set timer when retransmitting)
-              Simulator::Cancel (pkg_rtxEvent[index]);
+              Simulator::Cancel (pkg_rtxEvent[i]);
             }
         }
       else if (GetIrnState (seq) == IRN_STATE::NACK || GetIrnState (seq) == IRN_STATE::ACK)
@@ -139,7 +143,6 @@ public:
                                 "Invalid SACK packet");
         }
       MoveWindow ();
-      return rtxSeqList;
     }
 
     void
