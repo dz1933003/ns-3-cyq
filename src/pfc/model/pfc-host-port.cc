@@ -200,7 +200,7 @@ PfcHostPort::Transmit ()
       // 4. In IRN mode the sending window is not full.
       if ((m_pausedStates[qp->m_priority] == false || m_pfcEnabled == false) &&
           qp->IsFinished () == false && qp->m_startTime <= Simulator::Now () &&
-          (m_l2RetransmissionMode != IRN || qp->m_irn.pkg_state.size () < m_irn.maxBitmapSize))
+          (m_l2RetransmissionMode != IRN || qp->m_irn.GetWindowSize () < m_irn.maxBitmapSize))
         {
           m_lastQpIndex = qIdx;
           uint32_t seq;
@@ -548,7 +548,7 @@ PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t seq, uint32_t size)
 EventId
 PfcHostPort::IrnTimer (Ptr<RdmaTxQueuePair> qp, uint32_t seq)
 {
-  if (qp->m_irn.pkg_state.size () <= m_irn.rtoLowThreshold)
+  if (qp->m_irn.GetWindowSize () <= m_irn.rtoLowThreshold)
     {
       return Simulator::Schedule (m_irn.rtoLow, &PfcHostPort::IrnTimerHandler, this, qp, seq);
     }

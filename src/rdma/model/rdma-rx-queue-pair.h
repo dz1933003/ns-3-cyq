@@ -44,68 +44,18 @@ public:
     UNDEF // Out of window
   };
 
-  struct
+  class Irn
   {
+  public:
+    IRN_STATE GetIrnState (const uint32_t &seq) const;
+    void MoveWindow ();
+    void UpdateIrnState (const uint32_t &seq);
+    uint32_t GetNextSequenceNumber () const;
+    bool IsReceived (const uint32_t &seq) const;
+
+  private:
     std::deque<IRN_STATE> pkg_state;
     uint32_t base_seq = 1;
-
-    IRN_STATE
-    GetIrnState (const uint32_t &seq) const
-    {
-      if (seq >= GetNextSequenceNumber ()) // out of window
-        return IRN_STATE::UNDEF;
-      else if (seq >= base_seq) // in window
-        return pkg_state[seq - base_seq];
-      else // before window
-        return IRN_STATE::ACK;
-    }
-
-    void
-    MoveWindow ()
-    {
-      while (!pkg_state.empty () && pkg_state.front () == IRN_STATE::ACK)
-        {
-          pkg_state.pop_front ();
-          base_seq++;
-        }
-    }
-
-    void
-    UpdateIrnState (const uint32_t &seq)
-    {
-      // Packet not seen before
-      if (GetIrnState (seq) == IRN_STATE::UNDEF)
-        {
-          // Sequence number out of order
-          if (seq > GetNextSequenceNumber ())
-            {
-              while (seq > GetNextSequenceNumber ())
-                pkg_state.push_back (IRN_STATE::NACK);
-            }
-          // ACK this packet
-          pkg_state.push_back (IRN_STATE::ACK);
-        }
-      // Retransmission packet
-      else if (GetIrnState (seq) == IRN_STATE::NACK)
-        {
-          // Ack this packet
-          pkg_state[seq - base_seq] = IRN_STATE::ACK;
-        }
-      // If is ACKed, do nothing.
-      MoveWindow ();
-    }
-
-    uint32_t
-    GetNextSequenceNumber () const
-    {
-      return base_seq + pkg_state.size ();
-    }
-
-    bool
-    IsReceived (const uint32_t &seq) const
-    {
-      return GetIrnState (seq) == IRN_STATE::ACK;
-    }
   } m_irn;
 
   static TypeId GetTypeId (void);
