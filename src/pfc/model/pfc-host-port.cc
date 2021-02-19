@@ -170,9 +170,8 @@ PfcHostPort::Transmit ()
   // Retransmit packet (for IRN only now)
   while (m_rtxPacketQueue.empty () == false)
     {
-      const auto p = m_rtxPacketQueue.front ().first;
-      const auto qp = m_rtxPacketQueue.front ().second.first;
-      const auto seq = m_rtxPacketQueue.front ().second.second;
+      const auto qp = m_rtxPacketQueue.front ().first;
+      const auto seq = m_rtxPacketQueue.front ().second;
       const auto state = qp->m_irn.GetIrnState (seq);
       m_rtxPacketQueue.pop_front ();
       // Set up IRN timer
@@ -183,7 +182,7 @@ PfcHostPort::Transmit ()
             {
               auto id = IrnTimer (qp, seq);
               qp->m_irn.SetRtxEvent (seq, id);
-              return p;
+              return ReGenData (qp, seq, qp->m_irn.GetPayloadSize (seq));
             }
         }
     }
@@ -381,8 +380,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
           qp->m_irn.SackIrnState (seq, ack);
           for (auto i = ack; i < seq; i++)
             {
-              m_rtxPacketQueue.push_back (
-                  {ReGenData (qp, i, qp->m_irn.GetPayloadSize (i)), {qp, i}});
+              m_rtxPacketQueue.push_back ({qp, i});
             }
           m_dev->TriggerTransmit ();
           return false; // Not data so no need to send to node
@@ -425,7 +423,6 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_seq)
       qbb.SetAckNumber (0);
       qbb.SetFlags (QbbHeader::NONE);
       qp->m_irn.SendNewPacket (payloadSize); // Update IRN infos
-      // XXX cyq: move irn conf out of this function
     }
   p->AddHeader (qbb);
 
@@ -567,8 +564,7 @@ PfcHostPort::IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t seq)
   const auto state = qp->m_irn.GetIrnState (seq);
   if (state == RdmaTxQueuePair::NACK || state == RdmaTxQueuePair::UNACK)
     {
-      // TODO cyq: we can check if there is the same packet in retransmission queue and reduce retransmission
-      m_rtxPacketQueue.push_back ({ReGenData (qp, seq, qp->m_irn.GetPayloadSize (seq)), {qp, seq}});
+      m_rtxPacketQueue.push_back ({qp, seq});
       m_dev->TriggerTransmit ();
     }
 }

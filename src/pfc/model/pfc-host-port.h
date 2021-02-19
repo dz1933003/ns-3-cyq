@@ -183,12 +183,11 @@ private:
   std::queue<Ptr<Packet>> m_controlQueue; //!< control queue
 
   std::map<uint32_t, uint32_t> m_txQueuePairTable; //!< hash and transmitted queue pairs
-  std::vector<Ptr<RdmaTxQueuePair>> m_txQueuePairs; //!< transmit queue pairs
+  std::vector<Ptr<RdmaTxQueuePair>> m_txQueuePairs; //!< transmit queue pair vector for round-robin
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> m_rxQueuePairs; //!< hash and received queue pairs
 
-  // TODO cyq: using boost tuple instead
-  std::deque<std::pair<Ptr<Packet>, std::pair<Ptr<RdmaTxQueuePair>, uint32_t>>>
-      m_rtxPacketQueue; //!< packets that need to be retransmitted
+  std::deque<std::pair<Ptr<RdmaTxQueuePair>, uint32_t>>
+      m_rtxPacketQueue; //!< packets that need to be retransmitted, qp with seq number
 
   uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
 
