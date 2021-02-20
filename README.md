@@ -13,7 +13,7 @@ The Network Simulator, Version 3
   - [Working with the development version of ns-3](#working-with-the-development-version-of-ns-3)
   - [Changes on Branch `dev-cyq` by Yanqing](#changes-on-branch-dev-cyq-by-yanqing)
     - [Add Compiler Flag for Modified Socket Tos](#add-compiler-flag-for-modified-socket-tos)
-  - [Examples on Branch `dev-cyq` by Yanqing](#examples-on-branch-dev-cyq-by-yanqing)
+    - [Essential Libraries](#essential-libraries)
 
 Note:  Much more substantial information about ns-3 can be found at
 http://www.nsnam.org
@@ -147,9 +147,10 @@ In the method `ns3::Socket::IpTos2Priority` of the file `socket.cc`,
 if the compiler flag `CYQ_TOS` exists,
 the priority of the socket is setting to high four bits.
 
-## Examples on Branch `dev-cyq` by Yanqing
+### Essential Libraries
 
-I add some examples to test the functionalities of NS3 which are not shown in the manual or document.
+You need these libraries before building from this branch.
 
-- `ipv4-raw-socket`: Test if the ipv4 raw socket working.
-- `tos-pq`: Test the PrioQueueDisc with modified socket tos.
+- [Boost C++ Libraries](https://www.boost.org/)
+- [JSON for Modern C++](https://github.com/nlohmann/json) (included)
+- [Fast C++ CSV Parser](https://github.com/ben-strasser/fast-cpp-csv-parser) (included)

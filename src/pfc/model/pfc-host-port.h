@@ -98,6 +98,43 @@ public:
    */
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> GetRdmaRxQueuePairs ();
 
+  /**
+   * L2 retransmission mode
+   */
+  enum L2_RTX_MODE {
+    NONE, // No retransmission
+    B20, // Back to zero (Not implemented)
+    B2N, // Back to N (Not implemented)
+    IRN // Selective ACK
+  };
+
+  /**
+   * Set L2 retransmission mode
+   *
+   * \param mode L2 retransmission mode
+   */
+  void SetL2RetransmissionMode (uint32_t mode);
+
+  /**
+   * Convert L2 retransmission mode string to number
+   *
+   * \param mode L2 retransmission mode name
+   * \return mode number
+   */
+  static uint32_t L2RtxModeStringToNum (const std::string &mode);
+
+  // IRN related configurations
+
+  /**
+   * Setup IRN configurations
+   *
+   * \param size bitmap size
+   * \param rtoh timeout high
+   * \param rtol timeout low
+   * \param n timeout low threshold packets of a flow
+   */
+  void SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n);
+
 protected:
   /**
    * PFC host port transmitting logic.
@@ -145,10 +182,24 @@ private:
 
   std::queue<Ptr<Packet>> m_controlQueue; //!< control queue
 
-  std::vector<Ptr<RdmaTxQueuePair>> m_txQueuePairs; //!< transmit queue pairs
+  std::map<uint32_t, uint32_t> m_txQueuePairTable; //!< hash and transmitted queue pairs
+  std::vector<Ptr<RdmaTxQueuePair>> m_txQueuePairs; //!< transmit queue pair vector for round-robin
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> m_rxQueuePairs; //!< hash and received queue pairs
 
+  std::deque<std::pair<Ptr<RdmaTxQueuePair>, uint32_t>>
+      m_rtxPacketQueue; //!< packets that need to be retransmitted, qp with seq number
+
   uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
+
+  uint32_t m_l2RetransmissionMode; //!< L2 retransmission mode
+
+  struct
+  {
+    uint32_t maxBitmapSize; //!< Maximum bitmap size
+    Time rtoHigh; //!< Retransmission timeout high
+    Time rtoLow; //!< Retransmission timeout low
+    uint32_t rtoLowThreshold; //!< Retransmission timeout low threshold
+  } m_irn; //!< IRN configuration
 
   /**
    * Generate data packet of target transmitting queue pair
@@ -157,6 +208,61 @@ private:
    * \return data packet
    */
   Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * Generate data packet of target transmitting queue pair
+   *
+   * \param qp queue pair
+   * \param o_irnSeq output sequence number
+   * \return data packet
+   */
+  Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_irnSeq);
+
+  /**
+   * Generate data packet that needs to be retransmitted
+   * 
+   * \param qp queue pair
+   * \param irnSeq packet seq
+   * \param size packet size
+   * \return data packet
+   */
+  Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq, uint32_t size);
+
+  /**
+   * Generate ACK packet of target transmitting queue pair
+   *
+   * \param qp queue pair
+   * \param irnAck ack sequence number of this packet
+   * \return ACK packet
+   */
+  Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck);
+
+  /**
+   * Generate SACK packet of target transmitting queue pair
+   *
+   * \param qp queue pair
+   * \param irnAck ack sequence number of this packet
+   * \param irnNack cumulative acknowledgment (expected sequence number)
+   * \return SACK packet
+   */
+  Ptr<Packet> GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck, uint32_t irnNack);
+
+  /**
+   * Schedule IRN retransmission timer for each packet of one queue pair
+   * 
+   * \param qp queue pair
+   * \param irnSeq sequence number of this data packet
+   * \return NS3 event id
+   */
+  EventId IrnTimer (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq);
+
+  /**
+   * Generate IRN retransmission packet to retransmission queue
+   * 
+   * \param qp queue pair
+   * \param irnSeq sequence number of this data packet
+   */
+  void IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq);
 
   /**
    * The trace source fired for received a PFC packet.

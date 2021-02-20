@@ -27,6 +27,7 @@
 #include "ns3/ipv4-header.h"
 #include "ns3/pfc-header.h"
 #include "ns3/udp-header.h"
+#include "ns3/qbb-header.h"
 #include "ns3/dpsk-net-device.h"
 
 namespace ns3 {
@@ -56,7 +57,11 @@ PfcHostPort::GetTypeId (void)
   return tid;
 }
 
-PfcHostPort::PfcHostPort () : m_pfcEnabled (true), m_nTxBytes (0), m_nRxBytes (0)
+PfcHostPort::PfcHostPort ()
+    : m_pfcEnabled (true),
+      m_l2RetransmissionMode (L2_RTX_MODE::NONE),
+      m_nTxBytes (0),
+      m_nRxBytes (0)
 {
   NS_LOG_FUNCTION (this);
   m_name = "PfcHostPort";
@@ -99,6 +104,7 @@ PfcHostPort::AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp)
 {
   NS_LOG_FUNCTION (qp);
   m_txQueuePairs.push_back (qp);
+  m_txQueuePairTable.insert ({qp->GetHash (), m_txQueuePairs.size () - 1});
   Simulator::Schedule (qp->m_startTime, &DpskNetDevice::TriggerTransmit, m_dev);
 }
 
@@ -116,13 +122,44 @@ PfcHostPort::GetRdmaRxQueuePairs ()
   return m_rxQueuePairs;
 }
 
+void
+PfcHostPort::SetL2RetransmissionMode (uint32_t mode)
+{
+  NS_LOG_FUNCTION (mode);
+  m_l2RetransmissionMode = mode;
+}
+
+uint32_t
+PfcHostPort::L2RtxModeStringToNum (const std::string &mode)
+{
+  NS_LOG_FUNCTION (mode);
+  if (mode == "NONE")
+    return NONE;
+  else if (mode == "IRN")
+    return IRN;
+  else
+    NS_ASSERT_MSG (false, "PfcHostPort::L2RtxModeStringToNum: "
+                          "Unknown L2 retransmission mode");
+}
+
+void
+PfcHostPort::SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n)
+{
+  NS_LOG_FUNCTION (size << rtoh << rtol << n);
+  m_irn.maxBitmapSize = size;
+  m_irn.rtoHigh = rtoh;
+  m_irn.rtoLow = rtol;
+  m_irn.rtoLowThreshold = n;
+}
+
 Ptr<Packet>
 PfcHostPort::Transmit ()
 {
   NS_LOG_FUNCTION_NOARGS ();
 
+  // Check and send control packet
   if ((m_pausedStates[m_nQueues] == false || m_pfcEnabled == false) &&
-      m_controlQueue.empty () == false) // can send control packets
+      m_controlQueue.empty () == false)
     {
       Ptr<Packet> p = m_controlQueue.front ();
       m_controlQueue.pop ();
@@ -130,19 +167,53 @@ PfcHostPort::Transmit ()
       return p;
     }
 
+  // Retransmit packet (for IRN only now)
+  while (m_rtxPacketQueue.empty () == false)
+    {
+      const auto qp = m_rtxPacketQueue.front ().first;
+      const auto irnSeq = m_rtxPacketQueue.front ().second;
+      const auto state = qp->m_irn.GetIrnState (irnSeq);
+      m_rtxPacketQueue.pop_front ();
+      // Set up IRN timer
+      if (m_l2RetransmissionMode == IRN)
+        {
+          // filter out ACKed packets
+          if (state == RdmaTxQueuePair::NACK || state == RdmaTxQueuePair::UNACK)
+            {
+              auto id = IrnTimer (qp, irnSeq);
+              qp->m_irn.SetRtxEvent (irnSeq, id);
+              return ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
+            }
+        }
+    }
+
+  // Transmit data packet
   uint32_t flowCnt = m_txQueuePairs.size ();
   for (uint32_t i = 0; i < flowCnt; i++)
     {
-      uint32_t qIdx = (m_lastQpIndex + i) % flowCnt;
+      uint32_t qIdx = (m_lastQpIndex + i + 1) % flowCnt;
       auto qp = m_txQueuePairs[qIdx];
+      // Sending constrains:
+      // 1. PFC RESUME.
+      // 2. QP is not finished.
+      // 3. QP is started.
+      // 4. In IRN mode the sending window is not full.
       if ((m_pausedStates[qp->m_priority] == false || m_pfcEnabled == false) &&
-          qp->IsFinished () == false && qp->m_startTime <= Simulator::Now ())
+          qp->IsFinished () == false && qp->m_startTime <= Simulator::Now () &&
+          (m_l2RetransmissionMode != IRN || qp->m_irn.GetWindowSize () < m_irn.maxBitmapSize))
         {
           m_lastQpIndex = qIdx;
-          auto p = GenData (qp);
+          uint32_t irnSeq;
+          auto p = GenData (qp, irnSeq); // get sequence number out
           if (qp->IsFinished ())
             m_queuePairTxCompleteTrace (qp);
           m_nTxBytes += p->GetSize ();
+          // Set up IRN timer
+          if (m_l2RetransmissionMode == IRN)
+            {
+              auto id = IrnTimer (qp, irnSeq);
+              qp->m_irn.SetRtxEvent (irnSeq, id);
+            }
           return p;
         }
     }
@@ -209,55 +280,154 @@ PfcHostPort::Receive (Ptr<Packet> p)
   else // Not PFC
     {
       Ipv4Header ip;
-      UdpHeader udp;
+      QbbHeader qbb;
       p->RemoveHeader (ip);
-      p->RemoveHeader (udp);
+      p->RemoveHeader (qbb);
       auto sIp = ip.GetSource ();
       auto dIp = ip.GetDestination ();
-      uint16_t sPort = udp.GetSourcePort ();
-      uint16_t dPort = udp.GetDestinationPort ();
+      uint16_t sPort = qbb.GetSourcePort ();
+      uint16_t dPort = qbb.GetDestinationPort ();
+      uint32_t irnAck = qbb.GetIrnAckNumber ();
+      uint32_t irnNack = qbb.GetIrnNackNumber ();
+      uint8_t flags = qbb.GetFlags ();
       uint16_t dscp = ip.GetDscp ();
       uint32_t payloadSize = p->GetSize ();
 
-      uint32_t key = RdmaRxQueuePair::GetHash (sIp, dIp, sPort, dPort);
-      auto qpItr = m_rxQueuePairs.find (key);
-      Ptr<RdmaRxQueuePair> qp;
-      if (qpItr == m_rxQueuePairs.end ()) // new flow
+      // Data packet
+      if (flags == QbbHeader::NONE)
         {
-          const auto dpskLayer = m_dev->GetNode ()->GetObject<PfcHost> ();
-          const auto size = dpskLayer->GetRdmaRxQueuePairSize (key);
-          qp = CreateObject<RdmaRxQueuePair> (sIp, dIp, sPort, dPort, size, dscp);
-          qp->m_receivedSize += payloadSize;
-          m_rxQueuePairs.insert ({key, qp});
+          // Find qp in rx qp table
+          uint32_t key = RdmaRxQueuePair::GetHash (sIp, dIp, sPort, dPort);
+          auto qpItr = m_rxQueuePairs.find (key);
+          Ptr<RdmaRxQueuePair> qp;
+          if (qpItr == m_rxQueuePairs.end ()) // new flow
+            {
+              // Adding new flow in rx qp table
+              const auto dpskLayer = m_dev->GetNode ()->GetObject<PfcHost> ();
+              const auto size = dpskLayer->GetRdmaRxQueuePairSize (key);
+              qp = CreateObject<RdmaRxQueuePair> (sIp, dIp, sPort, dPort, size, dscp);
+              m_rxQueuePairs.insert ({key, qp});
+            }
+          else // existed flow
+            {
+              qp = qpItr->second;
+            }
+
+          // retransmission and rx byte count
+          if (m_l2RetransmissionMode == NONE)
+            {
+              qp->m_receivedSize += payloadSize;
+            }
+          else if (m_l2RetransmissionMode == IRN)
+            {
+              const uint32_t expectedAck = qp->m_irn.GetNextSequenceNumber ();
+              if (irnAck < expectedAck) // in window
+                {
+                  if (!qp->m_irn.IsReceived (irnAck)) // Not duplicated packet
+                    {
+                      qp->m_receivedSize += payloadSize;
+                      qp->m_irn.UpdateIrnState (irnAck);
+                    }
+                  // Send ACK and trigger transmit
+                  m_controlQueue.push (GenACK (qp, irnAck));
+                  m_dev->TriggerTransmit ();
+                }
+              else if (irnAck == expectedAck) // expected new packet
+                {
+                  qp->m_receivedSize += payloadSize;
+                  qp->m_irn.UpdateIrnState (irnAck);
+                  // Send ACK by retransmit mode and trigger transmit
+                  m_controlQueue.push (GenACK (qp, irnAck));
+                  m_dev->TriggerTransmit ();
+                }
+              else // out of order
+                {
+                  qp->m_receivedSize += payloadSize;
+                  qp->m_irn.UpdateIrnState (irnAck);
+                  // Send SACK and trigger transmit
+                  m_controlQueue.push (GenSACK (qp, irnAck, expectedAck));
+                  m_dev->TriggerTransmit ();
+                }
+            }
+          else
+            {
+              NS_ASSERT_MSG (false, "PfcSwitchPort::Rx: Invalid Qbb packet type");
+              return false; // Drop this packet
+            }
+
+          if (qp->IsFinished ())
+            m_queuePairRxCompleteTrace (qp);
+          return true; // Forward up to node
         }
-      else // existed flow
+      // ACK packet
+      else if (flags == QbbHeader::ACK)
         {
-          qp = qpItr->second;
-          qp->m_receivedSize += payloadSize;
+          // Handle ACK
+          uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
+          uint32_t index = m_txQueuePairTable[key];
+          Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
+          qp->m_irn.AckIrnState (irnAck);
+          m_dev->TriggerTransmit (); // Because BDP-FC needs to check new bitmap and send
+          return false; // Not data so no need to send to node
         }
-      if (qp->IsFinished ())
-        m_queuePairRxCompleteTrace (qp);
-      return true; // Forward up to node
+      else if (flags == QbbHeader::SACK)
+        {
+          // Handle SACK
+          uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
+          uint32_t index = m_txQueuePairTable[key];
+          Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
+          // Add retransmission packets and trigger transmitting
+          qp->m_irn.SackIrnState (irnAck, irnNack);
+          for (auto i = irnNack; i < irnAck; i++)
+            {
+              m_rtxPacketQueue.push_back ({qp, i});
+            }
+          m_dev->TriggerTransmit ();
+          return false; // Not data so no need to send to node
+        }
+      else
+        {
+          return false; // Drop because unknown flags
+        }
     }
 }
 
 Ptr<Packet>
 PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp)
 {
+  uint32_t tmp;
+  return GenData (qp, tmp);
+}
+
+Ptr<Packet>
+PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_irnSeq)
+{
   NS_LOG_FUNCTION (qp);
 
   const uint32_t remainSize = qp->GetRemainBytes ();
   const uint32_t mtu = m_dev->GetMtu ();
-  uint32_t payloadSize = (remainSize > mtu) ? mtu : remainSize;
+  const uint32_t maxPayloadSize = mtu - QbbHeader ().GetSerializedSize () -
+                                  Ipv4Header ().GetSerializedSize () -
+                                  EthernetHeader ().GetSerializedSize ();
+  uint32_t payloadSize = (remainSize > maxPayloadSize) ? maxPayloadSize : remainSize;
 
   qp->m_sentSize += payloadSize;
 
   Ptr<Packet> p = Create<Packet> (payloadSize);
 
-  UdpHeader udp;
-  udp.SetSourcePort (qp->m_sPort);
-  udp.SetDestinationPort (qp->m_dPort);
-  p->AddHeader (udp);
+  QbbHeader qbb;
+  qbb.SetSourcePort (qp->m_sPort);
+  qbb.SetDestinationPort (qp->m_dPort);
+  if (m_l2RetransmissionMode == IRN)
+    {
+      const auto seq = qp->m_irn.GetNextSequenceNumber ();
+      o_irnSeq = seq;
+      qbb.SetIrnAckNumber (seq);
+      qbb.SetIrnNackNumber (0);
+      qbb.SetFlags (QbbHeader::NONE);
+      qp->m_irn.SendNewPacket (payloadSize); // Update IRN infos
+    }
+  p->AddHeader (qbb);
 
   Ipv4Header ip;
   ip.SetSource (qp->m_sIp);
@@ -275,6 +445,131 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp)
   p->AddHeader (eth);
 
   return p;
+}
+
+Ptr<Packet>
+PfcHostPort::GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck)
+{
+  NS_LOG_FUNCTION (qp);
+
+  Ptr<Packet> p = Create<Packet> (0);
+
+  QbbHeader qbb;
+  qbb.SetSourcePort (qp->m_dPort); // exchange ports
+  qbb.SetDestinationPort (qp->m_sPort);
+  qbb.SetIrnAckNumber (irnAck);
+  qbb.SetIrnNackNumber (0);
+  qbb.SetFlags (QbbHeader::ACK);
+  p->AddHeader (qbb);
+
+  Ipv4Header ip;
+  ip.SetSource (qp->m_dIp); // exchange IPs
+  ip.SetDestination (qp->m_sIp);
+  ip.SetProtocol (0x11); // UDP
+  ip.SetPayloadSize (p->GetSize ());
+  ip.SetTtl (64);
+  ip.SetDscp (Ipv4Header::DscpType (m_nQueues)); // highest priority
+  p->AddHeader (ip);
+
+  EthernetHeader eth;
+  eth.SetSource (Mac48Address::ConvertFrom (m_dev->GetAddress ()));
+  eth.SetDestination (Mac48Address::ConvertFrom (m_dev->GetRemote ()));
+  eth.SetLengthType (0x0800); // IPv4
+  p->AddHeader (eth);
+
+  return p;
+}
+
+Ptr<Packet>
+PfcHostPort::GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck, uint32_t irnNack)
+{
+  NS_LOG_FUNCTION (qp);
+
+  Ptr<Packet> p = Create<Packet> (0);
+
+  QbbHeader qbb;
+  qbb.SetSourcePort (qp->m_dPort); // exchange ports
+  qbb.SetDestinationPort (qp->m_sPort);
+  qbb.SetIrnAckNumber (irnAck);
+  qbb.SetIrnNackNumber (irnNack);
+  qbb.SetFlags (QbbHeader::SACK);
+  p->AddHeader (qbb);
+
+  Ipv4Header ip;
+  ip.SetSource (qp->m_dIp); // exchange IPs
+  ip.SetDestination (qp->m_sIp);
+  ip.SetProtocol (0x11); // UDP
+  ip.SetPayloadSize (p->GetSize ());
+  ip.SetTtl (64);
+  ip.SetDscp (Ipv4Header::DscpType (m_nQueues)); // highest priority
+  p->AddHeader (ip);
+
+  EthernetHeader eth;
+  eth.SetSource (Mac48Address::ConvertFrom (m_dev->GetAddress ()));
+  eth.SetDestination (Mac48Address::ConvertFrom (m_dev->GetRemote ()));
+  eth.SetLengthType (0x0800); // IPv4
+  p->AddHeader (eth);
+
+  return p;
+}
+
+Ptr<Packet>
+PfcHostPort::ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq, uint32_t size)
+{
+  NS_LOG_FUNCTION (qp);
+
+  uint32_t payloadSize = size;
+
+  Ptr<Packet> p = Create<Packet> (payloadSize);
+
+  QbbHeader qbb;
+  qbb.SetSourcePort (qp->m_sPort);
+  qbb.SetDestinationPort (qp->m_dPort);
+  qbb.SetIrnAckNumber (irnSeq);
+  qbb.SetIrnNackNumber (0);
+  qbb.SetFlags (QbbHeader::NONE);
+  p->AddHeader (qbb);
+
+  Ipv4Header ip;
+  ip.SetSource (qp->m_sIp);
+  ip.SetDestination (qp->m_dIp);
+  ip.SetProtocol (0x11); // UDP
+  ip.SetPayloadSize (p->GetSize ());
+  ip.SetTtl (64);
+  ip.SetDscp (Ipv4Header::DscpType (qp->m_priority));
+  p->AddHeader (ip);
+
+  EthernetHeader eth;
+  eth.SetSource (Mac48Address::ConvertFrom (m_dev->GetAddress ()));
+  eth.SetDestination (Mac48Address::ConvertFrom (m_dev->GetRemote ()));
+  eth.SetLengthType (0x0800); // IPv4
+  p->AddHeader (eth);
+
+  return p;
+}
+
+EventId
+PfcHostPort::IrnTimer (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq)
+{
+  if (qp->m_irn.GetWindowSize () <= m_irn.rtoLowThreshold)
+    {
+      return Simulator::Schedule (m_irn.rtoLow, &PfcHostPort::IrnTimerHandler, this, qp, irnSeq);
+    }
+  else
+    {
+      return Simulator::Schedule (m_irn.rtoHigh, &PfcHostPort::IrnTimerHandler, this, qp, irnSeq);
+    }
+}
+
+void
+PfcHostPort::IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq)
+{
+  const auto state = qp->m_irn.GetIrnState (irnSeq);
+  if (state == RdmaTxQueuePair::NACK || state == RdmaTxQueuePair::UNACK)
+    {
+      m_rtxPacketQueue.push_back ({qp, irnSeq});
+      m_dev->TriggerTransmit ();
+    }
 }
 
 void

@@ -29,6 +29,7 @@ def build(bld):
         'model/pfc-host.cc',
         'model/pfc-header.cc',
         'model/cbfc-header.cc',
+        'model/qbb-header.cc',
         'helper/pfc-helper.cc',
     ]
 
@@ -59,6 +60,7 @@ def build(bld):
         'model/pfc-host.h',
         'model/pfc-header.h',
         'model/cbfc-header.h',
+        'model/qbb-header.h',
         'helper/pfc-helper.h',
     ]
 

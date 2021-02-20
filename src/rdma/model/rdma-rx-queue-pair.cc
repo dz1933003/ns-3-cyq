@@ -96,4 +96,64 @@ RdmaRxQueuePair::IsFinished ()
   return m_receivedSize >= m_size;
 }
 
+// IRN inner class implementation
+
+RdmaRxQueuePair::IRN_STATE
+RdmaRxQueuePair::Irn::GetIrnState (const uint32_t &seq) const
+{
+  if (seq >= GetNextSequenceNumber ()) // out of window
+    return IRN_STATE::UNDEF;
+  else if (seq >= m_baseSeq) // in window
+    return m_states[seq - m_baseSeq];
+  else // before window
+    return IRN_STATE::ACK;
+}
+
+void
+RdmaRxQueuePair::Irn::MoveWindow ()
+{
+  while (!m_states.empty () && m_states.front () == IRN_STATE::ACK)
+    {
+      m_states.pop_front ();
+      m_baseSeq++;
+    }
+}
+
+void
+RdmaRxQueuePair::Irn::UpdateIrnState (const uint32_t &seq)
+{
+  // Packet not seen before
+  if (GetIrnState (seq) == IRN_STATE::UNDEF)
+    {
+      // Sequence number out of order
+      if (seq > GetNextSequenceNumber ())
+        {
+          while (seq > GetNextSequenceNumber ())
+            m_states.push_back (IRN_STATE::NACK);
+        }
+      // ACK this packet
+      m_states.push_back (IRN_STATE::ACK);
+    }
+  // Retransmission packet
+  else if (GetIrnState (seq) == IRN_STATE::NACK)
+    {
+      // Ack this packet
+      m_states[seq - m_baseSeq] = IRN_STATE::ACK;
+    }
+  // If is ACKed, do nothing.
+  MoveWindow ();
+}
+
+uint32_t
+RdmaRxQueuePair::Irn::GetNextSequenceNumber () const
+{
+  return m_baseSeq + m_states.size ();
+}
+
+bool
+RdmaRxQueuePair::Irn::IsReceived (const uint32_t &seq) const
+{
+  return GetIrnState (seq) == IRN_STATE::ACK;
+}
+
 } // namespace ns3

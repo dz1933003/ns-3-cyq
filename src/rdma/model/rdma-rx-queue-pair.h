@@ -24,29 +24,113 @@
 #include "ns3/object.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/simulator.h"
+#include <deque>
 
 namespace ns3 {
 
+/**
+ * \ingroup rdma
+ * \class RdmaRxQueuePair
+ * \brief Rdma rx queue pair table entry.
+ */
 class RdmaRxQueuePair : public Object
 {
 public:
-  Ipv4Address m_sIp, m_dIp;
-  uint16_t m_sPort, m_dPort;
-  uint64_t m_size;
-  uint16_t m_priority;
+  Ipv4Address m_sIp, m_dIp; //!< source IP, dst IP
+  uint16_t m_sPort, m_dPort; //!< source port, dst port
+  uint64_t m_size; //!< source port, dst port
+  uint16_t m_priority; //!< flow priority
 
-  uint64_t m_receivedSize;
+  uint64_t m_receivedSize; //!< total valid received size
 
   static TypeId GetTypeId (void);
   RdmaRxQueuePair ();
+
+  /**
+   * Constructor
+   * 
+   * \param sIP source IP
+   * \param dIP destination IP
+   * \param sPort source port
+   * \param dPort destination port
+   * \param size queue pair length by byte
+   * \param priority queue pair priority
+   */
   RdmaRxQueuePair (Ipv4Address sIp, Ipv4Address dIp, uint16_t sPort, uint16_t dPort, uint64_t size,
                    uint16_t priority);
 
+  /**
+   * Get remaining bytes of this queue pair
+   * 
+   * \return remaining bytes
+   */
   uint64_t GetRemainBytes ();
+
   uint32_t GetHash (void);
   static uint32_t GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const uint16_t &sPort,
                            const uint16_t &dPort);
+
+  /**
+   * \return true for finished queue pair
+   */
   bool IsFinished ();
+
+  /**
+   * IRN rx bitmap state
+   */
+  enum IRN_STATE {
+    ACK, // Acknowledged
+    NACK, // Lost
+    UNDEF // Out of window
+  };
+
+  /**
+   * \ingroup rdma
+   * \class Irn
+   * \brief Rdma rx queue pair IRN infomation.
+   */
+  class Irn
+  {
+  public:
+    /**
+     * Get IRN bitmap state of this sequence number
+     * 
+     * \param seq sequence number
+     * \return IRN bitmap state
+     */
+    IRN_STATE GetIrnState (const uint32_t &seq) const;
+
+    /**
+     * Move IRN bitmap window
+     */
+    void MoveWindow ();
+
+    /**
+     * After received a packet, update its IRN bitmap
+     * 
+     * \param seq sequence number
+     */
+    void UpdateIrnState (const uint32_t &seq);
+
+    /**
+     * Get next sequence number
+     * 
+     * \return expected sequence number
+     */
+    uint32_t GetNextSequenceNumber () const;
+
+    /**
+     * Is target sequence number of packet was received
+     * 
+     * \param seq sequence number
+     * \return true for received, false for new packet
+     */
+    bool IsReceived (const uint32_t &seq) const;
+
+  private:
+    std::deque<IRN_STATE> m_states; //!< packet state bitmap window
+    uint32_t m_baseSeq = 1; //!< bitmap window base sequence i.e. number of index 0
+  } m_irn; //!< IRN infomation
 };
 
 } // namespace ns3
