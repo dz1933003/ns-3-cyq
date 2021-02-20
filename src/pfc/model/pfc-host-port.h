@@ -213,56 +213,56 @@ private:
    * Generate data packet of target transmitting queue pair
    *
    * \param qp queue pair
-   * \param o_seq output sequence number
+   * \param o_irnSeq output sequence number
    * \return data packet
    */
-  Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_seq);
+  Ptr<Packet> GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_irnSeq);
 
   /**
    * Generate data packet that needs to be retransmitted
    * 
    * \param qp queue pair
-   * \param seq packet seq
+   * \param irnSeq packet seq
    * \param size packet size
    * \return data packet
    */
-  Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t seq, uint32_t size);
+  Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq, uint32_t size);
 
   /**
    * Generate ACK packet of target transmitting queue pair
    *
    * \param qp queue pair
-   * \param seq ack sequence number of this packet
+   * \param irnAck ack sequence number of this packet
    * \return ACK packet
    */
-  Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq);
+  Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck);
 
   /**
    * Generate SACK packet of target transmitting queue pair
    *
    * \param qp queue pair
-   * \param seq ack sequence number of this packet
-   * \param exp cumulative acknowledgment (expected sequence number)
+   * \param irnAck ack sequence number of this packet
+   * \param irnNack cumulative acknowledgment (expected sequence number)
    * \return SACK packet
    */
-  Ptr<Packet> GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, uint32_t exp);
+  Ptr<Packet> GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck, uint32_t irnNack);
 
   /**
    * Schedule IRN retransmission timer for each packet of one queue pair
    * 
    * \param qp queue pair
-   * \param seq sequence number of this data packet
+   * \param irnSeq sequence number of this data packet
    * \return NS3 event id
    */
-  EventId IrnTimer (Ptr<RdmaTxQueuePair> qp, uint32_t seq);
+  EventId IrnTimer (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq);
 
   /**
    * Generate IRN retransmission packet to retransmission queue
    * 
    * \param qp queue pair
-   * \param seq sequence number of this data packet
+   * \param irnSeq sequence number of this data packet
    */
-  void IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t seq);
+  void IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq);
 
   /**
    * The trace source fired for received a PFC packet.

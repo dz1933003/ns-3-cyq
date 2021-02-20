@@ -61,27 +61,27 @@ QbbHeader::SetDestinationPort (uint16_t port)
 }
 
 uint32_t
-QbbHeader::GetSequenceNumber (void) const
+QbbHeader::GetIrnAckNumber (void) const
 {
-  return m_sequenceNumber;
+  return m_irnAckNumber;
 }
 
 void
-QbbHeader::SetSequenceNumber (uint32_t sequenceNumber)
+QbbHeader::SetIrnAckNumber (uint32_t sequenceNumber)
 {
-  m_sequenceNumber = sequenceNumber;
+  m_irnAckNumber = sequenceNumber;
 }
 
 uint32_t
-QbbHeader::GetAckNumber (void) const
+QbbHeader::GetIrnNackNumber (void) const
 {
-  return m_ackNumber;
+  return m_irnNackNumber;
 }
 
 void
-QbbHeader::SetAckNumber (uint32_t ackNumber)
+QbbHeader::SetIrnNackNumber (uint32_t ackNumber)
 {
-  m_ackNumber = ackNumber;
+  m_irnNackNumber = ackNumber;
 }
 
 uint8_t
@@ -129,15 +129,15 @@ void
 QbbHeader::Print (std::ostream &os) const
 {
   NS_LOG_FUNCTION (&os);
-  os << FlagsToString (m_flags) << " seq=" << m_sequenceNumber << " ack=" << m_ackNumber << " "
-     << m_sourcePort << " > " << m_destinationPort;
+  os << FlagsToString (m_flags) << " IrnAck=" << m_irnAckNumber << " IrnNack=" << m_irnNackNumber
+     << " " << m_sourcePort << " > " << m_destinationPort;
 }
 
 uint32_t
 QbbHeader::GetSerializedSize (void) const
 {
-  return sizeof (m_sourcePort) + sizeof (m_destinationPort) + sizeof (m_sequenceNumber) +
-         sizeof (m_ackNumber) + sizeof (m_flags);
+  return sizeof (m_sourcePort) + sizeof (m_destinationPort) + sizeof (m_irnAckNumber) +
+         sizeof (m_irnNackNumber) + sizeof (m_flags);
 }
 
 void
@@ -146,8 +146,8 @@ QbbHeader::Serialize (Buffer::Iterator start) const
   NS_LOG_FUNCTION (&start);
   start.WriteU16 (m_sourcePort);
   start.WriteU16 (m_destinationPort);
-  start.WriteU32 (m_sequenceNumber);
-  start.WriteU32 (m_ackNumber);
+  start.WriteU32 (m_irnAckNumber);
+  start.WriteU32 (m_irnNackNumber);
   start.WriteU8 (m_flags);
 }
 
@@ -157,8 +157,8 @@ QbbHeader::Deserialize (Buffer::Iterator start)
   NS_LOG_FUNCTION (&start);
   m_sourcePort = start.ReadU16 ();
   m_destinationPort = start.ReadU16 ();
-  m_sequenceNumber = start.ReadU32 ();
-  m_ackNumber = start.ReadU32 ();
+  m_irnAckNumber = start.ReadU32 ();
+  m_irnNackNumber = start.ReadU32 ();
   m_flags = start.ReadU8 ();
   return GetSerializedSize ();
 }

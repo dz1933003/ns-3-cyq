@@ -103,8 +103,8 @@ RdmaRxQueuePair::Irn::GetIrnState (const uint32_t &seq) const
 {
   if (seq >= GetNextSequenceNumber ()) // out of window
     return IRN_STATE::UNDEF;
-  else if (seq >= base_seq) // in window
-    return pkg_state[seq - base_seq];
+  else if (seq >= m_baseSeq) // in window
+    return m_states[seq - m_baseSeq];
   else // before window
     return IRN_STATE::ACK;
 }
@@ -112,10 +112,10 @@ RdmaRxQueuePair::Irn::GetIrnState (const uint32_t &seq) const
 void
 RdmaRxQueuePair::Irn::MoveWindow ()
 {
-  while (!pkg_state.empty () && pkg_state.front () == IRN_STATE::ACK)
+  while (!m_states.empty () && m_states.front () == IRN_STATE::ACK)
     {
-      pkg_state.pop_front ();
-      base_seq++;
+      m_states.pop_front ();
+      m_baseSeq++;
     }
 }
 
@@ -129,16 +129,16 @@ RdmaRxQueuePair::Irn::UpdateIrnState (const uint32_t &seq)
       if (seq > GetNextSequenceNumber ())
         {
           while (seq > GetNextSequenceNumber ())
-            pkg_state.push_back (IRN_STATE::NACK);
+            m_states.push_back (IRN_STATE::NACK);
         }
       // ACK this packet
-      pkg_state.push_back (IRN_STATE::ACK);
+      m_states.push_back (IRN_STATE::ACK);
     }
   // Retransmission packet
   else if (GetIrnState (seq) == IRN_STATE::NACK)
     {
       // Ack this packet
-      pkg_state[seq - base_seq] = IRN_STATE::ACK;
+      m_states[seq - m_baseSeq] = IRN_STATE::ACK;
     }
   // If is ACKed, do nothing.
   MoveWindow ();
@@ -147,7 +147,7 @@ RdmaRxQueuePair::Irn::UpdateIrnState (const uint32_t &seq)
 uint32_t
 RdmaRxQueuePair::Irn::GetNextSequenceNumber () const
 {
-  return base_seq + pkg_state.size ();
+  return m_baseSeq + m_states.size ();
 }
 
 bool

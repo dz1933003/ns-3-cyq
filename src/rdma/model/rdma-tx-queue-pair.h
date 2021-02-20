@@ -162,10 +162,10 @@ public:
     uint32_t GetWindowSize () const;
 
   private:
-    std::deque<IRN_STATE> pkg_state; //!< packet state bitmap window
-    std::deque<uint64_t> pkg_payload; //!< packet payload bitmap window
-    std::deque<EventId> pkg_rtxEvent; //!< packet retransmission event bitmap window
-    uint32_t base_seq = 1; //!< bitmap window base sequence i.e. number of index 0
+    std::deque<IRN_STATE> m_states; //!< packet state bitmap window
+    std::deque<uint64_t> m_payloads; //!< packet payload bitmap window
+    std::deque<EventId> m_rtxEvents; //!< packet retransmission event bitmap window
+    uint32_t m_baseSeq = 1; //!< bitmap window base sequence i.e. number of index 0
   } m_irn; //!< IRN infomation
 };
 

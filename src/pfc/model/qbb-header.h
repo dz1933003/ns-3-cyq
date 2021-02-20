@@ -64,24 +64,24 @@ public:
   /**
    * \return the sequence number for this header
    */
-  uint32_t GetSequenceNumber (void) const;
+  uint32_t GetIrnAckNumber (void) const;
 
   /**
    * \brief Set the sequence Number
    * \param sequenceNumber the sequence number for this header
    */
-  void SetSequenceNumber (uint32_t sequenceNumber);
+  void SetIrnAckNumber (uint32_t sequenceNumber);
 
   /**
    * \return the ACK number for this header
    */
-  uint32_t GetAckNumber (void) const;
+  uint32_t GetIrnNackNumber (void) const;
 
   /**
    * \brief Set the ACK Number
    * \param ackNumber the ACK number for this header
    */
-  void SetAckNumber (uint32_t ackNumber);
+  void SetIrnNackNumber (uint32_t ackNumber);
 
   /**
    * Flag types.
@@ -122,8 +122,11 @@ private:
   uint16_t m_sourcePort = 0; //!< Source port
   uint16_t m_destinationPort = 0; //!< Destination port
 
-  uint32_t m_sequenceNumber = 0; //!< Sequence Number for data packet & SACK for IRN
-  uint32_t m_ackNumber = 0; //!< Expected sequence number for IRN
+  uint32_t m_sequenceNumber = 0; //!< Sequence Number (for DCQCN)
+
+  uint32_t m_irnAckNumber = 0; //!< IRN ACK/SACK sequence Number
+  uint32_t m_irnNackNumber = 0; //!< IRN NACK sequence number
+
   uint8_t m_flags = NONE; //!< NONE/ACK/SACK
 };
 

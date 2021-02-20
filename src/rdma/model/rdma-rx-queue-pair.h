@@ -128,8 +128,8 @@ public:
     bool IsReceived (const uint32_t &seq) const;
 
   private:
-    std::deque<IRN_STATE> pkg_state; //!< packet state bitmap window
-    uint32_t base_seq = 1; //!< bitmap window base sequence i.e. number of index 0
+    std::deque<IRN_STATE> m_states; //!< packet state bitmap window
+    uint32_t m_baseSeq = 1; //!< bitmap window base sequence i.e. number of index 0
   } m_irn; //!< IRN infomation
 };
 

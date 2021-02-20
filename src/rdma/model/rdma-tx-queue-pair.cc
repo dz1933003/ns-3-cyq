@@ -119,9 +119,9 @@ RdmaTxQueuePair::IsFinished ()
 void
 RdmaTxQueuePair::Irn::SendNewPacket (uint32_t payloadSize)
 {
-  pkg_state.push_back (RdmaTxQueuePair::IRN_STATE::UNACK);
-  pkg_payload.push_back (payloadSize);
-  pkg_rtxEvent.push_back (EventId ());
+  m_states.push_back (RdmaTxQueuePair::IRN_STATE::UNACK);
+  m_payloads.push_back (payloadSize);
+  m_rtxEvents.push_back (EventId ());
 }
 
 RdmaTxQueuePair::IRN_STATE
@@ -129,8 +129,8 @@ RdmaTxQueuePair::Irn::GetIrnState (const uint32_t &seq) const
 {
   if (seq >= GetNextSequenceNumber ())
     return IRN_STATE::UNDEF;
-  else if (seq >= base_seq)
-    return pkg_state[seq - base_seq];
+  else if (seq >= m_baseSeq)
+    return m_states[seq - m_baseSeq];
   else
     return IRN_STATE::ACK;
 }
@@ -138,25 +138,25 @@ RdmaTxQueuePair::Irn::GetIrnState (const uint32_t &seq) const
 uint64_t
 RdmaTxQueuePair::Irn::GetPayloadSize (const uint32_t &seq) const
 {
-  if (seq >= GetNextSequenceNumber () || seq < base_seq)
+  if (seq >= GetNextSequenceNumber () || seq < m_baseSeq)
     {
       NS_ASSERT_MSG (false, "RdmaTxQueuePair::m_irn::GetPayloadSize: "
                             "Out of bound sequence number");
       return 0;
     }
   else
-    return pkg_payload[seq - base_seq];
+    return m_payloads[seq - m_baseSeq];
 }
 
 void
 RdmaTxQueuePair::Irn::MoveWindow ()
 {
-  while (!pkg_state.empty () && pkg_state.front () == IRN_STATE::ACK)
+  while (!m_states.empty () && m_states.front () == IRN_STATE::ACK)
     {
-      pkg_state.pop_front ();
-      pkg_payload.pop_front ();
-      pkg_rtxEvent.pop_front ();
-      base_seq++;
+      m_states.pop_front ();
+      m_payloads.pop_front ();
+      m_rtxEvents.pop_front ();
+      m_baseSeq++;
     }
 }
 
@@ -170,9 +170,9 @@ RdmaTxQueuePair::Irn::AckIrnState (const uint32_t &seq)
     }
   else if (GetIrnState (seq) == IRN_STATE::UNACK || GetIrnState (seq) == IRN_STATE::NACK)
     {
-      pkg_state[seq - base_seq] = IRN_STATE::ACK;
+      m_states[seq - m_baseSeq] = IRN_STATE::ACK;
       // Cancel timer
-      Simulator::Cancel (pkg_rtxEvent[seq - base_seq]);
+      Simulator::Cancel (m_rtxEvents[seq - m_baseSeq]);
     }
   // If is ACK, do nothing.
   MoveWindow ();
@@ -188,15 +188,15 @@ RdmaTxQueuePair::Irn::SackIrnState (const uint32_t &seq, const uint32_t &ack)
     }
   else if (GetIrnState (seq) == IRN_STATE::UNACK)
     {
-      auto expIndex = ack - base_seq;
-      auto index = seq - base_seq;
-      pkg_state[index] = IRN_STATE::ACK;
+      auto expIndex = ack - m_baseSeq;
+      auto index = seq - m_baseSeq;
+      m_states[index] = IRN_STATE::ACK;
       // Set NACK sequence
       for (auto i = expIndex; i < index; i++)
         {
-          pkg_state[i] = IRN_STATE::NACK;
+          m_states[i] = IRN_STATE::NACK;
           // Cancel timer (because we will set timer when retransmitting)
-          Simulator::Cancel (pkg_rtxEvent[i]);
+          Simulator::Cancel (m_rtxEvents[i]);
         }
     }
   else if (GetIrnState (seq) == IRN_STATE::NACK || GetIrnState (seq) == IRN_STATE::ACK)
@@ -210,10 +210,10 @@ RdmaTxQueuePair::Irn::SackIrnState (const uint32_t &seq, const uint32_t &ack)
 void
 RdmaTxQueuePair::Irn::SetRtxEvent (const uint32_t &seq, const EventId &id)
 {
-  if (seq >= base_seq && seq < GetNextSequenceNumber ())
+  if (seq >= m_baseSeq && seq < GetNextSequenceNumber ())
     {
-      Simulator::Cancel (pkg_rtxEvent[seq - base_seq]);
-      pkg_rtxEvent[seq - base_seq] = id;
+      Simulator::Cancel (m_rtxEvents[seq - m_baseSeq]);
+      m_rtxEvents[seq - m_baseSeq] = id;
     }
   else
     {
@@ -225,13 +225,13 @@ RdmaTxQueuePair::Irn::SetRtxEvent (const uint32_t &seq, const EventId &id)
 uint32_t
 RdmaTxQueuePair::Irn::GetNextSequenceNumber () const
 {
-  return base_seq + pkg_state.size ();
+  return m_baseSeq + m_states.size ();
 }
 
 uint32_t
 RdmaTxQueuePair::Irn::GetWindowSize () const
 {
-  return pkg_state.size ();
+  return m_states.size ();
 }
 
 } // namespace ns3
