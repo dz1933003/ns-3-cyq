@@ -131,6 +131,25 @@ public:
     std::deque<IRN_STATE> m_states; //!< packet state bitmap window
     uint32_t m_baseSeq = 1; //!< bitmap window base sequence i.e. number of index 0
   } m_irn; //!< IRN infomation
+
+  class Dcqcn
+  {
+  public:
+    /**
+     * every m_sendCnpInterval send a CNP to source
+     */
+    void CheckIfSendCNP ();
+
+    /**
+     * when destination receive a packet with ecn setted judge if need to send a CNP packet to source
+     * if need return true
+     */
+    bool SendCNP ();
+
+  private:
+    double m_sendCnpInterval; //!< at most one CNP packet is generate in m_sendCnpInterval us
+    bool m_ecnArrived; //!< when its value is true send CNP to the source
+  } m_dcqcn;
 };
 
 } // namespace ns3
