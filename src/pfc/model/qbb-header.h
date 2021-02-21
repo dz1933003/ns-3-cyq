@@ -86,7 +86,7 @@ public:
   /**
    * Flag types.
    */
-  enum QbbFlag { NONE, ACK, SACK };
+  enum QbbFlag { NONE, ACK, SACK , CNP };
 
   /**
    * \brief Get the flags
