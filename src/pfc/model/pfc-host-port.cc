@@ -357,6 +357,15 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
           if (qp->IsFinished ())
             m_queuePairRxCompleteTrace (qp);
+
+          if (ip.GetEcn () == ns3::Ipv4Header::EcnType::ECN_CE) // congestion
+            {
+              if (qp->m_dcqcn.SendCNP ()) //if true send CNP to source
+                {
+                  m_controlQueue.push (GenCNP (qp));
+                  m_dev->TriggerTransmit ();
+                }
+            }
           return true; // Forward up to node
         }
       // ACK packet
@@ -384,6 +393,15 @@ PfcHostPort::Receive (Ptr<Packet> p)
             }
           m_dev->TriggerTransmit ();
           return false; // Not data so no need to send to node
+        }
+      else if (flags == QbbHeader::CNP)
+        {
+          uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
+          uint32_t index = m_txQueuePairTable[key];
+          Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
+          qp->m_dcqcn.CnpReceived ();
+          m_dev->TriggerTransmit ();
+          return false;
         }
       else
         {
@@ -493,6 +511,37 @@ PfcHostPort::GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck, uint32_t irnNack
   qbb.SetIrnAckNumber (irnAck);
   qbb.SetIrnNackNumber (irnNack);
   qbb.SetFlags (QbbHeader::SACK);
+  p->AddHeader (qbb);
+
+  Ipv4Header ip;
+  ip.SetSource (qp->m_dIp); // exchange IPs
+  ip.SetDestination (qp->m_sIp);
+  ip.SetProtocol (0x11); // UDP
+  ip.SetPayloadSize (p->GetSize ());
+  ip.SetTtl (64);
+  ip.SetDscp (Ipv4Header::DscpType (m_nQueues)); // highest priority
+  p->AddHeader (ip);
+
+  EthernetHeader eth;
+  eth.SetSource (Mac48Address::ConvertFrom (m_dev->GetAddress ()));
+  eth.SetDestination (Mac48Address::ConvertFrom (m_dev->GetRemote ()));
+  eth.SetLengthType (0x0800); // IPv4
+  p->AddHeader (eth);
+
+  return p;
+}
+
+Ptr<Packet>
+PfcHostPort::GenCNP (Ptr<RdmaRxQueuePair> qp)
+{
+  NS_LOG_FUNCTION (qp);
+
+  Ptr<Packet> p = Create<Packet> (0);
+
+  QbbHeader qbb;
+  qbb.SetSourcePort (qp->m_dPort); // exchange ports
+  qbb.SetDestinationPort (qp->m_sPort);
+  qbb.SetFlags (QbbHeader::CNP);
   p->AddHeader (qbb);
 
   Ipv4Header ip;

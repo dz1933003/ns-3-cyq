@@ -248,6 +248,13 @@ private:
   Ptr<Packet> GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck, uint32_t irnNack);
 
   /**
+   * Generate CNP packet of target transmitting queue pair
+   * \param qp queue pair
+   * \return CNP packet
+   */
+  Ptr<Packet> GenCNP (Ptr<RdmaRxQueuePair> qp);
+
+  /**
    * Schedule IRN retransmission timer for each packet of one queue pair
    * 
    * \param qp queue pair
