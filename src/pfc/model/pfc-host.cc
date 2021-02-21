@@ -126,6 +126,7 @@ PfcHost::AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp)
       return;
     }
   outDev->GetObject<PfcHostPort> ()->AddRdmaTxQueuePair (qp);
+  qp->m_dcqcn.SetDevDataRate (outDev->GetDataRate ());
 }
 
 std::vector<Ptr<RdmaTxQueuePair>>

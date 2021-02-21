@@ -24,6 +24,7 @@
 #include "ns3/object.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/simulator.h"
+#include "ns3/data-rate.h"
 #include "ns3/packet.h"
 #include <deque>
 
@@ -167,6 +168,69 @@ public:
     std::deque<EventId> m_rtxEvents; //!< packet retransmission event bitmap window
     uint32_t m_baseSeq = 1; //!< bitmap window base sequence i.e. number of index 0
   } m_irn; //!< IRN infomation
+
+  class Dcqcn
+  {
+  public:
+    /**
+     * every fixed time slot, update alpha.
+     */
+    void UpdateAlphaMlx ();
+    void ScheduleUpdateAlphaMlx ();
+
+    /** 
+     *  receive a CNP packet call this function
+     */
+    void CnpReceived ();
+
+    /**
+     *  Mellanox's version of rate decrease
+     *  It checks every m_rateDecreaseInterval if CNP arrived (m_decrease_cnp_arrived).
+     *  If so, decrease rate, and reset all rate increase related things
+     */
+    void CheckRateDecreaseMlx ();
+    void ScheduleDecreaseRateMlx (uint32_t delta);
+
+    /**
+     *  Mellanox's version of rate increase
+     */
+    void RateIncEventTimerMlx ();
+    void RateIncEventMlx ();
+    void FastRecoveryMlx ();
+    void ActiveIncreaseMlx ();
+    void HyperIncreaseMlx ();
+
+    /**
+     * set m_devDataRate for the qp
+     * \param r the datarate
+     */
+    void SetDevDataRate (DataRate r);
+
+  private:
+    DataRate m_rate;
+    DataRate m_targetRate; //< Target rate
+    EventId m_eventUpdateAlpha;
+    double m_alpha;
+    bool m_alpha_cnp_arrived; // indicate if CNP arrived in the last slot
+    bool m_first_cnp = true; // indicate if the current CNP is the first CNP
+    EventId m_eventDecreaseRate;
+    bool m_decrease_cnp_arrived; // indicate if CNP arrived in the last slot
+    uint32_t m_rpTimeStage;
+    EventId m_rpTimer;
+
+    DataRate m_minRate; //< Min sending rate
+    double m_g; //feedback weight
+    double m_rateOnFirstCNP; // the fraction of line rate to set on first CNP
+    bool m_EcnClampTgtRate;
+    double m_rpgTimeReset;
+    double m_rateDecreaseInterval;
+    uint32_t m_rpgThreshold;
+    double m_alpha_resume_interval;
+    DataRate m_rai; //< Rate of additive increase
+    DataRate m_rhai;
+
+    DataRate m_devDataRate;
+  } m_dcqcn;
 };
 
 } // namespace ns3

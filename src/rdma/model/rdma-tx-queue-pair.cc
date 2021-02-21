@@ -25,7 +25,6 @@
 #include "ns3/ethernet-header.h"
 #include "ns3/ipv4-header.h"
 #include "ns3/qbb-header.h"
-
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("RdmaTxQueuePair");
@@ -232,6 +231,139 @@ uint32_t
 RdmaTxQueuePair::Irn::GetWindowSize () const
 {
   return m_states.size ();
+}
+
+void
+RdmaTxQueuePair::Dcqcn::UpdateAlphaMlx ()
+{
+  if (m_alpha_cnp_arrived)
+    {
+      m_alpha = (1 - m_g) * m_alpha + m_g; //binary feedback
+    }
+  else
+    {
+      m_alpha = (1 - m_g) * m_alpha; //binary feedback
+    }
+  m_alpha_cnp_arrived = false; // clear the CNP_arrived bit
+  ScheduleUpdateAlphaMlx ();
+}
+
+void
+RdmaTxQueuePair::Dcqcn::ScheduleUpdateAlphaMlx ()
+{
+  m_eventUpdateAlpha = Simulator::Schedule (MicroSeconds (m_alpha_resume_interval),
+                                            &RdmaTxQueuePair::Dcqcn::UpdateAlphaMlx, this);
+}
+
+void
+RdmaTxQueuePair::Dcqcn::CnpReceived ()
+{
+  m_alpha_cnp_arrived = true; // set CNP_arrived bit for alpha update
+  m_decrease_cnp_arrived = true; // set CNP_arrived bit for rate decrease
+  if (m_first_cnp)
+    {
+      // init alpha
+      m_alpha = 1;
+      m_alpha_cnp_arrived = false;
+      // schedule alpha update
+      ScheduleUpdateAlphaMlx ();
+      // schedule rate decrease
+      ScheduleDecreaseRateMlx (1); // add 1 ns to make sure rate decrease is after alpha update
+      // set rate on first CNP
+      m_targetRate = m_rate = m_rateOnFirstCNP * m_rate.GetBitRate ();
+      m_first_cnp = false;
+    }
+}
+
+void
+RdmaTxQueuePair::Dcqcn::CheckRateDecreaseMlx ()
+{
+  ScheduleDecreaseRateMlx (0);
+  if (m_decrease_cnp_arrived)
+    {
+      bool clamp = true;
+      if (!m_EcnClampTgtRate)
+        {
+          if (m_rpTimeStage == 0)
+            clamp = false;
+        }
+      if (clamp)
+        m_targetRate = m_rate;
+      m_rate =
+          std::max ((double) m_minRate.GetBitRate (), m_rate.GetBitRate () * (1 - m_alpha / 2));
+      // reset rate increase related things
+      m_rpTimeStage = 0;
+      m_decrease_cnp_arrived = false;
+      Simulator::Cancel (m_rpTimer);
+      m_rpTimer = Simulator::Schedule (MicroSeconds (m_rpgTimeReset),
+                                       &RdmaTxQueuePair::Dcqcn::RateIncEventTimerMlx, this);
+    }
+}
+
+void
+RdmaTxQueuePair::Dcqcn::ScheduleDecreaseRateMlx (uint32_t delta)
+{
+  m_eventDecreaseRate =
+      Simulator::Schedule (MicroSeconds (m_rateDecreaseInterval) + NanoSeconds (delta),
+                           &RdmaTxQueuePair::Dcqcn::CheckRateDecreaseMlx, this);
+}
+
+void
+RdmaTxQueuePair::Dcqcn::RateIncEventTimerMlx ()
+{
+  m_rpTimer = Simulator::Schedule (MicroSeconds (m_rpgTimeReset),
+                                   &RdmaTxQueuePair::Dcqcn::RateIncEventTimerMlx, this);
+  RateIncEventMlx ();
+  m_rpTimeStage++;
+}
+void
+RdmaTxQueuePair::Dcqcn::RateIncEventMlx ()
+{
+  // check which increase phase: fast recovery, active increase, hyper increase
+  if (m_rpTimeStage < m_rpgThreshold)
+    { // fast recovery
+      FastRecoveryMlx ();
+    }
+  else if (m_rpTimeStage == m_rpgThreshold)
+    { // active increase
+      ActiveIncreaseMlx ();
+    }
+  else
+    { // hyper increase
+      HyperIncreaseMlx ();
+    }
+}
+
+void
+RdmaTxQueuePair::Dcqcn::FastRecoveryMlx ()
+{
+  m_rate = (m_rate.GetBitRate () / 2) + (m_targetRate.GetBitRate () / 2);
+}
+
+void
+RdmaTxQueuePair::Dcqcn::ActiveIncreaseMlx ()
+{
+  // increate rate
+  m_targetRate = m_targetRate.GetBitRate () + m_rai.GetBitRate ();
+  if (m_targetRate > m_devDataRate)
+    m_targetRate = m_devDataRate;
+  m_rate = (m_rate.GetBitRate () / 2) + (m_targetRate.GetBitRate () / 2);
+}
+
+void
+RdmaTxQueuePair::Dcqcn::HyperIncreaseMlx ()
+{
+  // increate rate
+  m_targetRate = m_targetRate.GetBitRate () + m_rai.GetBitRate ();
+  if (m_targetRate > m_devDataRate)
+    m_targetRate = m_devDataRate;
+  m_rate = (m_rate.GetBitRate () / 2) + (m_targetRate.GetBitRate () / 2);
+}
+
+void
+RdmaTxQueuePair::Dcqcn::SetDevDataRate (DataRate r)
+{
+  m_devDataRate = r;
 }
 
 } // namespace ns3
