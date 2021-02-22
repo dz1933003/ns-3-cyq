@@ -241,7 +241,6 @@ RdmaTxQueuePair::Dcqcn::Dcqcn ()
   m_first_cnp = true;
   m_decrease_cnp_arrived = false;
   m_rpTimeStage = 0;
-  m_nextAvail = Time (0);
 }
 void
 RdmaTxQueuePair::Dcqcn::UpdateAlphaMlx ()
@@ -374,6 +373,12 @@ void
 RdmaTxQueuePair::Dcqcn::SetDevDataRate (DataRate r)
 {
   m_devDataRate = r;
+}
+
+DataRate
+RdmaTxQueuePair::Dcqcn::GetRate ()
+{
+  return m_rate;
 }
 
 } // namespace ns3

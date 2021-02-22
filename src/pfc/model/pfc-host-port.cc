@@ -59,6 +59,7 @@ PfcHostPort::GetTypeId (void)
 
 PfcHostPort::PfcHostPort ()
     : m_pfcEnabled (true),
+      m_dcqcnEnabled (false),
       m_l2RetransmissionMode (L2_RTX_MODE::NONE),
       m_nTxBytes (0),
       m_nRxBytes (0)
@@ -89,6 +90,13 @@ PfcHostPort::EnablePfc (bool flag)
 {
   NS_LOG_FUNCTION (flag);
   m_pfcEnabled = flag;
+}
+
+void
+PfcHostPort::EnableDcqcn (bool flag)
+{
+  NS_LOG_FUNCTION (flag);
+  m_dcqcnEnabled = flag;
 }
 
 void
@@ -164,6 +172,7 @@ PfcHostPort::Transmit ()
       Ptr<Packet> p = m_controlQueue.front ();
       m_controlQueue.pop ();
       m_nTxBytes += p->GetSize ();
+      m_nextAvail = Simulator::Now ();
       return p;
     }
 
@@ -182,6 +191,9 @@ PfcHostPort::Transmit ()
             {
               auto id = IrnTimer (qp, irnSeq);
               qp->m_irn.SetRtxEvent (irnSeq, id);
+              m_nextAvail =
+                  Simulator::Now () + Seconds (qp->m_dcqcn.GetRate ().CalculateBytesTxTime (
+                                          qp->m_irn.GetPayloadSize (irnSeq)));
               return ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
             }
         }
@@ -214,6 +226,8 @@ PfcHostPort::Transmit ()
               auto id = IrnTimer (qp, irnSeq);
               qp->m_irn.SetRtxEvent (irnSeq, id);
             }
+          m_nextAvail = Simulator::Now () +
+                        Seconds (qp->m_dcqcn.GetRate ().CalculateBytesTxTime (p->GetSize ()));
           return p;
         }
     }
@@ -268,7 +282,10 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = false;
           m_pfcRxTrace (m_dev, qIndex, PfcHeader::Resume, pfcHeader.GetTime ());
-          m_dev->TriggerTransmit (); // Trigger device transmitting
+          if (m_dcqcnEnabled)
+            UpdateNextSend ();
+          else
+            m_dev->TriggerTransmit (); // Trigger device transmitting
           return false; // Do not forward up to node
         }
       else
@@ -330,7 +347,10 @@ PfcHostPort::Receive (Ptr<Packet> p)
                     }
                   // Send ACK and trigger transmit
                   m_controlQueue.push (GenACK (qp, irnAck));
-                  m_dev->TriggerTransmit ();
+                  if (m_dcqcnEnabled)
+                    UpdateNextSend ();
+                  else
+                    m_dev->TriggerTransmit ();
                 }
               else if (irnAck == expectedAck) // expected new packet
                 {
@@ -338,7 +358,10 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   qp->m_irn.UpdateIrnState (irnAck);
                   // Send ACK by retransmit mode and trigger transmit
                   m_controlQueue.push (GenACK (qp, irnAck));
-                  m_dev->TriggerTransmit ();
+                  if (m_dcqcnEnabled)
+                    UpdateNextSend ();
+                  else
+                    m_dev->TriggerTransmit ();
                 }
               else // out of order
                 {
@@ -346,7 +369,10 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   qp->m_irn.UpdateIrnState (irnAck);
                   // Send SACK and trigger transmit
                   m_controlQueue.push (GenSACK (qp, irnAck, expectedAck));
-                  m_dev->TriggerTransmit ();
+                  if (m_dcqcnEnabled)
+                    UpdateNextSend ();
+                  else
+                    m_dev->TriggerTransmit ();
                 }
             }
           else
@@ -358,12 +384,12 @@ PfcHostPort::Receive (Ptr<Packet> p)
           if (qp->IsFinished ())
             m_queuePairRxCompleteTrace (qp);
 
-          if (ip.GetEcn () == ns3::Ipv4Header::EcnType::ECN_CE) // congestion
+          if (m_dcqcnEnabled && ip.GetEcn () == ns3::Ipv4Header::EcnType::ECN_CE) // congestion
             {
               if (qp->m_dcqcn.SendCNP ()) //if true send CNP to source
                 {
                   m_controlQueue.push (GenCNP (qp));
-                  m_dev->TriggerTransmit ();
+                  UpdateNextSend ();
                 }
             }
           return true; // Forward up to node
@@ -376,7 +402,10 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t index = m_txQueuePairTable[key];
           Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
           qp->m_irn.AckIrnState (irnAck);
-          m_dev->TriggerTransmit (); // Because BDP-FC needs to check new bitmap and send
+          if (m_dcqcnEnabled)
+            UpdateNextSend ();
+          else
+            m_dev->TriggerTransmit (); // Because BDP-FC needs to check new bitmap and send
           return false; // Not data so no need to send to node
         }
       else if (flags == QbbHeader::SACK)
@@ -391,7 +420,10 @@ PfcHostPort::Receive (Ptr<Packet> p)
             {
               m_rtxPacketQueue.push_back ({qp, i});
             }
-          m_dev->TriggerTransmit ();
+          if (m_dcqcnEnabled)
+            UpdateNextSend ();
+          else
+            m_dev->TriggerTransmit ();
           return false; // Not data so no need to send to node
         }
       else if (flags == QbbHeader::CNP)
@@ -400,7 +432,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t index = m_txQueuePairTable[key];
           Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
           qp->m_dcqcn.CnpReceived ();
-          m_dev->TriggerTransmit ();
+          UpdateNextSend ();
           return false;
         }
       else
@@ -618,6 +650,19 @@ PfcHostPort::IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq)
     {
       m_rtxPacketQueue.push_back ({qp, irnSeq});
       m_dev->TriggerTransmit ();
+    }
+}
+
+void
+PfcHostPort::UpdateNextSend ()
+{
+  Time t = Simulator::GetMaximumSimulationTime ();
+  t = Min (m_nextAvail, t);
+  if (m_nextSend.IsExpired () && t < Simulator::GetMaximumSimulationTime () &&
+      t > Simulator::Now ())
+    {
+      m_nextSend =
+          Simulator::Schedule (t - Simulator::Now (), &DpskNetDevice::TriggerTransmit, m_dev);
     }
 }
 

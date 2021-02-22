@@ -78,6 +78,12 @@ public:
   void EnablePfc (bool flag);
 
   /**
+   * Enable or disable DCQCN
+   * \param flag DCQCN enable flag
+   */
+  void EnableDcqcn (bool flag);
+
+  /**
    * Add RDMA queue pair for transmitting
    *
    * \param qp queue pair to send
@@ -135,6 +141,8 @@ public:
    */
   void SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n);
 
+  void UpdateNextSend ();
+
 protected:
   /**
    * PFC host port transmitting logic.
@@ -177,6 +185,7 @@ protected:
 private:
   uint32_t m_nQueues; //!< queue count of the port (control queue not included)
   bool m_pfcEnabled; //!< PFC enabled
+  bool m_dcqcnEnabled; //!< DCQCN enable
 
   std::vector<bool> m_pausedStates; //!< paused state of queues
 
@@ -192,6 +201,9 @@ private:
   uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
 
   uint32_t m_l2RetransmissionMode; //!< L2 retransmission mode
+
+  EventId m_nextSend; //< The next send event(RP parameters)
+  Time m_nextAvail; //< Soonest time of next send
 
   struct
   {

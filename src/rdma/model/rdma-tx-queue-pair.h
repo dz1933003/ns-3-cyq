@@ -207,6 +207,12 @@ public:
      */
     void SetDevDataRate (DataRate r);
 
+    /**
+     * get m_rate of this qp
+     * \return m_rate
+     */
+    DataRate GetRate ();
+
   private:
     DataRate m_rate;
     DataRate m_targetRate; //< Target rate
@@ -231,9 +237,6 @@ public:
     DataRate m_rhai;
 
     DataRate m_devDataRate;
-
-    Time m_nextAvail; //< Soonest time of next send
-    EventId m_nextSend; //< The next send event(RP parameters)
   } m_dcqcn;
 };
 
