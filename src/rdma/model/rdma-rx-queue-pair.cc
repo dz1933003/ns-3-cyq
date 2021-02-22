@@ -169,9 +169,9 @@ RdmaRxQueuePair::Dcqcn::SendCNP ()
   if (m_ecnArrived == false)
     {
       m_ecnArrived = true;
+      Simulator::Schedule (Time (m_sendCnpInterval), &RdmaRxQueuePair::Dcqcn::CheckIfSendCNP, this);
       return true;
     }
-  Simulator::Schedule (Time (m_sendCnpInterval), &RdmaRxQueuePair::Dcqcn::CheckIfSendCNP, this);
   return false;
 }
 

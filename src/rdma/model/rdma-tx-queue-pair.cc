@@ -363,7 +363,7 @@ void
 RdmaTxQueuePair::Dcqcn::HyperIncreaseMlx ()
 {
   // increate rate
-  m_targetRate = m_targetRate.GetBitRate () + m_rai.GetBitRate ();
+  m_targetRate = m_targetRate.GetBitRate () + m_rhai.GetBitRate ();
   if (m_targetRate > m_devDataRate)
     m_targetRate = m_devDataRate;
   m_rate = (m_rate.GetBitRate () / 2) + (m_targetRate.GetBitRate () / 2);
