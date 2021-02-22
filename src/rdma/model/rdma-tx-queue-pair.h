@@ -172,6 +172,7 @@ public:
   class Dcqcn
   {
   public:
+    Dcqcn ();
     /**
      * every fixed time slot, update alpha.
      */
@@ -212,7 +213,7 @@ public:
     EventId m_eventUpdateAlpha;
     double m_alpha;
     bool m_alpha_cnp_arrived; // indicate if CNP arrived in the last slot
-    bool m_first_cnp = true; // indicate if the current CNP is the first CNP
+    bool m_first_cnp; // indicate if the current CNP is the first CNP
     EventId m_eventDecreaseRate;
     bool m_decrease_cnp_arrived; // indicate if CNP arrived in the last slot
     uint32_t m_rpTimeStage;
@@ -230,6 +231,9 @@ public:
     DataRate m_rhai;
 
     DataRate m_devDataRate;
+
+    Time m_nextAvail; //< Soonest time of next send
+    EventId m_nextSend; //< The next send event(RP parameters)
   } m_dcqcn;
 };
 

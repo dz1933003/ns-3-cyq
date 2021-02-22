@@ -233,6 +233,16 @@ RdmaTxQueuePair::Irn::GetWindowSize () const
   return m_states.size ();
 }
 
+RdmaTxQueuePair::Dcqcn::Dcqcn ()
+{
+  m_rate = 0;
+  m_alpha = 1;
+  m_alpha_cnp_arrived = false;
+  m_first_cnp = true;
+  m_decrease_cnp_arrived = false;
+  m_rpTimeStage = 0;
+  m_nextAvail = Time (0);
+}
 void
 RdmaTxQueuePair::Dcqcn::UpdateAlphaMlx ()
 {
