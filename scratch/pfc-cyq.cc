@@ -562,6 +562,7 @@ CalculateRttBdp ()
               const uint64_t bdp = rtt.GetSeconds () * bandwidth.GetBitRate () / 8;
               const uint64_t queueBdp = queueRtt.GetSeconds () * bandwidth.GetBitRate () / 8;
               pairRtt[src][dst] = rtt;
+              pairBdp[src][dst] = bdp;
               maxBdp = std::max (bdp, maxBdp);
               maxRtt = std::max (rtt, maxRtt);
               maxQueueBdp = std::max (queueBdp, maxQueueBdp);

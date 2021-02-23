@@ -182,7 +182,9 @@ PfcHostPort::Transmit ()
             {
               auto id = IrnTimer (qp, irnSeq);
               qp->m_irn.SetRtxEvent (irnSeq, id);
-              return ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
+              auto p = ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
+              m_nTxBytes += p->GetSize ();
+              return p;
             }
         }
     }
