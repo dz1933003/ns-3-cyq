@@ -141,8 +141,6 @@ public:
    */
   void SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n);
 
-  void UpdateNextSend ();
-
 protected:
   /**
    * PFC host port transmitting logic.
@@ -186,6 +184,7 @@ private:
   uint32_t m_nQueues; //!< queue count of the port (control queue not included)
   bool m_pfcEnabled; //!< PFC enabled
   bool m_dcqcnEnabled; //!< DCQCN enable
+  bool m_sendCnpWithAck; //!send cnp and ack in one packet
 
   std::vector<bool> m_pausedStates; //!< paused state of queues
 
@@ -203,7 +202,7 @@ private:
   uint32_t m_l2RetransmissionMode; //!< L2 retransmission mode
 
   EventId m_nextSend; //< The next send event(RP parameters)
-  Time m_nextAvail; //< Soonest time of next send
+  Time interframeGap;
 
   struct
   {
@@ -212,6 +211,62 @@ private:
     Time rtoLow; //!< Retransmission timeout low
     uint32_t rtoLowThreshold; //!< Retransmission timeout low threshold
   } m_irn; //!< IRN configuration
+
+  //Mellanox's version of DCQCN
+  DataRate m_minRate;		//< Min sending rate
+  double m_g; //feedback weight
+  double m_rateOnFirstCNP; // the fraction of line rate to set on first CNP
+  bool m_EcnClampTgtRate;
+  double m_rpgTimeReset;
+  double m_rateDecreaseInterval;
+  uint32_t m_rpgThreshold;
+  double m_alpha_resume_interval;
+  DataRate m_rai; //< Rate of additive increase
+  DataRate m_rhai; //< Rate of hyper-additive increase
+
+  /**
+   * every fixed time slot, update alpha.
+   */
+  void UpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp);
+  void ScheduleUpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp);
+
+  /** 
+   *  receive a CNP packet call this function
+   */
+  void CnpReceived (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   *  Mellanox's version of rate decrease
+   *  It checks every m_rateDecreaseInterval if CNP arrived (m_decrease_cnp_arrived).
+   *  If so, decrease rate, and reset all rate increase related things
+   */
+  void CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> qp);
+  void ScheduleDecreaseRateMlx (Ptr<RdmaTxQueuePair> qp, uint32_t delta);
+
+  /**
+   *  Mellanox's version of rate increase
+   */
+  void RateIncEventTimerMlx (Ptr<RdmaTxQueuePair> qp);
+  void RateIncEventMlx (Ptr<RdmaTxQueuePair> qp);
+  void FastRecoveryMlx (Ptr<RdmaTxQueuePair> qp);
+  void ActiveIncreaseMlx (Ptr<RdmaTxQueuePair> qp);
+  void HyperIncreaseMlx (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * update qp next send time after send a new packet of qp
+   */
+  void UpdateNextAvail (Ptr<RdmaTxQueuePair> qp, uint32_t pkt_size);
+
+  /**
+   * update send event after receive a packet
+   * \param qp received flow
+   */
+  void UpdateNextSend (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * call this function after changing datarate
+   */
+  void ChangeRate (Ptr<RdmaTxQueuePair> qp, DataRate old_rate);
 
   /**
    * Generate data packet of target transmitting queue pair

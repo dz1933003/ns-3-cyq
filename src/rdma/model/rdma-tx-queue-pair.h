@@ -173,33 +173,6 @@ public:
   {
   public:
     Dcqcn ();
-    /**
-     * every fixed time slot, update alpha.
-     */
-    void UpdateAlphaMlx ();
-    void ScheduleUpdateAlphaMlx ();
-
-    /** 
-     *  receive a CNP packet call this function
-     */
-    void CnpReceived ();
-
-    /**
-     *  Mellanox's version of rate decrease
-     *  It checks every m_rateDecreaseInterval if CNP arrived (m_decrease_cnp_arrived).
-     *  If so, decrease rate, and reset all rate increase related things
-     */
-    void CheckRateDecreaseMlx ();
-    void ScheduleDecreaseRateMlx (uint32_t delta);
-
-    /**
-     *  Mellanox's version of rate increase
-     */
-    void RateIncEventTimerMlx ();
-    void RateIncEventMlx ();
-    void FastRecoveryMlx ();
-    void ActiveIncreaseMlx ();
-    void HyperIncreaseMlx ();
 
     /**
      * set m_devDataRate for the qp
@@ -213,7 +186,12 @@ public:
      */
     DataRate GetRate ();
 
-  private:
+    /**
+     * call after rate change
+     */
+    void ChangeRate ();
+
+  public:
     DataRate m_rate;
     DataRate m_targetRate; //< Target rate
     EventId m_eventUpdateAlpha;
@@ -225,18 +203,9 @@ public:
     uint32_t m_rpTimeStage;
     EventId m_rpTimer;
 
-    DataRate m_minRate; //< Min sending rate
-    double m_g; //feedback weight
-    double m_rateOnFirstCNP; // the fraction of line rate to set on first CNP
-    bool m_EcnClampTgtRate;
-    double m_rpgTimeReset;
-    double m_rateDecreaseInterval;
-    uint32_t m_rpgThreshold;
-    double m_alpha_resume_interval;
-    DataRate m_rai; //< Rate of additive increase
-    DataRate m_rhai;
-
     DataRate m_devDataRate;
+    Time m_nextAvail; // Soonest time of next send
+    uint32_t m_lastPktSize; //last packet size that has been sent
   } m_dcqcn;
 };
 
