@@ -86,7 +86,12 @@ public:
   /**
    * Flag types.
    */
-  enum QbbFlag { NONE, ACK, SACK , CNP };
+  enum QbbFlag { NONE, ACK, SACK };
+
+  /**
+   * CNP packet.
+   */
+  enum CnpFlag { UNCNP, CNP };
 
   /**
    * \brief Get the flags
@@ -99,6 +104,18 @@ public:
    * \param flags the flags for this header
    */
   void SetFlags (uint8_t flags);
+
+  /**
+   * \brief Get the CNP flags
+   * \return the CNP flags for this header
+   */
+  uint8_t GetCnpFlags (void) const;
+
+  /**
+   * \brief Set CNP flags of the header
+   * \param flags the CNP flags for this header
+   */
+  void SetCnpFlags (uint8_t flags);
 
   /**
    * \brief Qbb Flag to string.
@@ -128,6 +145,7 @@ private:
   uint32_t m_irnNackNumber = 0; //!< IRN NACK sequence number
 
   uint8_t m_flags = NONE; //!< NONE/ACK/SACK
+  uint8_t m_cnpFlags = UNCNP; //!<UNCNP/CNP
 };
 
 }; // namespace ns3
