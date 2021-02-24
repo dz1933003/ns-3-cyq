@@ -212,17 +212,19 @@ private:
     uint32_t rtoLowThreshold; //!< Retransmission timeout low threshold
   } m_irn; //!< IRN configuration
 
-  //Mellanox's version of DCQCN
-  DataRate m_minRate;		//< Min sending rate
-  double m_g; //feedback weight
-  double m_rateOnFirstCNP; // the fraction of line rate to set on first CNP
-  bool m_EcnClampTgtRate;
-  double m_rpgTimeReset;
-  double m_rateDecreaseInterval;
-  uint32_t m_rpgThreshold;
-  double m_alpha_resume_interval;
-  DataRate m_rai; //< Rate of additive increase
-  DataRate m_rhai; //< Rate of hyper-additive increase
+  struct
+  {
+    DataRate m_minRate; //< Min sending rate
+    double m_g; //feedback weight
+    double m_rateOnFirstCNP; // the fraction of line rate to set on first CNP
+    bool m_EcnClampTgtRate;
+    double m_rpgTimeReset;
+    double m_rateDecreaseInterval;
+    uint32_t m_rpgThreshold;
+    double m_alpha_resume_interval;
+    DataRate m_rai; //< Rate of additive increase
+    DataRate m_rhai; //< Rate of hyper-additive increase
+  } m_dcqcn; //!<DCQCN configuration
 
   /**
    * every fixed time slot, update alpha.

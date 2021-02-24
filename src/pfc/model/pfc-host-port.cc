@@ -689,11 +689,11 @@ PfcHostPort::UpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp)
 {
   if (qp->m_dcqcn.m_alpha_cnp_arrived)
     {
-      qp->m_dcqcn.m_alpha = (1 - m_g) * qp->m_dcqcn.m_alpha + m_g; //binary feedback
+      qp->m_dcqcn.m_alpha = (1 - m_dcqcn.m_g) * qp->m_dcqcn.m_alpha + m_dcqcn.m_g; //binary feedback
     }
   else
     {
-      qp->m_dcqcn.m_alpha = (1 - m_g) * qp->m_dcqcn.m_alpha; //binary feedback
+      qp->m_dcqcn.m_alpha = (1 - m_dcqcn.m_g) * qp->m_dcqcn.m_alpha; //binary feedback
     }
   qp->m_dcqcn.m_alpha_cnp_arrived = false; // clear the CNP_arrived bit
   ScheduleUpdateAlphaMlx (qp);
@@ -702,7 +702,7 @@ PfcHostPort::UpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp)
 void
 PfcHostPort::ScheduleUpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp)
 {
-  qp->m_dcqcn.m_eventUpdateAlpha = Simulator::Schedule (MicroSeconds (m_alpha_resume_interval),
+  qp->m_dcqcn.m_eventUpdateAlpha = Simulator::Schedule (MicroSeconds (m_dcqcn.m_alpha_resume_interval),
                                                         &PfcHostPort::UpdateAlphaMlx, this, qp);
 }
 
@@ -722,7 +722,7 @@ PfcHostPort::CnpReceived (Ptr<RdmaTxQueuePair> qp)
       ScheduleDecreaseRateMlx (qp, 1); // add 1 ns to make sure rate decrease is after alpha update
       // set rate on first CNP
       qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_rate =
-          m_rateOnFirstCNP * qp->m_dcqcn.m_rate.GetBitRate ();
+          m_dcqcn.m_rateOnFirstCNP * qp->m_dcqcn.m_rate.GetBitRate ();
       qp->m_dcqcn.m_first_cnp = false;
     }
 }
@@ -734,7 +734,7 @@ PfcHostPort::CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> qp)
   if (qp->m_dcqcn.m_decrease_cnp_arrived)
     {
       bool clamp = true;
-      if (!m_EcnClampTgtRate)
+      if (!m_dcqcn.m_EcnClampTgtRate)
         {
           if (qp->m_dcqcn.m_rpTimeStage == 0)
             clamp = false;
@@ -743,13 +743,13 @@ PfcHostPort::CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> qp)
         qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_rate;
       ChangeRate (qp, qp->m_dcqcn.m_rate);
       qp->m_dcqcn.m_rate =
-          std::max ((double) m_minRate.GetBitRate (),
+          std::max ((double) m_dcqcn.m_minRate.GetBitRate (),
                     qp->m_dcqcn.m_rate.GetBitRate () * (1 - qp->m_dcqcn.m_alpha / 2));
       // reset rate increase related things
       qp->m_dcqcn.m_rpTimeStage = 0;
       qp->m_dcqcn.m_decrease_cnp_arrived = false;
       Simulator::Cancel (qp->m_dcqcn.m_rpTimer);
-      qp->m_dcqcn.m_rpTimer = Simulator::Schedule (MicroSeconds (m_rpgTimeReset),
+      qp->m_dcqcn.m_rpTimer = Simulator::Schedule (MicroSeconds (m_dcqcn.m_rpgTimeReset),
                                                    &PfcHostPort::RateIncEventTimerMlx, this, qp);
     }
 }
@@ -758,14 +758,14 @@ void
 PfcHostPort::ScheduleDecreaseRateMlx (Ptr<RdmaTxQueuePair> qp, uint32_t delta)
 {
   qp->m_dcqcn.m_eventDecreaseRate =
-      Simulator::Schedule (MicroSeconds (m_rateDecreaseInterval) + NanoSeconds (delta),
+      Simulator::Schedule (MicroSeconds (m_dcqcn.m_rateDecreaseInterval) + NanoSeconds (delta),
                            &PfcHostPort::CheckRateDecreaseMlx, this, qp);
 }
 
 void
 PfcHostPort::RateIncEventTimerMlx (Ptr<RdmaTxQueuePair> qp)
 {
-  qp->m_dcqcn.m_rpTimer = Simulator::Schedule (MicroSeconds (m_rpgTimeReset),
+  qp->m_dcqcn.m_rpTimer = Simulator::Schedule (MicroSeconds (m_dcqcn.m_rpgTimeReset),
                                                &PfcHostPort::RateIncEventTimerMlx, this, qp);
   RateIncEventMlx (qp);
   qp->m_dcqcn.m_rpTimeStage++;
@@ -774,11 +774,11 @@ void
 PfcHostPort::RateIncEventMlx (Ptr<RdmaTxQueuePair> qp)
 {
   // check which increase phase: fast recovery, active increase, hyper increase
-  if (qp->m_dcqcn.m_rpTimeStage < m_rpgThreshold)
+  if (qp->m_dcqcn.m_rpTimeStage < m_dcqcn.m_rpgThreshold)
     { // fast recovery
       FastRecoveryMlx (qp);
     }
-  else if (qp->m_dcqcn.m_rpTimeStage == m_rpgThreshold)
+  else if (qp->m_dcqcn.m_rpTimeStage == m_dcqcn.m_rpgThreshold)
     { // active increase
       ActiveIncreaseMlx (qp);
     }
@@ -800,7 +800,7 @@ void
 PfcHostPort::ActiveIncreaseMlx (Ptr<RdmaTxQueuePair> qp)
 {
   // increate rate
-  qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_targetRate.GetBitRate () + m_rai.GetBitRate ();
+  qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_targetRate.GetBitRate () + m_dcqcn.m_rai.GetBitRate ();
   if (qp->m_dcqcn.m_targetRate > qp->m_dcqcn.m_devDataRate)
     qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_devDataRate;
   ChangeRate (qp, qp->m_dcqcn.m_rate);
@@ -812,7 +812,7 @@ void
 PfcHostPort::HyperIncreaseMlx (Ptr<RdmaTxQueuePair> qp)
 {
   // increate rate
-  qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_targetRate.GetBitRate () + m_rhai.GetBitRate ();
+  qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_targetRate.GetBitRate () + m_dcqcn.m_rhai.GetBitRate ();
   if (qp->m_dcqcn.m_targetRate > qp->m_dcqcn.m_devDataRate)
     qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_devDataRate;
   ChangeRate (qp, qp->m_dcqcn.m_rate);
