@@ -741,6 +741,7 @@ PfcHostPort::CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> qp)
         }
       if (clamp)
         qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_rate;
+      ChangeRate (qp, qp->m_dcqcn.m_rate);
       qp->m_dcqcn.m_rate =
           std::max ((double) m_minRate.GetBitRate (),
                     qp->m_dcqcn.m_rate.GetBitRate () * (1 - qp->m_dcqcn.m_alpha / 2));
@@ -764,8 +765,8 @@ PfcHostPort::ScheduleDecreaseRateMlx (Ptr<RdmaTxQueuePair> qp, uint32_t delta)
 void
 PfcHostPort::RateIncEventTimerMlx (Ptr<RdmaTxQueuePair> qp)
 {
-  qp->m_dcqcn.m_rpTimer =
-      Simulator::Schedule (MicroSeconds (m_rpgTimeReset), &PfcHostPort::RateIncEventTimerMlx, this, qp);
+  qp->m_dcqcn.m_rpTimer = Simulator::Schedule (MicroSeconds (m_rpgTimeReset),
+                                               &PfcHostPort::RateIncEventTimerMlx, this, qp);
   RateIncEventMlx (qp);
   qp->m_dcqcn.m_rpTimeStage++;
 }
@@ -790,6 +791,7 @@ PfcHostPort::RateIncEventMlx (Ptr<RdmaTxQueuePair> qp)
 void
 PfcHostPort::FastRecoveryMlx (Ptr<RdmaTxQueuePair> qp)
 {
+  ChangeRate (qp, qp->m_dcqcn.m_rate);
   qp->m_dcqcn.m_rate =
       (qp->m_dcqcn.m_rate.GetBitRate () / 2) + (qp->m_dcqcn.m_targetRate.GetBitRate () / 2);
 }
@@ -801,6 +803,7 @@ PfcHostPort::ActiveIncreaseMlx (Ptr<RdmaTxQueuePair> qp)
   qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_targetRate.GetBitRate () + m_rai.GetBitRate ();
   if (qp->m_dcqcn.m_targetRate > qp->m_dcqcn.m_devDataRate)
     qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_devDataRate;
+  ChangeRate (qp, qp->m_dcqcn.m_rate);
   qp->m_dcqcn.m_rate =
       (qp->m_dcqcn.m_rate.GetBitRate () / 2) + (qp->m_dcqcn.m_targetRate.GetBitRate () / 2);
 }
@@ -812,6 +815,7 @@ PfcHostPort::HyperIncreaseMlx (Ptr<RdmaTxQueuePair> qp)
   qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_targetRate.GetBitRate () + m_rhai.GetBitRate ();
   if (qp->m_dcqcn.m_targetRate > qp->m_dcqcn.m_devDataRate)
     qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_devDataRate;
+  ChangeRate (qp, qp->m_dcqcn.m_rate);
   qp->m_dcqcn.m_rate =
       (qp->m_dcqcn.m_rate.GetBitRate () / 2) + (qp->m_dcqcn.m_targetRate.GetBitRate () / 2);
 }
