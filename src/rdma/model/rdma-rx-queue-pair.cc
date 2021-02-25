@@ -156,22 +156,15 @@ RdmaRxQueuePair::Irn::IsReceived (const uint32_t &seq) const
   return GetIrnState (seq) == IRN_STATE::ACK;
 }
 
-void
-RdmaRxQueuePair::Dcqcn::CheckIfSendCNP ()
-{
-  m_ecnArrived = false;
-  Simulator::Schedule (Time (m_sendCnpInterval), &RdmaRxQueuePair::Dcqcn::CheckIfSendCNP, this);
-}
-
 bool
 RdmaRxQueuePair::Dcqcn::SendCNP ()
 {
-  if (m_ecnArrived == false)
+  if (m_sendCnpInterval < Simulator::Now ())
     {
-      m_ecnArrived = true;
-      Simulator::Schedule (Time (m_sendCnpInterval), &RdmaRxQueuePair::Dcqcn::CheckIfSendCNP, this);
+      m_sendCnpInterval = Simulator::Now () + m_sendCnpInterval;
       return true;
     }
+
   return false;
 }
 

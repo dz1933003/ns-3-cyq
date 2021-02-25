@@ -136,19 +136,13 @@ public:
   {
   public:
     /**
-     * every m_sendCnpInterval send a CNP to source
-     */
-    void CheckIfSendCNP ();
-
-    /**
      * when destination receive a packet with ecn setted judge if need to send a CNP packet to source
      * if need return true
      */
     bool SendCNP ();
 
   private:
-    double m_sendCnpInterval; //!< at most one CNP packet is generate in m_sendCnpInterval us
-    bool m_ecnArrived; //!< when its value is true send CNP to the source
+    Time m_sendCnpInterval = MicroSeconds(50.0); //!< at most one CNP packet is generate in m_sendCnpInterval us
   } m_dcqcn;
 };
 
