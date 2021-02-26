@@ -207,6 +207,16 @@ public:
     Time m_nextAvail; // Soonest time of next send
     uint32_t m_lastPktSize; //last packet size that has been sent
   } m_dcqcn;
+
+  class B20_B2N
+  {
+  public:
+    void Acknowledge (uint64_t ack);
+
+  public:
+    uint64_t snd_nxt = 0;
+    uint64_t snd_una = 0; // next seq to send, the highest unacked seq
+  } m_b20_b2n;
 };
 
 } // namespace ns3

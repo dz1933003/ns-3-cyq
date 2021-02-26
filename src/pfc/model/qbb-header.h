@@ -84,9 +84,20 @@ public:
   void SetIrnNackNumber (uint32_t ackNumber);
 
   /**
+   * \return the sequence number for this header
+   */
+  uint32_t GetSeqNumber (void) const;
+
+  /**
+   * \brief Set the sequence Number
+   * \param seq the sequence number for this header
+   */
+  void SetSeqNumber (uint32_t seq);
+
+  /**
    * Flag types.
    */
-  enum QbbFlag { NONE, ACK, SACK };
+  enum QbbFlag { NONE, ACK, SACK ,NACK};
 
   /**
    * CNP packet.

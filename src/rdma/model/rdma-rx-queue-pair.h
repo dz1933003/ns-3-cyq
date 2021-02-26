@@ -142,8 +142,19 @@ public:
     bool SendCNP ();
 
   private:
-    Time m_sendCnpInterval = MicroSeconds(50.0); //!< at most one CNP packet is generate in m_sendCnpInterval us
+    Time m_sendCnpInterval =
+        MicroSeconds (50.0); //!< at most one CNP packet is generate in m_sendCnpInterval us
   } m_dcqcn;
+
+  class B20_B2N
+  {
+  public:
+    uint32_t m_receiverNextExpectedSeq = 0;
+    uint32_t m_lastNACK = 0;
+    Time m_nackTimer = Time (0);
+    uint32_t m_milestone_rx = 0;
+
+  } m_b20_b2n;
 };
 
 } // namespace ns3

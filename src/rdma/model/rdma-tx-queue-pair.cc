@@ -255,4 +255,13 @@ RdmaTxQueuePair::Dcqcn::GetRate ()
   return m_rate;
 }
 
+void
+RdmaTxQueuePair::B20_B2N::Acknowledge (uint64_t ack)
+{
+  if (ack > snd_una)
+    {
+      snd_una = ack;
+    }
+}
+
 } // namespace ns3

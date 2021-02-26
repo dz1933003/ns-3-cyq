@@ -201,9 +201,6 @@ private:
 
   uint32_t m_l2RetransmissionMode; //!< L2 retransmission mode
 
-  EventId m_nextSend; //< The next send event(RP parameters)
-  Time interframeGap;
-
   struct
   {
     uint32_t maxBitmapSize; //!< Maximum bitmap size
@@ -214,16 +211,27 @@ private:
 
   struct
   {
-    DataRate m_minRate; //< Min sending rate
-    double m_g; //feedback weight
-    double m_rateOnFirstCNP; // the fraction of line rate to set on first CNP
-    bool m_EcnClampTgtRate;
-    double m_rpgTimeReset;
-    double m_rateDecreaseInterval;
-    uint32_t m_rpgThreshold;
-    double m_alpha_resume_interval;
-    DataRate m_rai; //< Rate of additive increase
-    DataRate m_rhai; //< Rate of hyper-additive increase
+    double m_nack_interval;
+    uint32_t m_chunk;
+    uint32_t m_ack_interval; //if = 0 disable ack
+    bool m_backto0;
+  } m_b20_b2n;
+
+  struct
+  {
+    DataRate m_minRate = 100; //< Min sending rate
+    double m_g = 1.0 / 16; //feedback weight
+    double m_rateOnFirstCNP = 1.0; // the fraction of line rate to set on first CNP
+    bool m_EcnClampTgtRate = false;
+    double m_rpgTimeReset = 1500.0;
+    double m_rateDecreaseInterval = 4.0;
+    uint32_t m_rpgThreshold = 5;
+    double m_alpha_resume_interval = 55.0;
+    DataRate m_rai = DataRate ("5Mb/s"); //< Rate of additive increase
+    DataRate m_rhai = DataRate ("50Mb/s"); //< Rate of hyper-additive increase
+
+    EventId m_nextSend; //< The next send event(RP parameters)
+    Time interframeGap = Seconds (0.0);
   } m_dcqcn; //!<DCQCN configuration
 
   /**
@@ -297,6 +305,15 @@ private:
    */
   Ptr<Packet> ReGenData (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq, uint32_t size);
 
+  /**
+   * Generate ACK packet of target transmitting queue pair for B20 B2N
+   *
+   * \param qp queue pair
+   * \param seq ack sequence number of this packet
+   * \param ack if ture send ack else send nack
+   * \return ACK packet
+   */
+  Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, bool ack);
   /**
    * Generate ACK packet of target transmitting queue pair
    *
