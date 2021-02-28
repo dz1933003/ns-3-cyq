@@ -251,6 +251,7 @@ DpskNetDevice::ResetImplementation ()
   ResetTransmitInterceptor ();
   ResetSendInterceptor ();
   ResetReceiveInterceptor ();
+  ResetUpdateNextAvail ();
 }
 
 void
@@ -279,6 +280,20 @@ DpskNetDevice::ResetSendInterceptor ()
 {
   NS_LOG_FUNCTION_NOARGS ();
   m_sendInterceptor.Nullify ();
+}
+
+void
+DpskNetDevice::SetUpdateNextAvail (UpdateNextAvail h)
+{
+  NS_LOG_FUNCTION (&h);
+  m_updateNextAvail = h;
+}
+
+void
+DpskNetDevice::ResetUpdateNextAvail ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  m_updateNextAvail.Nullify ();
 }
 
 void
@@ -364,7 +379,9 @@ DpskNetDevice::TransmitRequest ()
     {
       m_snifferTrace (p);
       m_promiscSnifferTrace (p);
-      return TransmitStart (p);
+      bool result = TransmitStart (p);
+      m_updateNextAvail(p,m_tInterframeGap);
+      return result;
     }
 }
 

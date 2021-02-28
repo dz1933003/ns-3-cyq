@@ -212,6 +212,23 @@ public:
   void ResetSendInterceptor ();
 
   /**
+   *  callback for sent a packet,update nextAvail
+   */
+  typedef Callback<void, Ptr<Packet>, Time> UpdateNextAvail;
+
+  /**
+   * set update callback.
+   * 
+   * \param the update handler
+   */
+  void SetUpdateNextAvail (UpdateNextAvail h);
+
+  /**
+   * clean the update callback.
+   */
+  void ResetUpdateNextAvail ();
+
+  /**
    * Callback type for receiving.
    */
   typedef Callback<bool, Ptr<Packet>> ReceiveInterceptor;
@@ -389,6 +406,7 @@ private:
   TransmitInterceptor m_txInterceptor; //!< device self-drive transmit callback
   SendInterceptor m_sendInterceptor; //!< node notified transmit callback
   ReceiveInterceptor m_rxInterceptor; //!< receive post-process callback
+  UpdateNextAvail m_updateNextAvail; //!< after send update nextAvail
 
   Ptr<DpskNetDeviceImpl> m_impl; //!< net device implementation
 
