@@ -153,6 +153,7 @@ main (int argc, char *argv[])
               dev->SetImplementation (impl);
               impl->SetupQueues (nQueue);
               impl->EnablePfc (host.contains ("PfcEnable") ? host["PfcEnable"].get<bool> () : true);
+              impl->EnableDcqcn (host.contains ("DcqcnEnable") ? host["DcqcnEnable"].get<bool> () : false);
               // L2 retransmission mode settings
               const auto l2RtxMode =
                   host.contains ("L2Retransmission")
@@ -166,6 +167,28 @@ main (int argc, char *argv[])
                   const Time rtoLow (host["L2Retransmission"]["RtoLow"].get<std::string> ());
                   const uint32_t n = host["L2Retransmission"]["RtoLowThreshold"];
                   impl->SetupIrn (size, rtoHigh, rtoLow, n);
+                }
+              else if (l2RtxMode == PfcHostPort::L2_RTX_MODE::B2N)
+                {
+                  const DataRate MinRate =
+                      DataRate (host["L2Retransmission"]["MinRate"].get<std::string> ());
+                  const double G = host["L2Retransmission"]["g"];
+                  const double RateOnFirstCNP = host["L2Retransmission"]["RateOnFirstCNP"];
+                  const bool EcnClampTgtRate = host["L2Retransmission"]["EcnClampTgtRate"];
+                  const double RpgTimeReset = host["L2Retransmission"]["RpgTimeReset"];
+                  const double RateDecreaseInterval =
+                      host["L2Retransmission"]["RateDecreaseInterval"];
+                  const uint32_t RpgThreshold = host["L2Retransmission"]["RpgThreshold"];
+                  const double AlphaResumeInterval =
+                      host["L2Retransmission"]["AlphaResumeInterval"];
+                  const DataRate Rai =
+                      DataRate (host["L2Retransmission"]["Rai"].get<std::string> ());
+                  const DataRate Rhai =
+                      DataRate (host["L2Retransmission"]["Rhai"].get<std::string> ());
+                  const double InterframeGap = host["L2Retransmission"]["InterframeGap"];
+                  impl->SetupDcqcn (MinRate, G, RateOnFirstCNP, EcnClampTgtRate, RpgTimeReset,
+                                    RateDecreaseInterval, RpgThreshold, AlphaResumeInterval, Rai,
+                                    Rhai, InterframeGap);
                 }
               allPorts[node].push_back (dev);
             }

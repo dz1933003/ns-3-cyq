@@ -4,8 +4,8 @@
       0
     ],
     "Ecn": {
-      "kMin": "8MiB",
-      "kMax": "10MiB",
+      "kMin": "3MiB",
+      "kMax": "5MiB",
       "pMax": 1
     },
     "Headroom": "1MiB",
