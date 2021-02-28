@@ -151,9 +151,11 @@ main (int argc, char *argv[])
               node->AddDevice (dev);
               const Ptr<PfcHostPort> impl = CreateObject<PfcHostPort> ();
               dev->SetImplementation (impl);
+              dev->SetUpdateNextAvail (MakeCallback (&PfcHostPort::UpdateNextAvail, impl));
               impl->SetupQueues (nQueue);
               impl->EnablePfc (host.contains ("PfcEnable") ? host["PfcEnable"].get<bool> () : true);
-              impl->EnableDcqcn (host.contains ("DcqcnEnable") ? host["DcqcnEnable"].get<bool> () : false);
+              impl->EnableDcqcn (host.contains ("DcqcnEnable") ? host["DcqcnEnable"].get<bool> ()
+                                                               : false);
               // L2 retransmission mode settings
               const auto l2RtxMode =
                   host.contains ("L2Retransmission")
@@ -185,10 +187,9 @@ main (int argc, char *argv[])
                       DataRate (host["L2Retransmission"]["Rai"].get<std::string> ());
                   const DataRate Rhai =
                       DataRate (host["L2Retransmission"]["Rhai"].get<std::string> ());
-                  const double InterframeGap = host["L2Retransmission"]["InterframeGap"];
                   impl->SetupDcqcn (MinRate, G, RateOnFirstCNP, EcnClampTgtRate, RpgTimeReset,
                                     RateDecreaseInterval, RpgThreshold, AlphaResumeInterval, Rai,
-                                    Rhai, InterframeGap);
+                                    Rhai);
                 }
               allPorts[node].push_back (dev);
             }

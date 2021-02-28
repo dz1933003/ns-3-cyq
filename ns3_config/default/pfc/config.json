@@ -11,21 +11,19 @@
       ],
       "PortNumber": 1,
       "PfcEnable": true,
-      "DcqcnEnable":true,
+      "DcqcnEnable": true,
       "L2Retransmission": {
         "Mode": "B2N",
-        "MinRate":"100Mb/s",
-        "g":0.0625,
-        "RateOnFirstCNP":1,
-        "EcnClampTgtRate":false,
-        "RpgTimeReset":1500.0,
-        "RateDecreaseInterval":4.0,
-        "RpgThreshold":5,
-        "AlphaResumeInterval":1.0,
-        "Rai":"50Mb/s",
-        "Rhai":"100Mb/s",
-        "InterframeGap":0.0
-
+        "MinRate": "100Mb/s",
+        "g": 0.0625,
+        "RateOnFirstCNP": 1,
+        "EcnClampTgtRate": false,
+        "RpgTimeReset": 1500.0,
+        "RateDecreaseInterval": 4.0,
+        "RpgThreshold": 5,
+        "AlphaResumeInterval": 1.0,
+        "Rai": "50Mb/s",
+        "Rhai": "100Mb/s"
       }
     }
   ],
