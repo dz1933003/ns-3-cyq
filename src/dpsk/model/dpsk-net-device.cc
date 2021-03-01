@@ -380,7 +380,7 @@ DpskNetDevice::TransmitRequest ()
       m_snifferTrace (p);
       m_promiscSnifferTrace (p);
       bool result = TransmitStart (p);
-      m_updateNextAvail(p,m_tInterframeGap);
+      m_updateNextAvail (p, m_tInterframeGap);
       return result;
     }
 }
@@ -419,6 +419,7 @@ DpskNetDevice::TransmitComplete (void)
       m_snifferTrace (p);
       m_promiscSnifferTrace (p);
       TransmitStart (p);
+      m_updateNextAvail (p, m_tInterframeGap);
     }
   else if (m_txMode == ACTIVE)
     {
