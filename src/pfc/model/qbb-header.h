@@ -97,7 +97,7 @@ public:
   /**
    * Flag types.
    */
-  enum QbbFlag { NONE, ACK, SACK ,NACK};
+  enum QbbFlag { NONE, ACK, SACK, NACK };
 
   /**
    * CNP packet.
@@ -136,6 +136,13 @@ public:
   static std::string FlagsToString (const uint8_t &flags);
 
   /**
+   * \brief Qbb Flag to string.
+   * \param flags the flags for this header
+   * \return name of the flags
+   */
+  static std::string CnpFlagsToString (const uint8_t &flags);
+
+  /**
    * \brief Get the type ID.
    * \return the object TypeId
    */
@@ -147,16 +154,16 @@ public:
   virtual uint32_t Deserialize (Buffer::Iterator start);
 
 private:
-  uint16_t m_sourcePort = 0; //!< Source port
-  uint16_t m_destinationPort = 0; //!< Destination port
+  uint16_t m_sourcePort; //!< Source port
+  uint16_t m_destinationPort; //!< Destination port
 
-  uint32_t m_sequenceNumber = 0; //!< Sequence Number (for DCQCN)
+  uint32_t m_sequenceNumber; //!< Sequence Number (for DCQCN)
 
-  uint32_t m_irnAckNumber = 0; //!< IRN ACK/SACK sequence Number
-  uint32_t m_irnNackNumber = 0; //!< IRN NACK sequence number
+  uint32_t m_irnAckNumber; //!< IRN ACK/SACK sequence Number
+  uint32_t m_irnNackNumber; //!< IRN NACK sequence number
 
-  uint8_t m_flags = NONE; //!< NONE/ACK/SACK
-  uint8_t m_cnpFlags = UNCNP; //!<UNCNP/CNP
+  uint8_t m_flags; //!< NONE/ACK/SACK/NACK
+  uint8_t m_cnpFlags; //!<UNCNP/CNP
 };
 
 }; // namespace ns3

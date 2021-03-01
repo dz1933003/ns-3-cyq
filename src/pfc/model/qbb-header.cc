@@ -84,6 +84,18 @@ QbbHeader::SetIrnNackNumber (uint32_t ackNumber)
   m_irnNackNumber = ackNumber;
 }
 
+uint32_t
+QbbHeader::GetSeqNumber (void) const
+{
+  return m_sequenceNumber;
+}
+
+void
+QbbHeader::SetSeqNumber (uint32_t seq)
+{
+  m_sequenceNumber = seq;
+}
+
 uint8_t
 QbbHeader::GetFlags (void) const
 {
@@ -119,6 +131,22 @@ QbbHeader::FlagsToString (const uint8_t &flags)
       return "ACK";
     case SACK:
       return "SACK";
+    case NACK:
+      return "NACK";
+    default:
+      return "UNKNOWN";
+    }
+}
+
+std::string
+QbbHeader::CnpFlagsToString (const uint8_t &flags)
+{
+  switch (flags)
+    {
+    case UNCNP:
+      return "UNCNP";
+    case CNP:
+      return "CNP";
     default:
       return "UNKNOWN";
     }
@@ -141,15 +169,16 @@ void
 QbbHeader::Print (std::ostream &os) const
 {
   NS_LOG_FUNCTION (&os);
-  os << FlagsToString (m_flags) << " IrnAck=" << m_irnAckNumber << " IrnNack=" << m_irnNackNumber
-     << " " << m_sourcePort << " > " << m_destinationPort;
+  os << FlagsToString (m_flags) << CnpFlagsToString (m_cnpFlags) << " IrnAck=" << m_irnAckNumber
+     << " IrnNack=" << m_irnNackNumber << " " << m_sourcePort << " > " << m_destinationPort;
 }
 
 uint32_t
 QbbHeader::GetSerializedSize (void) const
 {
   return sizeof (m_sourcePort) + sizeof (m_destinationPort) + sizeof (m_irnAckNumber) +
-         sizeof (m_irnNackNumber) + sizeof (m_flags) + sizeof (m_cnpFlags);
+         sizeof (m_irnNackNumber) + sizeof (m_sequenceNumber) + sizeof (m_flags) +
+         sizeof (m_cnpFlags);
 }
 
 void
@@ -160,6 +189,7 @@ QbbHeader::Serialize (Buffer::Iterator start) const
   start.WriteU16 (m_destinationPort);
   start.WriteU32 (m_irnAckNumber);
   start.WriteU32 (m_irnNackNumber);
+  start.WriteU32 (m_sequenceNumber);
   start.WriteU8 (m_flags);
   start.WriteU8 (m_cnpFlags);
 }
@@ -172,6 +202,7 @@ QbbHeader::Deserialize (Buffer::Iterator start)
   m_destinationPort = start.ReadU16 ();
   m_irnAckNumber = start.ReadU32 ();
   m_irnNackNumber = start.ReadU32 ();
+  m_sequenceNumber = start.ReadU32 ();
   m_flags = start.ReadU8 ();
   m_cnpFlags = start.ReadU8 ();
   return GetSerializedSize ();
