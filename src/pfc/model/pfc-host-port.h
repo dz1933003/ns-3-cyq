@@ -141,6 +141,15 @@ public:
    */
   void SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n);
 
+  void SetupDcqcn (DataRate minRate, double g, double rateOnFirstCNP, bool ecnClampTgtRate,
+                   double rpgTimeReset, double rateDecreaseInterval, uint32_t rpgThreshold,
+                   double alphaResumeInterval, DataRate rai, DataRate rhai);
+
+  /**
+   * update qp next send time after send a new packet of qp
+   */
+  void UpdateNextAvail (Ptr<Packet> p, Time interFrameGap);
+
 protected:
   /**
    * PFC host port transmitting logic.
@@ -211,27 +220,25 @@ private:
 
   struct
   {
-    double m_nack_interval;
-    uint32_t m_chunk;
-    uint32_t m_ack_interval; //if = 0 disable ack
-    bool m_backto0;
+    double m_nack_interval = 1;
+    uint32_t m_ack_interval = 1; //if = 0 disable ack
+    bool m_backto0 = false;
   } m_b20_b2n;
 
   struct
   {
-    DataRate m_minRate = 100; //< Min sending rate
-    double m_g = 1.0 / 16; //feedback weight
-    double m_rateOnFirstCNP = 1.0; // the fraction of line rate to set on first CNP
-    bool m_EcnClampTgtRate = false;
-    double m_rpgTimeReset = 1500.0;
-    double m_rateDecreaseInterval = 4.0;
-    uint32_t m_rpgThreshold = 5;
-    double m_alpha_resume_interval = 55.0;
-    DataRate m_rai = DataRate ("5Mb/s"); //< Rate of additive increase
-    DataRate m_rhai = DataRate ("50Mb/s"); //< Rate of hyper-additive increase
+    DataRate m_minRate; //< Min sending rate
+    double m_g; //feedback weight
+    double m_rateOnFirstCNP; // the fraction of line rate to set on first CNP
+    bool m_EcnClampTgtRate;
+    double m_rpgTimeReset;
+    double m_rateDecreaseInterval;
+    uint32_t m_rpgThreshold;
+    double m_alpha_resume_interval;
+    DataRate m_rai; //< Rate of additive increase
+    DataRate m_rhai; //< Rate of hyper-additive increase
 
     EventId m_nextSend; //< The next send event(RP parameters)
-    Time interframeGap = Seconds (0.0);
   } m_dcqcn; //!<DCQCN configuration
 
   /**
@@ -261,22 +268,6 @@ private:
   void FastRecoveryMlx (Ptr<RdmaTxQueuePair> qp);
   void ActiveIncreaseMlx (Ptr<RdmaTxQueuePair> qp);
   void HyperIncreaseMlx (Ptr<RdmaTxQueuePair> qp);
-
-  /**
-   * update qp next send time after send a new packet of qp
-   */
-  void UpdateNextAvail (Ptr<RdmaTxQueuePair> qp, uint32_t pkt_size);
-
-  /**
-   * update send event after receive a packet
-   * \param qp received flow
-   */
-  void UpdateNextSend (Ptr<RdmaTxQueuePair> qp);
-
-  /**
-   * call this function after changing datarate
-   */
-  void ChangeRate (Ptr<RdmaTxQueuePair> qp, DataRate old_rate);
 
   /**
    * Generate data packet of target transmitting queue pair

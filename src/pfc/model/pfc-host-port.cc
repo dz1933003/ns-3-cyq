@@ -145,6 +145,10 @@ PfcHostPort::L2RtxModeStringToNum (const std::string &mode)
     return NONE;
   else if (mode == "IRN")
     return IRN;
+  else if (mode == "B20")
+    return B20;
+  else if (mode == "B2N")
+    return B2N;
   else
     NS_ASSERT_MSG (false, "PfcHostPort::L2RtxModeStringToNum: "
                           "Unknown L2 retransmission mode");
@@ -158,6 +162,26 @@ PfcHostPort::SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n)
   m_irn.rtoHigh = rtoh;
   m_irn.rtoLow = rtol;
   m_irn.rtoLowThreshold = n;
+}
+
+void
+PfcHostPort::SetupDcqcn (DataRate minRate, double g, double rateOnFirstCNP, bool ecnClampTgtRate,
+                         double rpgTimeReset, double rateDecreaseInterval, uint32_t rpgThreshold,
+                         double alphaResumeInterval, DataRate rai, DataRate rhai)
+{
+  NS_LOG_FUNCTION (minRate << g << rateOnFirstCNP << ecnClampTgtRate << rpgTimeReset
+                           << rateDecreaseInterval << rpgThreshold << alphaResumeInterval << rai
+                           << rhai);
+  m_dcqcn.m_minRate = minRate;
+  m_dcqcn.m_g = g;
+  m_dcqcn.m_rateOnFirstCNP = rateOnFirstCNP;
+  m_dcqcn.m_EcnClampTgtRate = ecnClampTgtRate;
+  m_dcqcn.m_rpgTimeReset = rpgThreshold;
+  m_dcqcn.m_rateDecreaseInterval = rateDecreaseInterval;
+  m_dcqcn.m_rpgThreshold = rpgThreshold;
+  m_dcqcn.m_alpha_resume_interval = alphaResumeInterval;
+  m_dcqcn.m_rai = rai;
+  m_dcqcn.m_rhai = rhai;
 }
 
 Ptr<Packet>
@@ -190,12 +214,6 @@ PfcHostPort::Transmit ()
             {
               auto id = IrnTimer (qp, irnSeq);
               qp->m_irn.SetRtxEvent (irnSeq, id);
-              //update next send time m_nextAvail
-              if (m_dcqcnEnabled)
-                {
-                  UpdateNextAvail (qp, qp->m_irn.GetPayloadSize (irnSeq));
-                  qp->m_dcqcn.m_lastPktSize = qp->m_irn.GetPayloadSize (irnSeq);
-                }
               return ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
             }
         }
@@ -212,9 +230,16 @@ PfcHostPort::Transmit ()
       // 2. QP is not finished.
       // 3. QP is started.
       // 4. In IRN mode the sending window is not full.
+      // 5. In B20 or B2N mode the sending window is not full.
+      // 6. In DCQCN available now
       if ((m_pausedStates[qp->m_priority] == false || m_pfcEnabled == false) &&
           qp->IsFinished () == false && qp->m_startTime <= Simulator::Now () &&
-          (m_l2RetransmissionMode != IRN || qp->m_irn.GetWindowSize () < m_irn.maxBitmapSize))
+          (m_l2RetransmissionMode != IRN ||
+           (m_l2RetransmissionMode == IRN && qp->m_irn.GetWindowSize () < m_irn.maxBitmapSize)) &&
+          ((m_l2RetransmissionMode != B2N) ||
+           ((m_l2RetransmissionMode == B2N) && !qp->m_b20_b2n.IsWinBound ())) &&
+          (m_dcqcnEnabled == false ||
+           Simulator::Now ().GetTimeStep () >= qp->m_dcqcn.m_nextAvail.GetTimeStep ()))
         {
           m_lastQpIndex = qIdx;
           uint32_t irnSeq;
@@ -236,16 +261,28 @@ PfcHostPort::Transmit ()
               auto id = IrnTimer (qp, irnSeq);
               qp->m_irn.SetRtxEvent (irnSeq, id);
             }
-          //update next send time m_nextAvail
-          if (m_dcqcnEnabled)
-            {
-              UpdateNextAvail (qp, p->GetSize ());
-              qp->m_dcqcn.m_lastPktSize = p->GetSize ();
-            }
           return p;
         }
     }
-
+  if (m_dcqcnEnabled) //nothing to send, possibly due to qcn flow control, if so reschedule sending
+    {
+      Time t = Simulator::GetMaximumSimulationTime ();
+      for (uint32_t i = 0; i < flowCnt; i++)
+        {
+          auto qp = m_txQueuePairs[i];
+          if (qp->IsFinished ())
+            {
+              continue;
+            }
+          t = Min (qp->m_dcqcn.m_nextAvail, t);
+        }
+      if (m_dcqcn.m_nextSend.IsExpired () && t < Simulator::GetMaximumSimulationTime () &&
+          t > Simulator::Now ())
+        {
+          m_dcqcn.m_nextSend =
+              Simulator::Schedule (t - Simulator::Now (), &DpskNetDevice::TriggerTransmit, m_dev);
+        }
+    }
   // No packet to send
   return 0;
 }
@@ -296,8 +333,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t qIndex = (pfcQIndex >= m_nQueues) ? m_nQueues : pfcQIndex;
           m_pausedStates[qIndex] = false;
           m_pfcRxTrace (m_dev, qIndex, PfcHeader::Resume, pfcHeader.GetTime ());
-          if (!m_dcqcnEnabled)
-            m_dev->TriggerTransmit (); // Trigger device transmitting
+          m_dev->TriggerTransmit (); // Trigger device transmitting
           return false; // Do not forward up to node
         }
       else
@@ -318,6 +354,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
       uint16_t dPort = qbb.GetDestinationPort ();
       uint32_t irnAck = qbb.GetIrnAckNumber ();
       uint32_t irnNack = qbb.GetIrnNackNumber ();
+      uint32_t seq = qbb.GetSeqNumber ();
       uint8_t flags = qbb.GetFlags ();
       uint8_t cnpFlags = qbb.GetCnpFlags ();
       uint16_t dscp = ip.GetDscp ();
@@ -328,7 +365,9 @@ PfcHostPort::Receive (Ptr<Packet> p)
         {
           //DCQCN ACN/SACK with CNP send together
           if (m_dcqcnEnabled && ip.GetEcn () == ns3::Ipv4Header::EcnType::ECN_CE)
-            m_sendCnpWithAck = true;
+            {
+              m_sendCnpWithAck = true;
+            }
           else
             m_sendCnpWithAck = false;
 
@@ -366,8 +405,8 @@ PfcHostPort::Receive (Ptr<Packet> p)
                     }
                   // Send ACK and trigger transmit
                   m_controlQueue.push (GenACK (qp, irnAck));
-                  if (!m_dcqcnEnabled)
-                    m_dev->TriggerTransmit ();
+                  //if (!m_dcqcnEnabled)
+                  m_dev->TriggerTransmit ();
                 }
               else if (irnAck == expectedAck) // expected new packet
                 {
@@ -375,8 +414,8 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   qp->m_irn.UpdateIrnState (irnAck);
                   // Send ACK by retransmit mode and trigger transmit
                   m_controlQueue.push (GenACK (qp, irnAck));
-                  if (!m_dcqcnEnabled)
-                    m_dev->TriggerTransmit ();
+                  //if (!m_dcqcnEnabled)
+                  m_dev->TriggerTransmit ();
                 }
               else // out of order
                 {
@@ -384,8 +423,38 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   qp->m_irn.UpdateIrnState (irnAck);
                   // Send SACK and trigger transmit
                   m_controlQueue.push (GenSACK (qp, irnAck, expectedAck));
-                  if (!m_dcqcnEnabled)
-                    m_dev->TriggerTransmit ();
+                  //if (!m_dcqcnEnabled)
+                  m_dev->TriggerTransmit ();
+                }
+            }
+          else if (m_l2RetransmissionMode == B2N)
+            {
+              qp->m_b20_b2n.m_milestone_rx = m_b20_b2n.m_ack_interval;
+              uint32_t expected = qp->m_b20_b2n.m_receiverNextExpectedSeq;
+              if (seq == expected) //Generate ACK
+                {
+                  qp->m_receivedSize += payloadSize;
+                  qp->m_b20_b2n.m_receiverNextExpectedSeq = expected + payloadSize;
+                  if (qp->m_b20_b2n.m_receiverNextExpectedSeq >= qp->m_b20_b2n.m_milestone_rx)
+                    {
+                      qp->m_b20_b2n.m_milestone_rx += m_b20_b2n.m_ack_interval;
+                      m_controlQueue.push (
+                          GenACK (qp, qp->m_b20_b2n.m_receiverNextExpectedSeq, true));
+                      m_dev->TriggerTransmit ();
+                    }
+                }
+              else if (seq > expected) //Generate NACK
+                {
+                  if (Simulator::Now () >= qp->m_b20_b2n.m_nackTimer ||
+                      qp->m_b20_b2n.m_lastNACK != expected)
+                    {
+                      qp->m_b20_b2n.m_nackTimer =
+                          Simulator::Now () + MicroSeconds (m_b20_b2n.m_nack_interval);
+                      qp->m_b20_b2n.m_lastNACK = expected;
+                      m_controlQueue.push (
+                          GenACK (qp, qp->m_b20_b2n.m_receiverNextExpectedSeq, false));
+                      m_dev->TriggerTransmit ();
+                    }
                 }
             }
           else
@@ -405,17 +474,25 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
           uint32_t index = m_txQueuePairTable[key];
           Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
-          qp->m_irn.AckIrnState (irnAck);
+          if (m_l2RetransmissionMode == IRN)
+            qp->m_irn.AckIrnState (irnAck);
+          if (m_l2RetransmissionMode == B2N)
+            {
+              if (m_b20_b2n.m_ack_interval == 0)
+                std::cout << "ERROR: shouldn't receive ack\n";
+              else
+                {
+                  if (!m_b20_b2n.m_backto0) //B2N
+                    {
+                      qp->m_b20_b2n.Acknowledge (seq);
+                    }
+                }
+            }
           if (cnpFlags == QbbHeader::CnpFlag::CNP)
             {
               CnpReceived (qp);
-              UpdateNextSend (qp);
-              return false;
             }
-          if (m_dcqcnEnabled)
-            UpdateNextSend (qp);
-          else
-            m_dev->TriggerTransmit (); // Because BDP-FC needs to check new bitmap and send
+          m_dev->TriggerTransmit (); // Because BDP-FC needs to check new bitmap and send
           return false; // Not data so no need to send to node
         }
       else if (flags == QbbHeader::SACK)
@@ -433,14 +510,20 @@ PfcHostPort::Receive (Ptr<Packet> p)
           if (cnpFlags == QbbHeader::CnpFlag::CNP)
             {
               CnpReceived (qp);
-              UpdateNextSend (qp);
               return false;
             }
-          if (m_dcqcnEnabled)
-            UpdateNextSend (qp);
-          else
-            m_dev->TriggerTransmit ();
+          m_dev->TriggerTransmit ();
           return false; // Not data so no need to send to node
+        }
+      else if (flags == QbbHeader::NACK)
+        {
+          uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
+          uint32_t index = m_txQueuePairTable[key];
+          Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
+          qp->m_b20_b2n.snd_nxt = qp->m_b20_b2n.snd_una;
+          qp->m_sentSize = qp->m_b20_b2n.snd_nxt;
+          m_dev->TriggerTransmit ();
+          return false;
         }
       else
         {
@@ -485,6 +568,16 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_irnSeq)
       qbb.SetCnpFlags (QbbHeader::CnpFlag::UNCNP);
       qp->m_irn.SendNewPacket (payloadSize); // Update IRN infos
     }
+  else if (m_l2RetransmissionMode == B2N)
+    {
+      uint32_t seq = qp->m_b20_b2n.snd_nxt;
+      o_irnSeq = seq;
+      qbb.SetSeqNumber (seq);
+      qbb.SetFlags (QbbHeader::NONE);
+      qbb.SetCnpFlags (QbbHeader::CnpFlag::UNCNP);
+      qp->m_b20_b2n.snd_nxt += payloadSize;
+      //qp->m_sentSize = qp->m_b20_b2n.snd_nxt;
+    }
   p->AddHeader (qbb);
 
   Ipv4Header ip;
@@ -494,6 +587,46 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_irnSeq)
   ip.SetPayloadSize (p->GetSize ());
   ip.SetTtl (64);
   ip.SetDscp (Ipv4Header::DscpType (qp->m_priority));
+  p->AddHeader (ip);
+
+  EthernetHeader eth;
+  eth.SetSource (Mac48Address::ConvertFrom (m_dev->GetAddress ()));
+  eth.SetDestination (Mac48Address::ConvertFrom (m_dev->GetRemote ()));
+  eth.SetLengthType (0x0800); // IPv4
+  p->AddHeader (eth);
+
+  return p;
+}
+
+Ptr<Packet>
+PfcHostPort::GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, bool ack)
+{
+  NS_LOG_FUNCTION (qp);
+
+  Ptr<Packet> p = Create<Packet> (0);
+
+  QbbHeader qbb;
+  qbb.SetSourcePort (qp->m_dPort); // exchange ports
+  qbb.SetDestinationPort (qp->m_sPort);
+  qbb.SetSeqNumber (seq);
+  if (ack)
+    qbb.SetFlags (QbbHeader::QbbFlag::ACK);
+  else
+    qbb.SetFlags (QbbHeader::QbbFlag::NACK);
+  if (m_sendCnpWithAck)
+    {
+      qbb.SetCnpFlags (QbbHeader::CnpFlag::CNP);
+    }
+
+  p->AddHeader (qbb);
+
+  Ipv4Header ip;
+  ip.SetSource (qp->m_dIp); // exchange IPs
+  ip.SetDestination (qp->m_sIp);
+  ip.SetProtocol (0x11); // UDP
+  ip.SetPayloadSize (p->GetSize ());
+  ip.SetTtl (64);
+  ip.SetDscp (Ipv4Header::DscpType (m_nQueues)); // highest priority
   p->AddHeader (ip);
 
   EthernetHeader eth;
@@ -518,8 +651,11 @@ PfcHostPort::GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck)
   qbb.SetIrnAckNumber (irnAck);
   qbb.SetIrnNackNumber (0);
   qbb.SetFlags (QbbHeader::QbbFlag::ACK);
-  if (m_sendCnpWithAck && qp->m_dcqcn.SendCNP ())
-    qbb.SetCnpFlags (QbbHeader::CnpFlag::CNP);
+  if (m_sendCnpWithAck)
+    {
+      qbb.SetCnpFlags (QbbHeader::CnpFlag::CNP);
+    }
+
   p->AddHeader (qbb);
 
   Ipv4Header ip;
@@ -553,8 +689,11 @@ PfcHostPort::GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck, uint32_t irnNack
   qbb.SetIrnAckNumber (irnAck);
   qbb.SetIrnNackNumber (irnNack);
   qbb.SetFlags (QbbHeader::QbbFlag::SACK);
-  if (m_sendCnpWithAck && qp->m_dcqcn.SendCNP ())
-    qbb.SetCnpFlags (QbbHeader::CnpFlag::CNP);
+  if (m_sendCnpWithAck)
+    {
+      qbb.SetCnpFlags (QbbHeader::CnpFlag::CNP);
+    }
+
   p->AddHeader (qbb);
 
   Ipv4Header ip;
@@ -669,7 +808,8 @@ PfcHostPort::CnpReceived (Ptr<RdmaTxQueuePair> qp)
       // schedule alpha update
       ScheduleUpdateAlphaMlx (qp);
       // schedule rate decrease
-      ScheduleDecreaseRateMlx (qp, 1); // add 1 ns to make sure rate decrease is after alpha update
+      ScheduleDecreaseRateMlx (qp,
+                               1); // add 1 ns to make sure rate decrease is after alpha update
       // set rate on first CNP
       qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_rate =
           m_dcqcn.m_rateOnFirstCNP * qp->m_dcqcn.m_rate.GetBitRate ();
@@ -691,7 +831,6 @@ PfcHostPort::CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> qp)
         }
       if (clamp)
         qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_rate;
-      ChangeRate (qp, qp->m_dcqcn.m_rate);
       qp->m_dcqcn.m_rate =
           std::max ((double) m_dcqcn.m_minRate.GetBitRate (),
                     qp->m_dcqcn.m_rate.GetBitRate () * (1 - qp->m_dcqcn.m_alpha / 2));
@@ -741,7 +880,7 @@ PfcHostPort::RateIncEventMlx (Ptr<RdmaTxQueuePair> qp)
 void
 PfcHostPort::FastRecoveryMlx (Ptr<RdmaTxQueuePair> qp)
 {
-  ChangeRate (qp, qp->m_dcqcn.m_rate);
+  //ChangeRate (qp, qp->m_dcqcn.m_rate);
   qp->m_dcqcn.m_rate =
       (qp->m_dcqcn.m_rate.GetBitRate () / 2) + (qp->m_dcqcn.m_targetRate.GetBitRate () / 2);
 }
@@ -753,7 +892,6 @@ PfcHostPort::ActiveIncreaseMlx (Ptr<RdmaTxQueuePair> qp)
   qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_targetRate.GetBitRate () + m_dcqcn.m_rai.GetBitRate ();
   if (qp->m_dcqcn.m_targetRate > qp->m_dcqcn.m_devDataRate)
     qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_devDataRate;
-  ChangeRate (qp, qp->m_dcqcn.m_rate);
   qp->m_dcqcn.m_rate =
       (qp->m_dcqcn.m_rate.GetBitRate () / 2) + (qp->m_dcqcn.m_targetRate.GetBitRate () / 2);
 }
@@ -765,48 +903,38 @@ PfcHostPort::HyperIncreaseMlx (Ptr<RdmaTxQueuePair> qp)
   qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_targetRate.GetBitRate () + m_dcqcn.m_rhai.GetBitRate ();
   if (qp->m_dcqcn.m_targetRate > qp->m_dcqcn.m_devDataRate)
     qp->m_dcqcn.m_targetRate = qp->m_dcqcn.m_devDataRate;
-  ChangeRate (qp, qp->m_dcqcn.m_rate);
   qp->m_dcqcn.m_rate =
       (qp->m_dcqcn.m_rate.GetBitRate () / 2) + (qp->m_dcqcn.m_targetRate.GetBitRate () / 2);
 }
 
 void
-PfcHostPort::UpdateNextAvail (Ptr<RdmaTxQueuePair> qp, uint32_t pkt_size)
+PfcHostPort::UpdateNextAvail (Ptr<Packet> p, Time interFrameGap)
 {
-  Time sendingTime;
-  sendingTime = interframeGap + Seconds (qp->m_dcqcn.m_rate.CalculateBytesTxTime (pkt_size));
-  qp->m_dcqcn.m_nextAvail = Simulator::Now () + sendingTime;
-}
+  EthernetHeader ethHeader;
+  p->RemoveHeader (ethHeader);
+  if (ethHeader.GetLengthType () == PfcHeader::PROT_NUM) //PFC
+    return;
+  Ipv4Header ip;
+  QbbHeader qbb;
+  p->RemoveHeader (ip);
+  p->RemoveHeader (qbb);
+  auto sIp = ip.GetSource ();
+  auto dIp = ip.GetDestination ();
+  uint16_t sPort = qbb.GetSourcePort ();
+  uint16_t dPort = qbb.GetDestinationPort ();
+  uint8_t flags = qbb.GetFlags ();
 
-void
-PfcHostPort::UpdateNextSend (Ptr<RdmaTxQueuePair> qp)
-{
-  Time t = Simulator::GetMaximumSimulationTime ();
-  t = Min (qp->m_dcqcn.m_nextAvail, t);
-  if (m_nextSend.IsExpired () && t < Simulator::GetMaximumSimulationTime () &&
-      t > Simulator::Now ())
+  if (flags == QbbHeader::NONE) //data packet not ack/nack/sack/cnp
     {
-      m_nextSend =
-          Simulator::Schedule (t - Simulator::Now (), &DpskNetDevice::TriggerTransmit, m_dev);
+      uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
+      uint32_t index = m_txQueuePairTable[key];
+      Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
+      Time sendingTime;
+      sendingTime =
+          interFrameGap + Seconds (qp->m_dcqcn.m_rate.CalculateBytesTxTime (p->GetSize ()));
+      qp->m_dcqcn.m_nextAvail = Simulator::Now () + sendingTime;
     }
-}
-
-void
-PfcHostPort::ChangeRate (Ptr<RdmaTxQueuePair> qp, DataRate old_rate)
-{
-  Time sendingTime = Seconds (old_rate.CalculateBytesTxTime (qp->m_dcqcn.m_lastPktSize));
-  Time new_sendintTime =
-      Seconds (qp->m_dcqcn.m_rate.CalculateBytesTxTime (qp->m_dcqcn.m_lastPktSize));
-  qp->m_dcqcn.m_nextAvail = qp->m_dcqcn.m_nextAvail + new_sendintTime - sendingTime;
-  // update nic's next avail event
-  if (!m_nextSend.IsExpired () && qp->m_dcqcn.m_nextAvail < m_nextSend.GetTs ())
-    {
-      Simulator::Cancel (m_nextSend);
-      Time delta = qp->m_dcqcn.m_nextAvail < Simulator::Now ()
-                       ? Time (0)
-                       : qp->m_dcqcn.m_nextAvail - Simulator::Now ();
-      m_nextSend = Simulator::Schedule (delta, &DpskNetDevice::TriggerTransmit, m_dev);
-    }
+  return;
 }
 
 void
