@@ -155,17 +155,4 @@ RdmaRxQueuePair::Irn::IsReceived (const uint32_t &seq) const
 {
   return GetIrnState (seq) == IRN_STATE::ACK;
 }
-
-bool
-RdmaRxQueuePair::Dcqcn::SendCNP ()
-{
-  if (m_sendCnpInterval < Simulator::Now ())
-    {
-      m_sendCnpInterval = Simulator::Now () + m_sendCnpInterval;
-      return true;
-    }
-
-  return false;
-}
-
 } // namespace ns3

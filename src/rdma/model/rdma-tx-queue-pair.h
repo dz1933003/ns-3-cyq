@@ -172,50 +172,52 @@ public:
   class Dcqcn
   {
   public:
-    Dcqcn ();
-
-    /**
-     * set m_devDataRate for the qp
-     * \param r the datarate
-     */
-    void SetDevDataRate (DataRate r);
-
-    /**
-     * get m_rate of this qp
-     * \return m_rate
-     */
-    DataRate GetRate ();
-
-    /**
-     * call after rate change
-     */
-    void ChangeRate ();
-
-  public:
     DataRate m_rate;
     DataRate m_targetRate; //< Target rate
     EventId m_eventUpdateAlpha;
-    double m_alpha;
-    bool m_alpha_cnp_arrived; // indicate if CNP arrived in the last slot
-    bool m_first_cnp; // indicate if the current CNP is the first CNP
+    double m_alpha = 1;
+    bool m_alpha_cnp_arrived = false; // indicate if CNP arrived in the last slot
+    bool m_first_cnp = true; // indicate if the current CNP is the first CNP
     EventId m_eventDecreaseRate;
-    bool m_decrease_cnp_arrived; // indicate if CNP arrived in the last slot
-    uint32_t m_rpTimeStage;
+    bool m_decrease_cnp_arrived = false; // indicate if CNP arrived in the last slot
+    uint32_t m_rpTimeStage = 0;
     EventId m_rpTimer;
 
     DataRate m_devDataRate;
-    Time m_nextAvail; // Soonest time of next send
-    uint32_t m_lastPktSize; //last packet size that has been sent
+    Time m_nextAvail = Time (0); // Soonest time of next send
   } m_dcqcn;
 
   class B20_B2N
   {
   public:
+    /**
+     * sender receive ack or nack
+     * \param ack the latest received packet
+     */
     void Acknowledge (uint64_t ack);
 
+    /**
+     * get packet size on fly
+     */
+    uint64_t GetOnTheFly ();
+
+    /**
+     * judge if reach window bound
+     */
+    bool IsWinBound ();
+
+    /**
+     * get window size
+     */
+    uint64_t GetWin ();
+
   public:
-    uint64_t snd_nxt = 0;
-    uint64_t snd_una = 0; // next seq to send, the highest unacked seq
+    uint64_t snd_nxt = 0; // next seq to send
+    uint64_t snd_una = 0; // the highest unacked seq
+    uint32_t m_win = 4000000; // bound of on-the-fly packets
+    DataRate m_max_rate; // max rate
+    DataRate m_rate;
+    bool m_var_win = false; // variable window size
   } m_b20_b2n;
 };
 

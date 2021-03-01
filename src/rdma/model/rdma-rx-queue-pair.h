@@ -132,20 +132,6 @@ public:
     uint32_t m_baseSeq = 1; //!< bitmap window base sequence i.e. number of index 0
   } m_irn; //!< IRN infomation
 
-  class Dcqcn
-  {
-  public:
-    /**
-     * when destination receive a packet with ecn setted judge if need to send a CNP packet to source
-     * if need return true
-     */
-    bool SendCNP ();
-
-  private:
-    Time m_sendCnpInterval =
-        MicroSeconds (50.0); //!< at most one CNP packet is generate in m_sendCnpInterval us
-  } m_dcqcn;
-
   class B20_B2N
   {
   public:
@@ -153,7 +139,6 @@ public:
     uint32_t m_lastNACK = 0;
     Time m_nackTimer = Time (0);
     uint32_t m_milestone_rx = 0;
-
   } m_b20_b2n;
 };
 
