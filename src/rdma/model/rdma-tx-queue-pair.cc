@@ -58,6 +58,7 @@ RdmaTxQueuePair::RdmaTxQueuePair (Time startTime, Ipv4Address sIp, Ipv4Address d
       m_sentSize (0)
 {
   NS_LOG_FUNCTION (this << startTime << sIp << dIp << sPort << dPort << size << priority);
+  m_dcqcn.m_nextAvail = Simulator::Now ();
 }
 
 uint64_t
@@ -233,35 +234,45 @@ RdmaTxQueuePair::Irn::GetWindowSize () const
   return m_states.size ();
 }
 
-RdmaTxQueuePair::Dcqcn::Dcqcn ()
-{
-  m_rate = 0;
-  m_alpha = 1;
-  m_alpha_cnp_arrived = false;
-  m_first_cnp = true;
-  m_decrease_cnp_arrived = false;
-  m_rpTimeStage = 0;
-}
-
-void
-RdmaTxQueuePair::Dcqcn::SetDevDataRate (DataRate r)
-{
-  m_devDataRate = r;
-}
-
-DataRate
-RdmaTxQueuePair::Dcqcn::GetRate ()
-{
-  return m_rate;
-}
-
 void
 RdmaTxQueuePair::B20_B2N::Acknowledge (uint64_t ack)
 {
-  if (ack > snd_una)
+  if (ack >= snd_una)
     {
       snd_una = ack;
     }
+}
+
+uint64_t
+RdmaTxQueuePair::B20_B2N::GetOnTheFly ()
+{
+  return snd_nxt - snd_una;
+}
+
+bool
+RdmaTxQueuePair::B20_B2N::IsWinBound ()
+{
+  uint64_t w = GetWin ();
+  return w != 0 && GetOnTheFly () >= w;
+}
+
+uint64_t
+RdmaTxQueuePair::B20_B2N::GetWin ()
+{
+  if (m_win == 0)
+    return 0;
+  uint64_t w;
+  if (m_var_win)
+    {
+      w = m_win * m_rate.GetBitRate () / m_max_rate.GetBitRate ();
+      if (w == 0)
+        w = 1; // must > 0
+    }
+  else
+    {
+      w = m_win;
+    }
+  return w;
 }
 
 } // namespace ns3
