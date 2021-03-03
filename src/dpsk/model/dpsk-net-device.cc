@@ -380,7 +380,8 @@ DpskNetDevice::TransmitRequest ()
       m_snifferTrace (p);
       m_promiscSnifferTrace (p);
       bool result = TransmitStart (p);
-      m_updateNextAvail (p, m_tInterframeGap);
+      if (!m_updateNextAvail.IsNull ())
+        m_updateNextAvail (p, m_tInterframeGap);
       return result;
     }
 }

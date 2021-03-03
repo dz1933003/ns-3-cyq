@@ -176,7 +176,7 @@ PfcHostPort::SetupDcqcn (DataRate minRate, double g, double rateOnFirstCNP, bool
   m_dcqcn.m_g = g;
   m_dcqcn.m_rateOnFirstCNP = rateOnFirstCNP;
   m_dcqcn.m_EcnClampTgtRate = ecnClampTgtRate;
-  m_dcqcn.m_rpgTimeReset = rpgThreshold;
+  m_dcqcn.m_rpgTimeReset = rpgTimeReset;
   m_dcqcn.m_rateDecreaseInterval = rateDecreaseInterval;
   m_dcqcn.m_rpgThreshold = rpgThreshold;
   m_dcqcn.m_alpha_resume_interval = alphaResumeInterval;
