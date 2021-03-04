@@ -25,6 +25,8 @@
 #include "ns3/ipv4-address.h"
 #include "ns3/simulator.h"
 #include "ns3/packet.h"
+#include "ns3/data-rate.h"
+
 #include <deque>
 
 namespace ns3 {
@@ -167,6 +169,41 @@ public:
     std::deque<EventId> m_rtxEvents; //!< packet retransmission event bitmap window
     uint32_t m_baseSeq = 1; //!< bitmap window base sequence i.e. number of index 0
   } m_irn; //!< IRN infomation
+
+  /**
+   * From HPCC codes
+   */
+  // TODO cyq: configure this in file
+  bool isDcqcn;
+  uint64_t snd_nxt, snd_una; // next seq to send, the highest unacked seq
+  // TODO cyq: configure this in file
+  uint32_t m_win; // bound of on-the-fly packets
+  DataRate m_max_rate; // max rate
+  // TODO cyq: configure this in file
+  bool m_var_win; // variable window size
+  Time m_nextAvail; //< Soonest time of next send
+  uint32_t lastPktSize;
+  /******************************
+   * runtime states
+   *****************************/
+  DataRate m_rate; //< Current rate
+  struct
+  {
+    DataRate m_targetRate; //< Target rate
+    EventId m_eventUpdateAlpha;
+    double m_alpha;
+    bool m_alpha_cnp_arrived; // indicate if CNP arrived in the last slot
+    bool m_first_cnp; // indicate if the current CNP is the first CNP
+    EventId m_eventDecreaseRate;
+    bool m_decrease_cnp_arrived; // indicate if CNP arrived in the last slot
+    uint32_t m_rpTimeStage;
+    EventId m_rpTimer;
+  } mlx;
+
+  void Acknowledge (uint64_t ack);
+  uint64_t GetOnTheFly ();
+  bool IsWinBound ();
+  uint64_t GetWin (); // window size calculated from m_rate
 };
 
 } // namespace ns3

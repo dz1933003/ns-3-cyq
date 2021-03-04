@@ -59,11 +59,25 @@ RdmaTxQueuePair::RdmaTxQueuePair (Time startTime, Ipv4Address sIp, Ipv4Address d
       m_sentSize (0)
 {
   NS_LOG_FUNCTION (this << startTime << sIp << dIp << sPort << dPort << size << priority);
+  isDcqcn = true;
+  snd_nxt = snd_una = 0;
+  m_win = 40000;
+  m_max_rate = 0;
+  m_var_win = false;
+  m_rate = 0;
+  m_nextAvail = Time (0);
+  mlx.m_alpha = 1;
+  mlx.m_alpha_cnp_arrived = false;
+  mlx.m_first_cnp = true;
+  mlx.m_decrease_cnp_arrived = false;
+  mlx.m_rpTimeStage = 0;
 }
 
 uint64_t
 RdmaTxQueuePair::GetRemainBytes ()
 {
+  if (isDcqcn)
+    return m_size >= snd_nxt ? m_size - snd_nxt : 0;
   return (m_size >= m_sentSize) ? m_size - m_sentSize : 0;
 }
 
@@ -111,6 +125,8 @@ RdmaTxQueuePair::GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const 
 bool
 RdmaTxQueuePair::IsFinished ()
 {
+  if (isDcqcn)
+    return snd_una >= m_size;
   return m_sentSize >= m_size;
 }
 
@@ -232,6 +248,47 @@ uint32_t
 RdmaTxQueuePair::Irn::GetWindowSize () const
 {
   return m_states.size ();
+}
+
+void
+RdmaTxQueuePair::Acknowledge (uint64_t ack)
+{
+  if (ack > snd_una)
+    {
+      snd_una = ack;
+    }
+}
+
+uint64_t
+RdmaTxQueuePair::GetOnTheFly ()
+{
+  return snd_nxt - snd_una;
+}
+
+bool
+RdmaTxQueuePair::IsWinBound ()
+{
+  uint64_t w = GetWin ();
+  return w != 0 && GetOnTheFly () >= w;
+}
+
+uint64_t
+RdmaTxQueuePair::GetWin ()
+{
+  if (m_win == 0)
+    return 0;
+  uint64_t w;
+  if (m_var_win)
+    {
+      w = m_win * m_rate.GetBitRate () / m_max_rate.GetBitRate ();
+      if (w == 0)
+        w = 1; // must > 0
+    }
+  else
+    {
+      w = m_win;
+    }
+  return w;
 }
 
 } // namespace ns3
