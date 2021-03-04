@@ -61,10 +61,10 @@ RdmaTxQueuePair::RdmaTxQueuePair (Time startTime, Ipv4Address sIp, Ipv4Address d
   NS_LOG_FUNCTION (this << startTime << sIp << dIp << sPort << dPort << size << priority);
   isDcqcn = true;
   snd_nxt = snd_una = 0;
-  m_win = 40000;
-  m_max_rate = 0;
-  m_var_win = false;
-  m_rate = 0;
+  m_win = 4000;
+  m_max_rate = DataRate ("100Gbps");
+  m_var_win = true;
+  m_rate = DataRate ("100Gbps");
   m_nextAvail = Time (0);
   mlx.m_alpha = 1;
   mlx.m_alpha_cnp_arrived = false;
@@ -126,7 +126,9 @@ bool
 RdmaTxQueuePair::IsFinished ()
 {
   if (isDcqcn)
-    return snd_una >= m_size;
+    {
+      return snd_una >= m_size;
+    }
   return m_sentSize >= m_size;
 }
 

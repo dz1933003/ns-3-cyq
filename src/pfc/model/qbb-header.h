@@ -111,6 +111,10 @@ public:
    */
   static std::string FlagsToString (const uint8_t &flags);
 
+  // TODO cyq: Add comments
+  bool GetCnp (void) const;
+  void SetCnp (bool cnp);
+
   /**
    * \brief Get the type ID.
    * \return the object TypeId
@@ -132,6 +136,7 @@ private:
   uint32_t m_irnNackNumber = 0; //!< IRN NACK sequence number
 
   uint8_t m_flags = NONE; //!< NONE/ACK/SACK
+  uint8_t m_cnp = 0; //!< 0 or 1
 };
 
 }; // namespace ns3

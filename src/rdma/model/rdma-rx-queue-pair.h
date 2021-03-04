@@ -135,10 +135,10 @@ public:
   /**
    * Copy from HPCC
    */
-  uint32_t ReceiverNextExpectedSeq;
-  Time m_nackTimer;
-  int32_t m_milestone_rx;
-  uint32_t m_lastNACK;
+  uint32_t ReceiverNextExpectedSeq = 0;
+  Time m_nackTimer = Time (0);
+  uint32_t m_milestone_rx = 0;
+  uint32_t m_lastNACK = 0;
 };
 
 } // namespace ns3

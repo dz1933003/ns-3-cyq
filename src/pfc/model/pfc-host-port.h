@@ -42,6 +42,64 @@ class PfcHostPort : public DpskNetDeviceImpl
 {
 public:
   /**
+   * Copy from HPCC
+   */
+  // TODO cyq: config in file
+  bool isDcqcn = true;
+
+  EventId m_nextSend; //< The next send event
+
+  DataRate m_minRate = DataRate("100Mbps"); //< Min sending rate
+  double m_nack_interval = 500;
+  uint32_t m_chunk = 4000;
+  uint32_t m_ack_interval = 1;
+  bool m_backto0 = false;
+  bool m_var_win = true, m_fast_react = true;
+  bool m_rateBound = false;
+
+  int ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t size);
+
+  void RecoverQueue (Ptr<RdmaTxQueuePair> qp);
+  void QpComplete (Ptr<RdmaTxQueuePair> qp);
+
+  void PktSent (Ptr<RdmaTxQueuePair> qp, Ptr<Packet> pkt, Time interframeGap);
+  void UpdateNextAvail (Ptr<RdmaTxQueuePair> qp, Time interframeGap, uint32_t pkt_size);
+
+  /******************************
+   * Mellanox's version of DCQCN
+   *****************************/
+  double m_g = 0.00390625; //feedback weight
+  double m_rateOnFirstCNP = 1; // the fraction of line rate to set on first CNP
+  bool m_EcnClampTgtRate = false;
+  double m_rpgTimeReset = 900;
+  double m_rateDecreaseInterval = 4;
+  uint32_t m_rpgThreshold = 1;
+  double m_alpha_resume_interval = 1;
+  DataRate m_rai = DataRate("50Mb/s"); //< Rate of additive increase
+  DataRate m_rhai = DataRate("100Mb/s"); //< Rate of hyper-additive increase
+
+  // the Mellanox's version of alpha update:
+  // every fixed time slot, update alpha.
+  void UpdateAlphaMlx (Ptr<RdmaTxQueuePair> q);
+  void ScheduleUpdateAlphaMlx (Ptr<RdmaTxQueuePair> q);
+
+  // Mellanox's version of CNP receive
+  void cnp_received_mlx (Ptr<RdmaTxQueuePair> q);
+
+  // Mellanox's version of rate decrease
+  // It checks every m_rateDecreaseInterval if CNP arrived (m_decrease_cnp_arrived).
+  // If so, decrease rate, and reset all rate increase related things
+  void CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> q);
+  void ScheduleDecreaseRateMlx (Ptr<RdmaTxQueuePair> q, uint32_t delta);
+
+  // Mellanox's version of rate increase
+  void RateIncEventTimerMlx (Ptr<RdmaTxQueuePair> q);
+  void RateIncEventMlx (Ptr<RdmaTxQueuePair> q);
+  void FastRecoveryMlx (Ptr<RdmaTxQueuePair> q);
+  void ActiveIncreaseMlx (Ptr<RdmaTxQueuePair> q);
+  void HyperIncreaseMlx (Ptr<RdmaTxQueuePair> q);
+
+  /**
    * \brief Get the TypeId
    *
    * \return The TypeId for this class

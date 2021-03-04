@@ -124,6 +124,18 @@ QbbHeader::FlagsToString (const uint8_t &flags)
     }
 }
 
+bool
+QbbHeader::GetCnp (void) const
+{
+  return m_cnp == 1;
+}
+
+void
+QbbHeader::SetCnp (bool cnp)
+{
+  m_cnp = cnp;
+}
+
 TypeId
 QbbHeader::GetTypeId (void)
 {
@@ -148,8 +160,8 @@ QbbHeader::Print (std::ostream &os) const
 uint32_t
 QbbHeader::GetSerializedSize (void) const
 {
-  return sizeof (m_sourcePort) + sizeof (m_destinationPort) + sizeof (m_irnAckNumber) +
-         sizeof (m_irnNackNumber) + sizeof (m_flags);
+  return sizeof (m_sourcePort) + sizeof (m_destinationPort) + sizeof (m_sequenceNumber) +
+         sizeof (m_irnAckNumber) + sizeof (m_irnNackNumber) + sizeof (m_flags) + sizeof (m_cnp);
 }
 
 void
@@ -162,6 +174,7 @@ QbbHeader::Serialize (Buffer::Iterator start) const
   start.WriteU32 (m_irnAckNumber);
   start.WriteU32 (m_irnNackNumber);
   start.WriteU8 (m_flags);
+  start.WriteU8 (m_cnp);
 }
 
 uint32_t
@@ -174,6 +187,7 @@ QbbHeader::Deserialize (Buffer::Iterator start)
   m_irnAckNumber = start.ReadU32 ();
   m_irnNackNumber = start.ReadU32 ();
   m_flags = start.ReadU8 ();
+  m_cnp = start.ReadU8 ();
   return GetSerializedSize ();
 }
 
