@@ -61,6 +61,18 @@ QbbHeader::SetDestinationPort (uint16_t port)
 }
 
 uint32_t
+QbbHeader::GetSequenceNumber (void) const
+{
+  return m_sequenceNumber;
+}
+
+void
+QbbHeader::SetSequenceNumber (uint32_t sequenceNumber)
+{
+  m_sequenceNumber = sequenceNumber;
+}
+
+uint32_t
 QbbHeader::GetIrnAckNumber (void) const
 {
   return m_irnAckNumber;
@@ -146,6 +158,7 @@ QbbHeader::Serialize (Buffer::Iterator start) const
   NS_LOG_FUNCTION (&start);
   start.WriteU16 (m_sourcePort);
   start.WriteU16 (m_destinationPort);
+  start.WriteU32 (m_sequenceNumber);
   start.WriteU32 (m_irnAckNumber);
   start.WriteU32 (m_irnNackNumber);
   start.WriteU8 (m_flags);
@@ -157,6 +170,7 @@ QbbHeader::Deserialize (Buffer::Iterator start)
   NS_LOG_FUNCTION (&start);
   m_sourcePort = start.ReadU16 ();
   m_destinationPort = start.ReadU16 ();
+  m_sequenceNumber = start.ReadU32 ();
   m_irnAckNumber = start.ReadU32 ();
   m_irnNackNumber = start.ReadU32 ();
   m_flags = start.ReadU8 ();

@@ -61,6 +61,10 @@ public:
    */
   void SetDestinationPort (uint16_t port);
 
+  // TODO cyq: Add comments
+  uint32_t GetSequenceNumber (void) const;
+  void SetSequenceNumber (uint32_t sequenceNumber);
+
   /**
    * \return the sequence number for this header
    */
