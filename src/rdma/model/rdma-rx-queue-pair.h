@@ -131,6 +131,14 @@ public:
     std::deque<IRN_STATE> m_states; //!< packet state bitmap window
     uint32_t m_baseSeq = 1; //!< bitmap window base sequence i.e. number of index 0
   } m_irn; //!< IRN infomation
+
+  /**
+   * Copy from HPCC
+   */
+  uint32_t ReceiverNextExpectedSeq;
+  Time m_nackTimer;
+  int32_t m_milestone_rx;
+  uint32_t m_lastNACK;
 };
 
 } // namespace ns3
