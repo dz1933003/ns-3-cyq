@@ -56,11 +56,11 @@ RdmaTxQueuePair::RdmaTxQueuePair (Time startTime, Ipv4Address sIp, Ipv4Address d
       m_dPort (dPort),
       m_size (size),
       m_priority (priority),
-      m_sentSize (0)
+      m_txSize (0)
 {
   NS_LOG_FUNCTION (this << startTime << sIp << dIp << sPort << dPort << size << priority);
   isDcqcn = true;
-  snd_nxt = snd_una = 0;
+  m_unackSize = 0;
   m_win = 2000000;
   m_max_rate = DataRate ("100Gbps");
   m_var_win = true;
@@ -76,9 +76,7 @@ RdmaTxQueuePair::RdmaTxQueuePair (Time startTime, Ipv4Address sIp, Ipv4Address d
 uint64_t
 RdmaTxQueuePair::GetRemainBytes ()
 {
-  if (isDcqcn)
-    return m_size >= snd_nxt ? m_size - snd_nxt : 0;
-  return (m_size >= m_sentSize) ? m_size - m_sentSize : 0;
+  return (m_size >= m_txSize) ? m_size - m_txSize : 0;
 }
 
 uint32_t
@@ -123,23 +121,15 @@ RdmaTxQueuePair::GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const 
 }
 
 bool
-RdmaTxQueuePair::IsFinishedSend ()
+RdmaTxQueuePair::IsTxFinished ()
 {
-  if (isDcqcn)
-    {
-      return snd_nxt >= m_size;
-    }
-  return m_sentSize >= m_size;
+  return m_txSize >= m_size;
 }
 
 bool
-RdmaTxQueuePair::IsFinished ()
+RdmaTxQueuePair::IsAckedFinished ()
 {
-  if (isDcqcn)
-    {
-      return snd_una >= m_size;
-    }
-  return m_sentSize >= m_size;
+  return m_unackSize >= m_size;
 }
 
 // IRN inner class implementation
@@ -265,16 +255,16 @@ RdmaTxQueuePair::Irn::GetWindowSize () const
 void
 RdmaTxQueuePair::Acknowledge (uint64_t ack)
 {
-  if (ack > snd_una)
+  if (ack > m_unackSize)
     {
-      snd_una = ack;
+      m_unackSize = ack;
     }
 }
 
 uint64_t
 RdmaTxQueuePair::GetOnTheFly ()
 {
-  return snd_nxt - snd_una;
+  return m_txSize - m_unackSize;
 }
 
 bool

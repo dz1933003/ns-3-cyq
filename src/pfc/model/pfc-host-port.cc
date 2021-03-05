@@ -190,17 +190,17 @@ PfcHostPort::Transmit ()
     }
 
   // Retransmit packet (for IRN only now)
-  while (m_rtxPacketQueue.empty () == false)
+  if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
     {
-      const auto qp = m_rtxPacketQueue.front ().first;
-      const auto irnSeq = m_rtxPacketQueue.front ().second;
-      const auto state = qp->m_irn.GetIrnState (irnSeq);
-      m_rtxPacketQueue.pop_front ();
-      // Set up IRN timer
-      if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
+      while (m_rtxPacketQueue.empty () == false)
         {
-          // filter out ACKed packets
-          if (state == RdmaTxQueuePair::NACK || state == RdmaTxQueuePair::UNACK)
+          const auto qp = m_rtxPacketQueue.front ().first;
+          const auto irnSeq = m_rtxPacketQueue.front ().second;
+          const auto state = qp->m_irn.GetIrnState (irnSeq);
+          m_rtxPacketQueue.pop_front ();
+          // Set up IRN timer
+          if (state == RdmaTxQueuePair::NACK ||
+              state == RdmaTxQueuePair::UNACK) // filter out ACKed packets
             {
               auto id = IrnTimer (qp, irnSeq);
               qp->m_irn.SetRtxEvent (irnSeq, id);
@@ -221,32 +221,16 @@ PfcHostPort::Transmit ()
       // 3. QP is started.
       // 4. In IRN mode the sending window is not full.
       if ((m_pausedStates[qp->m_priority] == false || m_pfcEnabled == false) &&
-          qp->IsFinished () == false && qp->m_startTime <= Simulator::Now () &&
+          qp->IsTxFinished () == false && qp->m_startTime <= Simulator::Now () &&
           (m_l2RetransmissionMode != L2_RTX_MODE::IRN ||
            qp->m_irn.GetWindowSize () < m_irn.maxBitmapSize))
         {
-          if (m_ccMode == CC_MODE::DCQCN)
-            {
-              if (qp->GetRemainBytes () > 0 && !qp->IsWinBound () && !qp->IsFinishedSend ())
-                {
-                  if (qp->m_nextAvail > Simulator::Now ()) // Not available now
-                    continue;
-                  m_lastQpIndex = qIdx;
-                  auto p = GenData (qp);
-                  // TODO cyq: Not finished here!
-                  if (qp->IsFinishedSend ())
-                    m_queuePairTxCompleteTrace (qp);
-                  m_nTxBytes += p->GetSize ();
-                  PktSent (qp, p, Time (0));
-                  return p;
-                }
-            }
-          else
+          if (m_ccMode == CC_MODE::NONE_CC)
             {
               m_lastQpIndex = qIdx;
               uint32_t irnSeq;
               auto p = GenData (qp, irnSeq); // get sequence number out
-              if (qp->IsFinished ())
+              if (qp->IsTxFinished ())
                 m_queuePairTxCompleteTrace (qp);
               m_nTxBytes += p->GetSize ();
               // Set up IRN timer
@@ -257,24 +241,49 @@ PfcHostPort::Transmit ()
                 }
               return p;
             }
+          else if (m_ccMode == CC_MODE::DCQCN)
+            {
+              if (qp->GetRemainBytes () > 0 && !qp->IsWinBound () && !qp->IsTxFinished ())
+                {
+                  if (qp->m_nextAvail > Simulator::Now ()) // Not available now
+                    continue;
+                  m_lastQpIndex = qIdx;
+                  auto p = GenData (qp);
+                  if (qp->IsTxFinished ())
+                    m_queuePairTxCompleteTrace (qp);
+                  m_nTxBytes += p->GetSize ();
+                  UpdateNextAvail (qp, Time (0), p->GetSize ());
+                  return p;
+                }
+            }
+          else
+            {
+              NS_ASSERT_MSG (false, "PfcHostPort::Transmit: "
+                                    "CC mode not valid");
+            }
         }
     }
 
   // No packet to send
-
-  Time t = Simulator::GetMaximumSimulationTime ();
-  for (uint32_t i = 0; i < m_txQueuePairs.size (); i++)
+  if (m_ccMode == CC_MODE::DCQCN)
     {
-      Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[i];
-      if (qp->IsFinished ())
-        continue;
-      t = Min (qp->m_nextAvail, t);
-    }
-  if (m_nextSend.IsExpired () && t < Simulator::GetMaximumSimulationTime () &&
-      t > Simulator::Now ())
-    {
-      m_nextSend =
-          Simulator::Schedule (t - Simulator::Now (), &DpskNetDevice::TriggerTransmit, m_dev);
+      // For DCQCN schedule next transmit
+      const Time now = Simulator::Now ();
+      const Time maxInfTime = Simulator::GetMaximumSimulationTime ();
+      Time minAvailTime = maxInfTime;
+      // Find minimum next avail packet transmission time
+      for (auto qp : m_txQueuePairs)
+        {
+          if (qp->IsTxFinished ())
+            continue;
+          minAvailTime = Min (qp->m_nextAvail, minAvailTime);
+        }
+      // Schedule next transmission if no previous scheduling transmission event
+      if (m_nextTransmitEvent.IsExpired () && minAvailTime < maxInfTime && minAvailTime > now)
+        {
+          m_nextTransmitEvent =
+              Simulator::Schedule (minAvailTime - now, &DpskNetDevice::TriggerTransmit, m_dev);
+        }
     }
 
   return 0;
@@ -480,7 +489,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                       uint32_t goback_seq = seq / m_chunk * m_chunk;
                       qp->Acknowledge (goback_seq);
                     }
-                  if (qp->IsFinished ())
+                  if (qp->IsAckedFinished ())
                     {
                       QpComplete (qp);
                     }
@@ -525,7 +534,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                       uint32_t goback_seq = seq / m_chunk * m_chunk;
                       qp->Acknowledge (goback_seq);
                     }
-                  if (qp->IsFinished ())
+                  if (qp->IsAckedFinished ())
                     {
                       QpComplete (qp);
                     }
@@ -580,8 +589,6 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_irnSeq)
                                   EthernetHeader ().GetSerializedSize ();
   uint32_t payloadSize = (remainSize > maxPayloadSize) ? maxPayloadSize : remainSize;
 
-  qp->m_sentSize += payloadSize;
-
   Ptr<Packet> p = Create<Packet> (payloadSize);
 
   QbbHeader qbb;
@@ -597,7 +604,10 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_irnSeq)
       qp->m_irn.SendNewPacket (payloadSize); // Update IRN infos
     }
   if (m_ccMode == CC_MODE::DCQCN)
-    qbb.SetSequenceNumber (qp->snd_nxt);
+    {
+      qbb.SetSequenceNumber (qp->m_txSize);
+      qbb.SetFlags (QbbHeader::NONE);
+    }
   p->AddHeader (qbb);
 
   Ipv4Header ip;
@@ -615,8 +625,7 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_irnSeq)
   eth.SetLengthType (0x0800); // IPv4
   p->AddHeader (eth);
 
-  if (m_ccMode == CC_MODE::DCQCN)
-    qp->snd_nxt += payloadSize;
+  qp->m_txSize += payloadSize;
 
   return p;
 }
@@ -803,13 +812,6 @@ PfcHostPort::ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> qp, uint32_t s
 }
 
 void
-PfcHostPort::PktSent (Ptr<RdmaTxQueuePair> qp, Ptr<Packet> pkt, Time interframeGap)
-{
-  qp->lastPktSize = pkt->GetSize ();
-  UpdateNextAvail (qp, interframeGap, pkt->GetSize ());
-}
-
-void
 PfcHostPort::UpdateNextAvail (Ptr<RdmaTxQueuePair> qp, Time interframeGap, uint32_t pkt_size)
 {
   Time sendingTime;
@@ -823,7 +825,7 @@ PfcHostPort::UpdateNextAvail (Ptr<RdmaTxQueuePair> qp, Time interframeGap, uint3
 void
 PfcHostPort::RecoverQueue (Ptr<RdmaTxQueuePair> qp)
 {
-  qp->snd_nxt = qp->snd_una;
+  qp->m_txSize = qp->m_unackSize;
 }
 
 void

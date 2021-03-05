@@ -45,7 +45,7 @@ public:
    * Copy from HPCC
    */
 
-  EventId m_nextSend; //< The next send event
+  EventId m_nextTransmitEvent; //< The next send event
 
   double m_nack_interval = 500;
   uint32_t m_chunk = 4000;

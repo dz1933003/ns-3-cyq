@@ -45,7 +45,7 @@ public:
   uint64_t m_size; //!< source port, dst port
   uint16_t m_priority; //!< flow priority
 
-  uint64_t m_sentSize; //!< total valid sent size
+  uint64_t m_txSize; //!< total valid sent size (next seq to send)
 
   static TypeId GetTypeId (void);
   RdmaTxQueuePair ();
@@ -76,14 +76,18 @@ public:
                            const uint16_t &dPort);
 
   /**
-   * \return true for finished send
+   * Finished tx but may not all packets are acked
+   *
+   * \return true for finished
    */
-  bool IsFinishedSend ();
+  bool IsTxFinished ();
 
   /**
-   * \return true for finished queue pair
+   * Finished with all packets are acked
+   * 
+   * \return true for finished
    */
-  bool IsFinished ();
+  bool IsAckedFinished ();
 
   /**
    * IRN tx bitmap state
@@ -180,14 +184,13 @@ public:
    */
   // TODO cyq: configure this in file
   bool isDcqcn;
-  uint64_t snd_nxt, snd_una; // next seq to send, the highest unacked seq
+  uint64_t m_unackSize; // the highest unacked seq
   // TODO cyq: configure this in file
   uint32_t m_win; // bound of on-the-fly packets
   DataRate m_max_rate; // max rate
   // TODO cyq: configure this in file
   bool m_var_win; // variable window size
   Time m_nextAvail; //< Soonest time of next send
-  uint32_t lastPktSize;
   /******************************
    * runtime states
    *****************************/
