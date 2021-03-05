@@ -76,14 +76,16 @@ public:
                            const uint16_t &dPort);
 
   /**
-   * Finished tx but may not all packets are acked
+   * Finished tx but may not all packets are acked.
+   * But finished all acked with IRN.
    *
    * \return true for finished
    */
   bool IsTxFinished ();
 
   /**
-   * Finished with all packets are acked
+   * Finished with all packets are acked.
+   * This is only for B2N and B20 with DCQCN.
    * 
    * \return true for finished
    */

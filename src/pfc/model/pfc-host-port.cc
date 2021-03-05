@@ -247,6 +247,7 @@ PfcHostPort::Transmit ()
             }
           else if (m_ccMode == CC_MODE::DCQCN)
             {
+              // TODO cyq: In IRN mode, the DCQCN window is disabled because IRN have one.
               if (qp->GetRemainBytes () > 0 && !qp->IsWinBound () && !qp->IsTxFinished ())
                 {
                   if (qp->m_nextAvail > Simulator::Now ()) // Not available now
@@ -365,6 +366,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
       bool cnp = qbb.GetCnp ();
       uint16_t dscp = ip.GetDscp ();
       auto ecn = ip.GetEcn ();
+      const bool isCe = ecn == Ipv4Header::EcnType::ECN_CE;
       uint32_t payloadSize = p->GetSize ();
 
       // Data packet
@@ -403,7 +405,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                       qp->m_irn.UpdateIrnState (irnAck);
                     }
                   // Send ACK and trigger transmit
-                  m_controlQueue.push (GenACK (qp, 0, irnAck, false));
+                  m_controlQueue.push (GenACK (qp, seq, irnAck, isCe));
                   m_dev->TriggerTransmit ();
                 }
               else if (irnAck == expectedAck) // expected new packet
@@ -411,7 +413,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   qp->m_receivedSize += payloadSize;
                   qp->m_irn.UpdateIrnState (irnAck);
                   // Send ACK by retransmit mode and trigger transmit
-                  m_controlQueue.push (GenACK (qp, 0, irnAck, false));
+                  m_controlQueue.push (GenACK (qp, seq, irnAck, isCe));
                   m_dev->TriggerTransmit ();
                 }
               else // out of order
@@ -419,7 +421,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   qp->m_receivedSize += payloadSize;
                   qp->m_irn.UpdateIrnState (irnAck);
                   // Send SACK and trigger transmit
-                  m_controlQueue.push (GenSACK (qp, 0, irnAck, expectedAck, false));
+                  m_controlQueue.push (GenSACK (qp, seq, irnAck, expectedAck, isCe));
                   m_dev->TriggerTransmit ();
                 }
             }
@@ -428,7 +430,6 @@ PfcHostPort::Receive (Ptr<Packet> p)
             {
               qp->m_b2n_0.m_milestone_rx = m_ack_interval;
               const uint32_t expectedSeq = qp->m_receivedSize;
-              const bool isCe = ecn == Ipv4Header::EcnType::ECN_CE;
               if (seq == expectedSeq)
                 {
                   qp->m_receivedSize = expectedSeq + payloadSize;
@@ -458,61 +459,58 @@ PfcHostPort::Receive (Ptr<Packet> p)
                     }
                 }
             }
-          else
-            {
-              NS_ASSERT_MSG (false, "PfcSwitchPort::Rx: Invalid retransmission mode");
-              return false; // Drop this packet
-            }
 
           if (qp->IsFinished ())
             m_queuePairRxCompleteTrace (qp);
 
           return true; // Forward up to node
         }
-      // ACK packet
       else if (flags == QbbHeader::ACK)
         {
           // Handle ACK
           uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
           uint32_t index = m_txQueuePairTable[key];
           Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
-          if (m_ccMode == CC_MODE::DCQCN)
+
+          if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
+            {
+              qp->m_irn.AckIrnState (irnAck);
+
+              // Cleanup timer for DCQCN
+              if (m_ccMode == CC_MODE::DCQCN && qp->IsTxFinished ())
+                QpComplete (qp);
+
+              m_dev->TriggerTransmit (); // Because BDP-FC needs to check new bitmap and send
+              return false; // Not data so no need to send to node
+            }
+          else if (m_l2RetransmissionMode == L2_RTX_MODE::B20 ||
+                   m_l2RetransmissionMode == L2_RTX_MODE::B2N)
             {
               if (m_ack_interval == 0)
-                std::cout << "ERROR: shouldn't receive ack\n";
+                {
+                  NS_ASSERT_MSG (false, "PfcHostPort::Receive: "
+                                        "Shouldn't receive ACK");
+                }
               else
                 {
                   if (m_l2RetransmissionMode == L2_RTX_MODE::B2N)
-                    {
-                      qp->Acknowledge (seq);
-                    }
+                    qp->Acknowledge (seq);
                   else
-                    {
-                      uint32_t goback_seq = seq / m_chunk * m_chunk;
-                      qp->Acknowledge (goback_seq);
-                    }
+                    qp->Acknowledge (seq / m_chunk * m_chunk);
+
                   if (qp->IsAckedFinished ())
-                    {
-                      QpComplete (qp);
-                    }
+                    QpComplete (qp);
                 }
-              // if (ch.l3Prot == 0xFD) // NACK
-              //   RecoverQueue (qp);
-              // handle cnp
+
               if (cnp)
-                {
-                  // mlx version
-                  m_dcqcn.cnp_received_mlx (qp);
-                }
-              // ACK may advance the on-the-fly window, allowing more packets to send
-              m_dev->TriggerTransmit ();
+                m_dcqcn.cnp_received_mlx (qp);
+
+              m_dev->TriggerTransmit (); // Because ACK may advance the on-the-fly window
               return false;
             }
           else
             {
-              qp->m_irn.AckIrnState (irnAck);
-              m_dev->TriggerTransmit (); // Because BDP-FC needs to check new bitmap and send
-              return false; // Not data so no need to send to node
+              return false;
             }
         }
       else if (flags == QbbHeader::SACK)
