@@ -76,6 +76,11 @@ public:
                            const uint16_t &dPort);
 
   /**
+   * \return true for finished send
+   */
+  bool IsFinishedSend ();
+
+  /**
    * \return true for finished queue pair
    */
   bool IsFinished ();

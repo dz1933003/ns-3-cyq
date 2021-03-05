@@ -123,6 +123,16 @@ RdmaTxQueuePair::GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const 
 }
 
 bool
+RdmaTxQueuePair::IsFinishedSend ()
+{
+  if (isDcqcn)
+    {
+      return snd_nxt >= m_size;
+    }
+  return m_sentSize >= m_size;
+}
+
+bool
 RdmaTxQueuePair::IsFinished ()
 {
   if (isDcqcn)

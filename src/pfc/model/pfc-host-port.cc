@@ -204,7 +204,7 @@ PfcHostPort::Transmit ()
           qp->IsFinished () == false && qp->m_startTime <= Simulator::Now () &&
           (m_l2RetransmissionMode != IRN || qp->m_irn.GetWindowSize () < m_irn.maxBitmapSize))
         {
-          if (isDcqcn)
+          if (isDcqcn && !qp->IsFinishedSend ())
             {
               if (qp->GetRemainBytes () > 0 && !qp->IsWinBound ())
                 {
@@ -214,7 +214,7 @@ PfcHostPort::Transmit ()
               m_lastQpIndex = qIdx;
               auto p = GenData (qp);
               // TODO cyq: Not finished here!
-              if (qp->IsFinished ())
+              if (qp->IsFinishedSend ())
                 m_queuePairTxCompleteTrace (qp);
               m_nTxBytes += p->GetSize ();
               PktSent (qp, p, Time (0));
@@ -387,9 +387,6 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   m_controlQueue.push (p);
                   m_dev->TriggerTransmit ();
                 }
-              // TODO cyq: Reduce duplicate fin check
-              if (qp->ReceiverNextExpectedSeq >= qp->m_size)
-                NS_LOG_UNCOND ("FIN RCV");
             }
           else
             {
@@ -435,6 +432,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   return false; // Drop this packet
                 }
             }
+          // TODO cyq: Reduce duplicate fin check
           if (qp->IsFinished ())
             m_queuePairRxCompleteTrace (qp);
           return true; // Forward up to node
