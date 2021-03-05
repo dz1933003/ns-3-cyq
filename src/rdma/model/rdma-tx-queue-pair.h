@@ -182,8 +182,6 @@ public:
   /**
    * From HPCC codes
    */
-  // TODO cyq: configure this in file
-  bool isDcqcn;
   uint64_t m_unackSize; // the highest unacked seq
   // TODO cyq: configure this in file
   uint32_t m_win; // bound of on-the-fly packets

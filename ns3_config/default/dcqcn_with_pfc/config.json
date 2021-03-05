@@ -10,6 +10,9 @@
         "h2"
       ],
       "PortNumber": 1,
+      "L2Retransmission": {
+        "Mode": "B2N"
+      },
       "CcMode": {
         "Mode": "DCQCN"
       }

@@ -50,11 +50,8 @@ public:
   double m_nack_interval = 500;
   uint32_t m_chunk = 4000;
   uint32_t m_ack_interval = 1;
-  bool m_backto0 = false;
   bool m_var_win = true, m_fast_react = true;
   bool m_rateBound = true;
-
-  int ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> qp, uint32_t size);
 
   void RecoverQueue (Ptr<RdmaTxQueuePair> qp);
   void QpComplete (Ptr<RdmaTxQueuePair> qp);
@@ -318,20 +315,25 @@ private:
    * Generate ACK packet of target transmitting queue pair
    *
    * \param qp queue pair
+   * \param seq sequence number
    * \param irnAck ack sequence number of this packet
+   * \param cnp whether tag CNP flag
    * \return ACK packet
    */
-  Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck);
+  Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, uint32_t irnAck, bool cnp);
 
   /**
    * Generate SACK packet of target transmitting queue pair
    *
    * \param qp queue pair
+   * \param seq sequence number
    * \param irnAck ack sequence number of this packet
    * \param irnNack cumulative acknowledgment (expected sequence number)
+   * \param cnp whether tag CNP flag
    * \return SACK packet
    */
-  Ptr<Packet> GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck, uint32_t irnNack);
+  Ptr<Packet> GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, uint32_t irnAck, uint32_t irnNack,
+                       bool cnp);
 
   /**
    * Schedule IRN retransmission timer for each packet of one queue pair

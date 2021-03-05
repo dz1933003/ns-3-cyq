@@ -139,6 +139,10 @@ PfcHostPort::L2RtxModeStringToNum (const std::string &mode)
     return L2_RTX_MODE::NONE_RTX;
   else if (mode == "IRN")
     return L2_RTX_MODE::IRN;
+  else if (mode == "B20")
+    return L2_RTX_MODE::B20;
+  else if (mode == "B2N")
+    return L2_RTX_MODE::B2N;
   else
     NS_ASSERT_MSG (false, "PfcHostPort::L2RtxModeStringToNum: "
                           "Unknown L2 retransmission mode");
@@ -383,88 +387,86 @@ PfcHostPort::Receive (Ptr<Packet> p)
               qp = qpItr->second;
             }
 
-          if (m_ccMode == CC_MODE::DCQCN)
+          // retransmission and rx byte count
+          if (m_l2RetransmissionMode == L2_RTX_MODE::NONE_RTX)
+            {
+              qp->m_receivedSize += payloadSize;
+            }
+          else if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
+            {
+              const uint32_t expectedAck = qp->m_irn.GetNextSequenceNumber ();
+              if (irnAck < expectedAck) // in window
+                {
+                  if (!qp->m_irn.IsReceived (irnAck)) // Not duplicated packet
+                    {
+                      qp->m_receivedSize += payloadSize;
+                      qp->m_irn.UpdateIrnState (irnAck);
+                    }
+                  // Send ACK and trigger transmit
+                  m_controlQueue.push (GenACK (qp, 0, irnAck, false));
+                  m_dev->TriggerTransmit ();
+                }
+              else if (irnAck == expectedAck) // expected new packet
+                {
+                  qp->m_receivedSize += payloadSize;
+                  qp->m_irn.UpdateIrnState (irnAck);
+                  // Send ACK by retransmit mode and trigger transmit
+                  m_controlQueue.push (GenACK (qp, 0, irnAck, false));
+                  m_dev->TriggerTransmit ();
+                }
+              else // out of order
+                {
+                  qp->m_receivedSize += payloadSize;
+                  qp->m_irn.UpdateIrnState (irnAck);
+                  // Send SACK and trigger transmit
+                  m_controlQueue.push (GenSACK (qp, 0, irnAck, expectedAck, false));
+                  m_dev->TriggerTransmit ();
+                }
+            }
+          else if (m_l2RetransmissionMode == L2_RTX_MODE::B20 ||
+                   m_l2RetransmissionMode == L2_RTX_MODE::B2N)
             {
               qp->m_b2n_0.m_milestone_rx = m_ack_interval;
-              int x = ReceiverCheckSeq (seq, qp, payloadSize);
-              if (x == 1 || x == 2)
+              const uint32_t expectedSeq = qp->m_receivedSize;
+              const bool isCe = ecn == Ipv4Header::EcnType::ECN_CE;
+              if (seq == expectedSeq)
                 {
-                  Ptr<Packet> p = Create<Packet> (0);
-
-                  QbbHeader qbb;
-                  qbb.SetSourcePort (qp->m_dPort); // exchange ports
-                  qbb.SetDestinationPort (qp->m_sPort);
-                  qbb.SetSequenceNumber (qp->m_receivedSize);
-                  qbb.SetCnp (ecn == Ipv4Header::EcnType::ECN_CE);
-                  qbb.SetFlags (x == 1 ? QbbHeader::ACK : QbbHeader::SACK);
-                  p->AddHeader (qbb);
-
-                  Ipv4Header ip;
-                  ip.SetSource (qp->m_dIp); // exchange IPs
-                  ip.SetDestination (qp->m_sIp);
-                  ip.SetProtocol (0x11); // UDP
-                  ip.SetPayloadSize (p->GetSize ());
-                  ip.SetTtl (64);
-                  ip.SetDscp (Ipv4Header::DscpType (m_nQueues)); // highest priority
-                  p->AddHeader (ip);
-
-                  EthernetHeader eth;
-                  eth.SetSource (Mac48Address::ConvertFrom (m_dev->GetAddress ()));
-                  eth.SetDestination (Mac48Address::ConvertFrom (m_dev->GetRemote ()));
-                  eth.SetLengthType (0x0800); // IPv4
-                  p->AddHeader (eth);
-
-                  m_controlQueue.push (p);
-                  m_dev->TriggerTransmit ();
+                  qp->m_receivedSize = expectedSeq + payloadSize;
+                  if (qp->m_receivedSize >= qp->m_b2n_0.m_milestone_rx)
+                    {
+                      qp->m_b2n_0.m_milestone_rx += m_ack_interval;
+                      m_controlQueue.push (GenACK (qp, seq, 0, isCe));
+                      m_dev->TriggerTransmit ();
+                    }
+                  else if (qp->m_receivedSize % m_chunk == 0)
+                    {
+                      m_controlQueue.push (GenACK (qp, seq, 0, isCe));
+                      m_dev->TriggerTransmit ();
+                    }
+                }
+              else if (seq > expectedSeq)
+                {
+                  const Time now = Simulator::Now ();
+                  if (now >= qp->m_b2n_0.m_nackTimer || qp->m_b2n_0.m_lastNACK != expectedSeq)
+                    {
+                      qp->m_b2n_0.m_nackTimer = now + MicroSeconds (m_nack_interval);
+                      qp->m_b2n_0.m_lastNACK = expectedSeq;
+                      if (m_l2RetransmissionMode == L2_RTX_MODE::B20)
+                        qp->m_receivedSize = qp->m_receivedSize / m_chunk * m_chunk;
+                      m_controlQueue.push (GenSACK (qp, seq, 0, 0, isCe));
+                      m_dev->TriggerTransmit ();
+                    }
                 }
             }
           else
             {
-              // retransmission and rx byte count
-              if (m_l2RetransmissionMode == L2_RTX_MODE::NONE_RTX)
-                {
-                  qp->m_receivedSize += payloadSize;
-                }
-              else if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
-                {
-                  const uint32_t expectedAck = qp->m_irn.GetNextSequenceNumber ();
-                  if (irnAck < expectedAck) // in window
-                    {
-                      if (!qp->m_irn.IsReceived (irnAck)) // Not duplicated packet
-                        {
-                          qp->m_receivedSize += payloadSize;
-                          qp->m_irn.UpdateIrnState (irnAck);
-                        }
-                      // Send ACK and trigger transmit
-                      m_controlQueue.push (GenACK (qp, irnAck));
-                      m_dev->TriggerTransmit ();
-                    }
-                  else if (irnAck == expectedAck) // expected new packet
-                    {
-                      qp->m_receivedSize += payloadSize;
-                      qp->m_irn.UpdateIrnState (irnAck);
-                      // Send ACK by retransmit mode and trigger transmit
-                      m_controlQueue.push (GenACK (qp, irnAck));
-                      m_dev->TriggerTransmit ();
-                    }
-                  else // out of order
-                    {
-                      qp->m_receivedSize += payloadSize;
-                      qp->m_irn.UpdateIrnState (irnAck);
-                      // Send SACK and trigger transmit
-                      m_controlQueue.push (GenSACK (qp, irnAck, expectedAck));
-                      m_dev->TriggerTransmit ();
-                    }
-                }
-              else
-                {
-                  NS_ASSERT_MSG (false, "PfcSwitchPort::Rx: Invalid Qbb packet type");
-                  return false; // Drop this packet
-                }
+              NS_ASSERT_MSG (false, "PfcSwitchPort::Rx: Invalid retransmission mode");
+              return false; // Drop this packet
             }
-          // TODO cyq: Reduce duplicate fin check
+
           if (qp->IsFinished ())
             m_queuePairRxCompleteTrace (qp);
+
           return true; // Forward up to node
         }
       // ACK packet
@@ -480,7 +482,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                 std::cout << "ERROR: shouldn't receive ack\n";
               else
                 {
-                  if (!m_backto0)
+                  if (m_l2RetransmissionMode == L2_RTX_MODE::B2N)
                     {
                       qp->Acknowledge (seq);
                     }
@@ -525,7 +527,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                 std::cout << "ERROR: shouldn't receive ack\n";
               else
                 {
-                  if (!m_backto0)
+                  if (m_l2RetransmissionMode == L2_RTX_MODE::B2N)
                     {
                       qp->Acknowledge (seq);
                     }
@@ -631,7 +633,7 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_irnSeq)
 }
 
 Ptr<Packet>
-PfcHostPort::GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck)
+PfcHostPort::GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, uint32_t irnAck, bool cnp)
 {
   NS_LOG_FUNCTION (qp);
 
@@ -640,9 +642,11 @@ PfcHostPort::GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck)
   QbbHeader qbb;
   qbb.SetSourcePort (qp->m_dPort); // exchange ports
   qbb.SetDestinationPort (qp->m_sPort);
+  qbb.SetSequenceNumber (seq);
   qbb.SetIrnAckNumber (irnAck);
   qbb.SetIrnNackNumber (0);
   qbb.SetFlags (QbbHeader::ACK);
+  qbb.SetCnp (cnp);
   p->AddHeader (qbb);
 
   Ipv4Header ip;
@@ -664,7 +668,8 @@ PfcHostPort::GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck)
 }
 
 Ptr<Packet>
-PfcHostPort::GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck, uint32_t irnNack)
+PfcHostPort::GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, uint32_t irnAck, uint32_t irnNack,
+                      bool cnp)
 {
   NS_LOG_FUNCTION (qp);
 
@@ -673,9 +678,11 @@ PfcHostPort::GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck, uint32_t irnNack
   QbbHeader qbb;
   qbb.SetSourcePort (qp->m_dPort); // exchange ports
   qbb.SetDestinationPort (qp->m_sPort);
+  qbb.SetSequenceNumber (seq);
   qbb.SetIrnAckNumber (irnAck);
   qbb.SetIrnNackNumber (irnNack);
   qbb.SetFlags (QbbHeader::SACK);
+  qbb.SetCnp (cnp);
   p->AddHeader (qbb);
 
   Ipv4Header ip;
@@ -765,50 +772,6 @@ PfcHostPort::DoDispose ()
   m_txQueuePairs.clear ();
   m_rxQueuePairs.clear ();
   DpskNetDeviceImpl::DoDispose ();
-}
-
-int
-PfcHostPort::ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> qp, uint32_t size)
-{
-  uint32_t expected = qp->m_receivedSize;
-  if (seq == expected)
-    {
-      qp->m_receivedSize = expected + size;
-      if (qp->m_receivedSize >= qp->m_b2n_0.m_milestone_rx)
-        {
-          qp->m_b2n_0.m_milestone_rx += m_ack_interval;
-          return 1; // Generate ACK
-        }
-      else if (qp->m_receivedSize % m_chunk == 0)
-        {
-          return 1;
-        }
-      else
-        {
-          return 5;
-        }
-    }
-  else if (seq > expected)
-    {
-      // Generate NACK
-      if (Simulator::Now () >= qp->m_b2n_0.m_nackTimer || qp->m_b2n_0.m_lastNACK != expected)
-        {
-          qp->m_b2n_0.m_nackTimer = Simulator::Now () + MicroSeconds (m_nack_interval);
-          qp->m_b2n_0.m_lastNACK = expected;
-          if (m_backto0)
-            {
-              qp->m_receivedSize = qp->m_receivedSize / m_chunk * m_chunk;
-            }
-          return 2;
-        }
-      else
-        return 4;
-    }
-  else
-    {
-      // Duplicate.
-      return 3;
-    }
 }
 
 void

@@ -59,7 +59,6 @@ RdmaTxQueuePair::RdmaTxQueuePair (Time startTime, Ipv4Address sIp, Ipv4Address d
       m_txSize (0)
 {
   NS_LOG_FUNCTION (this << startTime << sIp << dIp << sPort << dPort << size << priority);
-  isDcqcn = true;
   m_unackSize = 0;
   m_win = 2000000;
   m_max_rate = DataRate ("100Gbps");
