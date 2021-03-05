@@ -50,13 +50,9 @@ public:
   double m_nack_interval = 500;
   uint32_t m_chunk = 4000;
   uint32_t m_ack_interval = 1;
-  bool m_var_win = true, m_fast_react = true;
+  bool m_var_win = true;
   bool m_rateBound = true;
 
-  void RecoverQueue (Ptr<RdmaTxQueuePair> qp);
-  void QpComplete (Ptr<RdmaTxQueuePair> qp);
-
-  void PktSent (Ptr<RdmaTxQueuePair> qp, Ptr<Packet> pkt, Time interframeGap);
   void UpdateNextAvail (Ptr<RdmaTxQueuePair> qp, Time interframeGap, uint32_t pkt_size);
 
   /******************************

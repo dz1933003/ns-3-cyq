@@ -39,13 +39,29 @@ namespace ns3 {
 class RdmaTxQueuePair : public Object
 {
 public:
+  /* Flow infomation */
   Time m_startTime; //!< queue pair arrival time
   Ipv4Address m_sIp, m_dIp; //!< source IP, dst IP
   uint16_t m_sPort, m_dPort; //!< source port, dst port
   uint64_t m_size; //!< source port, dst port
   uint16_t m_priority; //!< flow priority
 
+  /* Transmission statics */
   uint64_t m_txSize; //!< total valid sent size (next seq to send)
+
+  /* B2N & B20 */
+  uint64_t m_unackSize; // the highest unacked seq
+
+  // TODO cyq: configure this in file
+  /* RDMA window */
+  bool m_var_win = true; // variable window size
+  uint32_t m_win = 2000000; // bound of on-the-fly packets
+
+  // TODO cyq: configure this in file
+  /* Rate limiter */
+  DataRate m_max_rate = DataRate ("100Gbps"); // max rate
+  DataRate m_rate = DataRate ("100Gbps"); //< Current rate
+  Time m_nextAvail = Time (0); //< Soonest time of next send
 
   static TypeId GetTypeId (void);
   RdmaTxQueuePair ();
@@ -90,6 +106,39 @@ public:
    * \return true for finished
    */
   bool IsAckedFinished ();
+
+  /**
+   * Recover queue when receive NACK for B2N or B20
+   */
+  void B2Recover ();
+
+  /**
+   * Acknowleage sequence for B2N or B20
+   * 
+   * \param ack ack sequence
+   */
+  void B2Ack (uint64_t ack);
+
+  /**
+   * Get on the fly bytes for B2N or B20
+   * 
+   * \return on the fly bytes
+   */
+  uint64_t B2GetOnTheFly ();
+
+  /**
+   * Whether B2N or B20 window is full
+   * 
+   * \return true if window is full
+   */
+  bool B2IsWinBound ();
+
+  /**
+   * B2N or B20 window size
+   * 
+   * \return window size by byte
+   */
+  uint64_t GetWin ();
 
   /**
    * IRN tx bitmap state
@@ -182,36 +231,33 @@ public:
   } m_irn; //!< IRN infomation
 
   /**
-   * From HPCC codes
+   * \ingroup rdma
+   * \class Dcqcn
+   * \brief Rdma tx queue pair DCQCN infomation.
    */
-  uint64_t m_unackSize; // the highest unacked seq
-  // TODO cyq: configure this in file
-  uint32_t m_win; // bound of on-the-fly packets
-  DataRate m_max_rate; // max rate
-  // TODO cyq: configure this in file
-  bool m_var_win; // variable window size
-  Time m_nextAvail; //< Soonest time of next send
-  /******************************
-   * runtime states
-   *****************************/
-  DataRate m_rate; //< Current rate
-  struct
+  class Dcqcn
   {
-    DataRate m_targetRate; //< Target rate
-    EventId m_eventUpdateAlpha;
-    double m_alpha;
-    bool m_alpha_cnp_arrived; // indicate if CNP arrived in the last slot
-    bool m_first_cnp; // indicate if the current CNP is the first CNP
-    EventId m_eventDecreaseRate;
-    bool m_decrease_cnp_arrived; // indicate if CNP arrived in the last slot
-    uint32_t m_rpTimeStage;
-    EventId m_rpTimer;
-  } mlx;
+  public:
+    double m_alpha = 1;
+    bool m_alpha_cnp_arrived = false; // indicate if CNP arrived in the last slot
+    bool m_first_cnp = true; // indicate if the current CNP is the first CNP
+    bool m_decrease_cnp_arrived = false; // indicate if CNP arrived in the last slot
+    uint32_t m_rpTimeStage = 0;
 
-  void Acknowledge (uint64_t ack);
-  uint64_t GetOnTheFly ();
-  bool IsWinBound ();
-  uint64_t GetWin (); // window size calculated from m_rate
+    DataRate m_targetRate; //< Target rate
+
+    EventId m_eventUpdateAlpha;
+    EventId m_eventDecreaseRate;
+    EventId m_rpTimer;
+
+    void
+    CleanupTimer ()
+    {
+      Simulator::Cancel (m_eventUpdateAlpha);
+      Simulator::Cancel (m_eventDecreaseRate);
+      Simulator::Cancel (m_rpTimer);
+    }
+  } m_dcqcn;
 };
 
 } // namespace ns3

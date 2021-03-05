@@ -56,20 +56,10 @@ RdmaTxQueuePair::RdmaTxQueuePair (Time startTime, Ipv4Address sIp, Ipv4Address d
       m_dPort (dPort),
       m_size (size),
       m_priority (priority),
-      m_txSize (0)
+      m_txSize (0),
+      m_unackSize (0)
 {
   NS_LOG_FUNCTION (this << startTime << sIp << dIp << sPort << dPort << size << priority);
-  m_unackSize = 0;
-  m_win = 2000000;
-  m_max_rate = DataRate ("100Gbps");
-  m_var_win = true;
-  m_rate = DataRate ("100Gbps");
-  m_nextAvail = Time (0);
-  mlx.m_alpha = 1;
-  mlx.m_alpha_cnp_arrived = false;
-  mlx.m_first_cnp = true;
-  mlx.m_decrease_cnp_arrived = false;
-  mlx.m_rpTimeStage = 0;
 }
 
 uint64_t
@@ -252,7 +242,13 @@ RdmaTxQueuePair::Irn::GetWindowSize () const
 }
 
 void
-RdmaTxQueuePair::Acknowledge (uint64_t ack)
+RdmaTxQueuePair::B2Recover ()
+{
+  m_txSize = m_unackSize;
+}
+
+void
+RdmaTxQueuePair::B2Ack (uint64_t ack)
 {
   if (ack > m_unackSize)
     {
@@ -261,16 +257,16 @@ RdmaTxQueuePair::Acknowledge (uint64_t ack)
 }
 
 uint64_t
-RdmaTxQueuePair::GetOnTheFly ()
+RdmaTxQueuePair::B2GetOnTheFly ()
 {
   return m_txSize - m_unackSize;
 }
 
 bool
-RdmaTxQueuePair::IsWinBound ()
+RdmaTxQueuePair::B2IsWinBound ()
 {
   uint64_t w = GetWin ();
-  return w != 0 && GetOnTheFly () >= w;
+  return w != 0 && B2GetOnTheFly () >= w;
 }
 
 uint64_t

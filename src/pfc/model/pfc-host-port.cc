@@ -248,7 +248,7 @@ PfcHostPort::Transmit ()
           else if (m_ccMode == CC_MODE::DCQCN)
             {
               // TODO cyq: In IRN mode, the DCQCN window is disabled because IRN have one.
-              if (qp->GetRemainBytes () > 0 && !qp->IsWinBound () && !qp->IsTxFinished ())
+              if (qp->GetRemainBytes () > 0 && !qp->B2IsWinBound () && !qp->IsTxFinished ())
                 {
                   if (qp->m_nextAvail > Simulator::Now ()) // Not available now
                     continue;
@@ -478,7 +478,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
               // Cleanup timer for DCQCN
               if (m_ccMode == CC_MODE::DCQCN && qp->IsTxFinished ())
-                QpComplete (qp);
+                qp->m_dcqcn.CleanupTimer ();
 
               m_dev->TriggerTransmit (); // Because BDP-FC needs to check new bitmap and send
               return false; // Not data so no need to send to node
@@ -494,12 +494,12 @@ PfcHostPort::Receive (Ptr<Packet> p)
               else
                 {
                   if (m_l2RetransmissionMode == L2_RTX_MODE::B2N)
-                    qp->Acknowledge (seq);
+                    qp->B2Ack (seq);
                   else
-                    qp->Acknowledge (seq / m_chunk * m_chunk);
+                    qp->B2Ack (seq / m_chunk * m_chunk);
 
                   if (qp->IsAckedFinished ())
-                    QpComplete (qp);
+                    qp->m_dcqcn.CleanupTimer ();
                 }
 
               if (cnp)
@@ -542,15 +542,15 @@ PfcHostPort::Receive (Ptr<Packet> p)
               else
                 {
                   if (m_l2RetransmissionMode == L2_RTX_MODE::B2N)
-                    qp->Acknowledge (seq);
+                    qp->B2Ack (seq);
                   else
-                    qp->Acknowledge (seq / m_chunk * m_chunk);
+                    qp->B2Ack (seq / m_chunk * m_chunk);
 
                   if (qp->IsAckedFinished ())
-                    QpComplete (qp);
+                    qp->m_dcqcn.CleanupTimer ();
                 }
 
-              RecoverQueue (qp);
+              qp->B2Recover ();
 
               if (cnp)
                 m_dcqcn.cnp_received_mlx (qp);
@@ -783,20 +783,6 @@ PfcHostPort::UpdateNextAvail (Ptr<RdmaTxQueuePair> qp, Time interframeGap, uint3
   qp->m_nextAvail = Simulator::Now () + sendingTime;
 }
 
-void
-PfcHostPort::RecoverQueue (Ptr<RdmaTxQueuePair> qp)
-{
-  qp->m_txSize = qp->m_unackSize;
-}
-
-void
-PfcHostPort::QpComplete (Ptr<RdmaTxQueuePair> qp)
-{
-  Simulator::Cancel (qp->mlx.m_eventUpdateAlpha);
-  Simulator::Cancel (qp->mlx.m_eventDecreaseRate);
-  Simulator::Cancel (qp->mlx.m_rpTimer);
-}
-
 /******************************
  * Mellanox's version of DCQCN
  *****************************/
@@ -804,42 +790,42 @@ PfcHostPort::QpComplete (Ptr<RdmaTxQueuePair> qp)
 void
 PfcHostPort::Dcqcn::UpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp)
 {
-  if (qp->mlx.m_alpha_cnp_arrived)
+  if (qp->m_dcqcn.m_alpha_cnp_arrived)
     {
-      qp->mlx.m_alpha = (1 - m_g) * qp->mlx.m_alpha + m_g; //binary feedback
+      qp->m_dcqcn.m_alpha = (1 - m_g) * qp->m_dcqcn.m_alpha + m_g; //binary feedback
     }
   else
     {
-      qp->mlx.m_alpha = (1 - m_g) * qp->mlx.m_alpha; //binary feedback
+      qp->m_dcqcn.m_alpha = (1 - m_g) * qp->m_dcqcn.m_alpha; //binary feedback
     }
-  qp->mlx.m_alpha_cnp_arrived = false; // clear the CNP_arrived bit
+  qp->m_dcqcn.m_alpha_cnp_arrived = false; // clear the CNP_arrived bit
   ScheduleUpdateAlphaMlx (qp);
 }
 
 void
 PfcHostPort::Dcqcn::ScheduleUpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp)
 {
-  qp->mlx.m_eventUpdateAlpha = Simulator::Schedule (MicroSeconds (m_alpha_resume_interval),
+  qp->m_dcqcn.m_eventUpdateAlpha = Simulator::Schedule (MicroSeconds (m_alpha_resume_interval),
                                                     &PfcHostPort::Dcqcn::UpdateAlphaMlx, this, qp);
 }
 
 void
 PfcHostPort::Dcqcn::cnp_received_mlx (Ptr<RdmaTxQueuePair> qp)
 {
-  qp->mlx.m_alpha_cnp_arrived = true; // set CNP_arrived bit for alpha update
-  qp->mlx.m_decrease_cnp_arrived = true; // set CNP_arrived bit for rate decrease
-  if (qp->mlx.m_first_cnp)
+  qp->m_dcqcn.m_alpha_cnp_arrived = true; // set CNP_arrived bit for alpha update
+  qp->m_dcqcn.m_decrease_cnp_arrived = true; // set CNP_arrived bit for rate decrease
+  if (qp->m_dcqcn.m_first_cnp)
     {
       // init alpha
-      qp->mlx.m_alpha = 1;
-      qp->mlx.m_alpha_cnp_arrived = false;
+      qp->m_dcqcn.m_alpha = 1;
+      qp->m_dcqcn.m_alpha_cnp_arrived = false;
       // schedule alpha update
       ScheduleUpdateAlphaMlx (qp);
       // schedule rate decrease
       ScheduleDecreaseRateMlx (qp, 1); // add 1 ns to make sure rate decrease is after alpha update
       // set rate on first CNP
-      qp->mlx.m_targetRate = qp->m_rate = DataRate (m_rateOnFirstCNP * qp->m_rate.GetBitRate ());
-      qp->mlx.m_first_cnp = false;
+      qp->m_dcqcn.m_targetRate = qp->m_rate = DataRate (m_rateOnFirstCNP * qp->m_rate.GetBitRate ());
+      qp->m_dcqcn.m_first_cnp = false;
     }
 }
 
@@ -847,23 +833,23 @@ void
 PfcHostPort::Dcqcn::CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> qp)
 {
   ScheduleDecreaseRateMlx (qp, 0);
-  if (qp->mlx.m_decrease_cnp_arrived)
+  if (qp->m_dcqcn.m_decrease_cnp_arrived)
     {
       bool clamp = true;
       if (!m_EcnClampTgtRate)
         {
-          if (qp->mlx.m_rpTimeStage == 0)
+          if (qp->m_dcqcn.m_rpTimeStage == 0)
             clamp = false;
         }
       if (clamp)
-        qp->mlx.m_targetRate = qp->m_rate;
+        qp->m_dcqcn.m_targetRate = qp->m_rate;
       qp->m_rate =
-          std::max (m_minRate, DataRate (qp->m_rate.GetBitRate () * (1 - qp->mlx.m_alpha / 2)));
+          std::max (m_minRate, DataRate (qp->m_rate.GetBitRate () * (1 - qp->m_dcqcn.m_alpha / 2)));
       // reset rate increase related things
-      qp->mlx.m_rpTimeStage = 0;
-      qp->mlx.m_decrease_cnp_arrived = false;
-      Simulator::Cancel (qp->mlx.m_rpTimer);
-      qp->mlx.m_rpTimer = Simulator::Schedule (MicroSeconds (m_rpgTimeReset),
+      qp->m_dcqcn.m_rpTimeStage = 0;
+      qp->m_dcqcn.m_decrease_cnp_arrived = false;
+      Simulator::Cancel (qp->m_dcqcn.m_rpTimer);
+      qp->m_dcqcn.m_rpTimer = Simulator::Schedule (MicroSeconds (m_rpgTimeReset),
                                                &PfcHostPort::Dcqcn::RateIncEventTimerMlx, this, qp);
     }
 }
@@ -871,7 +857,7 @@ PfcHostPort::Dcqcn::CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> qp)
 void
 PfcHostPort::Dcqcn::ScheduleDecreaseRateMlx (Ptr<RdmaTxQueuePair> qp, uint32_t delta)
 {
-  qp->mlx.m_eventDecreaseRate =
+  qp->m_dcqcn.m_eventDecreaseRate =
       Simulator::Schedule (MicroSeconds (m_rateDecreaseInterval) + NanoSeconds (delta),
                            &PfcHostPort::Dcqcn::CheckRateDecreaseMlx, this, qp);
 }
@@ -879,21 +865,21 @@ PfcHostPort::Dcqcn::ScheduleDecreaseRateMlx (Ptr<RdmaTxQueuePair> qp, uint32_t d
 void
 PfcHostPort::Dcqcn::RateIncEventTimerMlx (Ptr<RdmaTxQueuePair> qp)
 {
-  qp->mlx.m_rpTimer = Simulator::Schedule (MicroSeconds (m_rpgTimeReset),
+  qp->m_dcqcn.m_rpTimer = Simulator::Schedule (MicroSeconds (m_rpgTimeReset),
                                            &PfcHostPort::Dcqcn::RateIncEventTimerMlx, this, qp);
   RateIncEventMlx (qp);
-  qp->mlx.m_rpTimeStage++;
+  qp->m_dcqcn.m_rpTimeStage++;
 }
 
 void
 PfcHostPort::Dcqcn::RateIncEventMlx (Ptr<RdmaTxQueuePair> qp)
 {
   // check which increase phase: fast recovery, active increase, hyper increase
-  if (qp->mlx.m_rpTimeStage < m_rpgThreshold)
+  if (qp->m_dcqcn.m_rpTimeStage < m_rpgThreshold)
     { // fast recovery
       FastRecoveryMlx (qp);
     }
-  else if (qp->mlx.m_rpTimeStage == m_rpgThreshold)
+  else if (qp->m_dcqcn.m_rpTimeStage == m_rpgThreshold)
     { // active increase
       ActiveIncreaseMlx (qp);
     }
@@ -906,27 +892,27 @@ PfcHostPort::Dcqcn::RateIncEventMlx (Ptr<RdmaTxQueuePair> qp)
 void
 PfcHostPort::Dcqcn::FastRecoveryMlx (Ptr<RdmaTxQueuePair> qp)
 {
-  qp->m_rate = DataRate ((qp->m_rate.GetBitRate () / 2) + (qp->mlx.m_targetRate.GetBitRate () / 2));
+  qp->m_rate = DataRate ((qp->m_rate.GetBitRate () / 2) + (qp->m_dcqcn.m_targetRate.GetBitRate () / 2));
 }
 
 void
 PfcHostPort::Dcqcn::ActiveIncreaseMlx (Ptr<RdmaTxQueuePair> qp)
 {
   // increate rate
-  qp->mlx.m_targetRate = DataRate (qp->mlx.m_targetRate.GetBitRate () + m_rai.GetBitRate ());
-  if (qp->mlx.m_targetRate > m_dev_rate)
-    qp->mlx.m_targetRate = m_dev_rate;
-  qp->m_rate = DataRate ((qp->m_rate.GetBitRate () / 2) + (qp->mlx.m_targetRate.GetBitRate () / 2));
+  qp->m_dcqcn.m_targetRate = DataRate (qp->m_dcqcn.m_targetRate.GetBitRate () + m_rai.GetBitRate ());
+  if (qp->m_dcqcn.m_targetRate > m_dev_rate)
+    qp->m_dcqcn.m_targetRate = m_dev_rate;
+  qp->m_rate = DataRate ((qp->m_rate.GetBitRate () / 2) + (qp->m_dcqcn.m_targetRate.GetBitRate () / 2));
 }
 
 void
 PfcHostPort::Dcqcn::HyperIncreaseMlx (Ptr<RdmaTxQueuePair> qp)
 {
   // increate rate
-  qp->mlx.m_targetRate = DataRate (qp->mlx.m_targetRate.GetBitRate () + m_rhai.GetBitRate ());
-  if (qp->mlx.m_targetRate > m_dev_rate)
-    qp->mlx.m_targetRate = m_dev_rate;
-  qp->m_rate = DataRate ((qp->m_rate.GetBitRate () / 2) + (qp->mlx.m_targetRate.GetBitRate () / 2));
+  qp->m_dcqcn.m_targetRate = DataRate (qp->m_dcqcn.m_targetRate.GetBitRate () + m_rhai.GetBitRate ());
+  if (qp->m_dcqcn.m_targetRate > m_dev_rate)
+    qp->m_dcqcn.m_targetRate = m_dev_rate;
+  qp->m_rate = DataRate ((qp->m_rate.GetBitRate () / 2) + (qp->m_dcqcn.m_targetRate.GetBitRate () / 2));
 }
 
 } // namespace ns3
