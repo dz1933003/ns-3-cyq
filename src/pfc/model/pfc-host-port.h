@@ -80,24 +80,24 @@ public:
 
   // the Mellanox's version of alpha update:
   // every fixed time slot, update alpha.
-  void UpdateAlphaMlx (Ptr<RdmaTxQueuePair> q);
-  void ScheduleUpdateAlphaMlx (Ptr<RdmaTxQueuePair> q);
+  void UpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp);
+  void ScheduleUpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp);
 
   // Mellanox's version of CNP receive
-  void cnp_received_mlx (Ptr<RdmaTxQueuePair> q);
+  void cnp_received_mlx (Ptr<RdmaTxQueuePair> qp);
 
   // Mellanox's version of rate decrease
   // It checks every m_rateDecreaseInterval if CNP arrived (m_decrease_cnp_arrived).
   // If so, decrease rate, and reset all rate increase related things
-  void CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> q);
-  void ScheduleDecreaseRateMlx (Ptr<RdmaTxQueuePair> q, uint32_t delta);
+  void CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> qp);
+  void ScheduleDecreaseRateMlx (Ptr<RdmaTxQueuePair> qp, uint32_t delta);
 
   // Mellanox's version of rate increase
-  void RateIncEventTimerMlx (Ptr<RdmaTxQueuePair> q);
-  void RateIncEventMlx (Ptr<RdmaTxQueuePair> q);
-  void FastRecoveryMlx (Ptr<RdmaTxQueuePair> q);
-  void ActiveIncreaseMlx (Ptr<RdmaTxQueuePair> q);
-  void HyperIncreaseMlx (Ptr<RdmaTxQueuePair> q);
+  void RateIncEventTimerMlx (Ptr<RdmaTxQueuePair> qp);
+  void RateIncEventMlx (Ptr<RdmaTxQueuePair> qp);
+  void FastRecoveryMlx (Ptr<RdmaTxQueuePair> qp);
+  void ActiveIncreaseMlx (Ptr<RdmaTxQueuePair> qp);
+  void HyperIncreaseMlx (Ptr<RdmaTxQueuePair> qp);
 
   /**
    * \brief Get the TypeId
