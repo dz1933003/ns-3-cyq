@@ -49,7 +49,6 @@ public:
 
   EventId m_nextSend; //< The next send event
 
-  DataRate m_minRate = DataRate("1Mbps"); //< Min sending rate
   double m_nack_interval = 500;
   uint32_t m_chunk = 4000;
   uint32_t m_ack_interval = 1;
@@ -68,36 +67,44 @@ public:
   /******************************
    * Mellanox's version of DCQCN
    *****************************/
-  double m_g = 0.00390625; //feedback weight
-  double m_rateOnFirstCNP = 1; // the fraction of line rate to set on first CNP
-  bool m_EcnClampTgtRate = false;
-  double m_rpgTimeReset = 900;
-  double m_rateDecreaseInterval = 4;
-  uint32_t m_rpgThreshold = 1;
-  double m_alpha_resume_interval = 1;
-  DataRate m_rai = DataRate("50Mb/s"); //< Rate of additive increase
-  DataRate m_rhai = DataRate("100Mb/s"); //< Rate of hyper-additive increase
+  class Dcqcn
+  {
+  public:
+    // Mellanox's version of CNP receive
+    void cnp_received_mlx (Ptr<RdmaTxQueuePair> qp);
 
-  // the Mellanox's version of alpha update:
-  // every fixed time slot, update alpha.
-  void UpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp);
-  void ScheduleUpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp);
+  private:
+    double m_g = 0.00390625; //feedback weight
+    double m_rateOnFirstCNP = 1; // the fraction of line rate to set on first CNP
+    bool m_EcnClampTgtRate = false;
+    double m_rpgTimeReset = 900;
+    double m_rateDecreaseInterval = 4;
+    uint32_t m_rpgThreshold = 1;
+    double m_alpha_resume_interval = 1;
+    DataRate m_rai = DataRate ("50Mb/s"); //< Rate of additive increase
+    DataRate m_rhai = DataRate ("100Mb/s"); //< Rate of hyper-additive increase
 
-  // Mellanox's version of CNP receive
-  void cnp_received_mlx (Ptr<RdmaTxQueuePair> qp);
+    DataRate m_minRate = DataRate ("1Mbps"); //< Min sending rate
+    DataRate m_dev_rate = DataRate ("100Gbps"); // m_dev.GetBitRate()
 
-  // Mellanox's version of rate decrease
-  // It checks every m_rateDecreaseInterval if CNP arrived (m_decrease_cnp_arrived).
-  // If so, decrease rate, and reset all rate increase related things
-  void CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> qp);
-  void ScheduleDecreaseRateMlx (Ptr<RdmaTxQueuePair> qp, uint32_t delta);
+    // the Mellanox's version of alpha update:
+    // every fixed time slot, update alpha.
+    void UpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp);
+    void ScheduleUpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp);
 
-  // Mellanox's version of rate increase
-  void RateIncEventTimerMlx (Ptr<RdmaTxQueuePair> qp);
-  void RateIncEventMlx (Ptr<RdmaTxQueuePair> qp);
-  void FastRecoveryMlx (Ptr<RdmaTxQueuePair> qp);
-  void ActiveIncreaseMlx (Ptr<RdmaTxQueuePair> qp);
-  void HyperIncreaseMlx (Ptr<RdmaTxQueuePair> qp);
+    // Mellanox's version of rate decrease
+    // It checks every m_rateDecreaseInterval if CNP arrived (m_decrease_cnp_arrived).
+    // If so, decrease rate, and reset all rate increase related things
+    void CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> qp);
+    void ScheduleDecreaseRateMlx (Ptr<RdmaTxQueuePair> qp, uint32_t delta);
+
+    // Mellanox's version of rate increase
+    void RateIncEventTimerMlx (Ptr<RdmaTxQueuePair> qp);
+    void RateIncEventMlx (Ptr<RdmaTxQueuePair> qp);
+    void FastRecoveryMlx (Ptr<RdmaTxQueuePair> qp);
+    void ActiveIncreaseMlx (Ptr<RdmaTxQueuePair> qp);
+    void HyperIncreaseMlx (Ptr<RdmaTxQueuePair> qp);
+  } m_dcqcn;
 
   /**
    * \brief Get the TypeId
