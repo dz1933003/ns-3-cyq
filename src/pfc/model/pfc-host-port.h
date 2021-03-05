@@ -44,8 +44,6 @@ public:
   /**
    * Copy from HPCC
    */
-  // TODO cyq: config in file
-  bool isDcqcn = true;
 
   EventId m_nextSend; //< The next send event
 

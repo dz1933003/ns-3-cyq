@@ -167,6 +167,15 @@ main (int argc, char *argv[])
                   const uint32_t n = host["L2Retransmission"]["RtoLowThreshold"];
                   impl->SetupIrn (size, rtoHigh, rtoLow, n);
                 }
+              // Congestion control mode settings
+              const auto ccMode = host.contains ("CcMode")
+                                      ? PfcHostPort::CcModeStringToNum (host["CcMode"]["Mode"])
+                                      : PfcHostPort::CC_MODE::NONE_CC;
+              impl->SetCcMode (ccMode);
+              if (ccMode == PfcHostPort::CC_MODE::DCQCN)
+                {
+                  // TODO cyq: dcqcn settings
+                }
               allPorts[node].push_back (dev);
             }
           // Install DPSK

@@ -225,7 +225,7 @@ PfcHostPort::Transmit ()
           (m_l2RetransmissionMode != L2_RTX_MODE::IRN ||
            qp->m_irn.GetWindowSize () < m_irn.maxBitmapSize))
         {
-          if (isDcqcn)
+          if (m_ccMode == CC_MODE::DCQCN)
             {
               if (qp->GetRemainBytes () > 0 && !qp->IsWinBound () && !qp->IsFinishedSend ())
                 {
@@ -374,7 +374,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
               qp = qpItr->second;
             }
 
-          if (isDcqcn)
+          if (m_ccMode == CC_MODE::DCQCN)
             {
               qp->m_b2n_0.m_milestone_rx = m_ack_interval;
               int x = ReceiverCheckSeq (seq, qp, payloadSize);
@@ -465,7 +465,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
           uint32_t index = m_txQueuePairTable[key];
           Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
-          if (isDcqcn)
+          if (m_ccMode == CC_MODE::DCQCN)
             {
               if (m_ack_interval == 0)
                 std::cout << "ERROR: shouldn't receive ack\n";
@@ -510,7 +510,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
           uint32_t index = m_txQueuePairTable[key];
           Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
-          if (isDcqcn)
+          if (m_ccMode == CC_MODE::DCQCN)
             {
               if (m_ack_interval == 0)
                 std::cout << "ERROR: shouldn't receive ack\n";
@@ -596,7 +596,7 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_irnSeq)
       qbb.SetFlags (QbbHeader::NONE);
       qp->m_irn.SendNewPacket (payloadSize); // Update IRN infos
     }
-  if (isDcqcn)
+  if (m_ccMode == CC_MODE::DCQCN)
     qbb.SetSequenceNumber (qp->snd_nxt);
   p->AddHeader (qbb);
 
@@ -615,7 +615,7 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_irnSeq)
   eth.SetLengthType (0x0800); // IPv4
   p->AddHeader (eth);
 
-  if (isDcqcn)
+  if (m_ccMode == CC_MODE::DCQCN)
     qp->snd_nxt += payloadSize;
 
   return p;

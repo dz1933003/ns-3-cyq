@@ -9,7 +9,10 @@
         "h1",
         "h2"
       ],
-      "PortNumber": 1
+      "PortNumber": 1,
+      "CcMode": {
+        "Mode": "DCQCN"
+      }
     }
   ],
   "Switch": [
