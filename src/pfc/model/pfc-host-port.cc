@@ -355,7 +355,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
           if (isDcqcn)
             {
-              qp->m_milestone_rx = m_ack_interval;
+              qp->m_b2n_0.m_milestone_rx = m_ack_interval;
               int x = ReceiverCheckSeq (seq, qp, payloadSize);
               if (x == 1 || x == 2)
                 {
@@ -744,9 +744,9 @@ PfcHostPort::ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t si
   if (seq == expected)
     {
       q->m_receivedSize = expected + size;
-      if (q->m_receivedSize >= q->m_milestone_rx)
+      if (q->m_receivedSize >= q->m_b2n_0.m_milestone_rx)
         {
-          q->m_milestone_rx += m_ack_interval;
+          q->m_b2n_0.m_milestone_rx += m_ack_interval;
           return 1; //Generate ACK
         }
       else if (q->m_receivedSize % m_chunk == 0)
@@ -761,10 +761,10 @@ PfcHostPort::ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t si
   else if (seq > expected)
     {
       // Generate NACK
-      if (Simulator::Now () >= q->m_nackTimer || q->m_lastNACK != expected)
+      if (Simulator::Now () >= q->m_b2n_0.m_nackTimer || q->m_b2n_0.m_lastNACK != expected)
         {
-          q->m_nackTimer = Simulator::Now () + MicroSeconds (m_nack_interval);
-          q->m_lastNACK = expected;
+          q->m_b2n_0.m_nackTimer = Simulator::Now () + MicroSeconds (m_nack_interval);
+          q->m_b2n_0.m_lastNACK = expected;
           if (m_backto0)
             {
               q->m_receivedSize = q->m_receivedSize / m_chunk * m_chunk;

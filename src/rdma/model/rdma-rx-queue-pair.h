@@ -133,11 +133,17 @@ public:
   } m_irn; //!< IRN infomation
 
   /**
-   * Copy from HPCC
+   * \ingroup rdma
+   * \class B2n_0
+   * \brief Rdma rx queue pair back to N or back to zero infomation.
    */
-  Time m_nackTimer = Time (0);
-  uint32_t m_milestone_rx = 0;
-  uint32_t m_lastNACK = 0;
+  class B2N_0
+  {
+  public:
+    Time m_nackTimer = Time (0);
+    uint32_t m_milestone_rx = 0;
+    uint32_t m_lastNACK = 0;
+  } m_b2n_0;
 };
 
 } // namespace ns3
