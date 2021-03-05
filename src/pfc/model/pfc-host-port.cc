@@ -519,39 +519,8 @@ PfcHostPort::Receive (Ptr<Packet> p)
           uint32_t key = RdmaTxQueuePair::GetHash (sIp, dIp, sPort, dPort);
           uint32_t index = m_txQueuePairTable[key];
           Ptr<RdmaTxQueuePair> qp = m_txQueuePairs[index];
-          if (m_ccMode == CC_MODE::DCQCN)
-            {
-              if (m_ack_interval == 0)
-                std::cout << "ERROR: shouldn't receive ack\n";
-              else
-                {
-                  if (m_l2RetransmissionMode == L2_RTX_MODE::B2N)
-                    {
-                      qp->Acknowledge (seq);
-                    }
-                  else
-                    {
-                      uint32_t goback_seq = seq / m_chunk * m_chunk;
-                      qp->Acknowledge (goback_seq);
-                    }
-                  if (qp->IsAckedFinished ())
-                    {
-                      QpComplete (qp);
-                    }
-                }
-              // if (ch.l3Prot == 0xFD) // NACK
-              RecoverQueue (qp);
-              // handle cnp
-              if (cnp)
-                {
-                  // mlx version
-                  m_dcqcn.cnp_received_mlx (qp);
-                }
-              // ACK may advance the on-the-fly window, allowing more packets to send
-              m_dev->TriggerTransmit ();
-              return false;
-            }
-          else
+
+          if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
             {
               // Add retransmission packets and trigger transmitting
               qp->m_irn.SackIrnState (irnAck, irnNack);
@@ -561,6 +530,37 @@ PfcHostPort::Receive (Ptr<Packet> p)
                 }
               m_dev->TriggerTransmit ();
               return false; // Not data so no need to send to node
+            }
+          else if (m_l2RetransmissionMode == L2_RTX_MODE::B20 ||
+                   m_l2RetransmissionMode == L2_RTX_MODE::B2N)
+            {
+              if (m_ack_interval == 0)
+                {
+                  NS_ASSERT_MSG (false, "PfcHostPort::Receive: "
+                                        "Shouldn't receive ACK");
+                }
+              else
+                {
+                  if (m_l2RetransmissionMode == L2_RTX_MODE::B2N)
+                    qp->Acknowledge (seq);
+                  else
+                    qp->Acknowledge (seq / m_chunk * m_chunk);
+
+                  if (qp->IsAckedFinished ())
+                    QpComplete (qp);
+                }
+
+              RecoverQueue (qp);
+
+              if (cnp)
+                m_dcqcn.cnp_received_mlx (qp);
+
+              m_dev->TriggerTransmit (); // Because ACK may advance the on-the-fly window
+              return false;
+            }
+          else
+            {
+              return false;
             }
         }
       else
