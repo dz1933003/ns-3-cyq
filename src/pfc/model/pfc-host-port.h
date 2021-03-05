@@ -49,13 +49,13 @@ public:
 
   EventId m_nextSend; //< The next send event
 
-  DataRate m_minRate = DataRate("100Mbps"); //< Min sending rate
+  DataRate m_minRate = DataRate("1Mbps"); //< Min sending rate
   double m_nack_interval = 500;
   uint32_t m_chunk = 4000;
   uint32_t m_ack_interval = 1;
   bool m_backto0 = false;
   bool m_var_win = true, m_fast_react = true;
-  bool m_rateBound = false;
+  bool m_rateBound = true;
 
   int ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t size);
 

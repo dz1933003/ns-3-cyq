@@ -41,7 +41,7 @@ public:
   uint64_t m_size; //!< source port, dst port
   uint16_t m_priority; //!< flow priority
 
-  uint64_t m_receivedSize; //!< total valid received size
+  uint64_t m_receivedSize; //!< total valid received size (next expected sequence)
 
   static TypeId GetTypeId (void);
   RdmaRxQueuePair ();
@@ -135,7 +135,6 @@ public:
   /**
    * Copy from HPCC
    */
-  uint32_t ReceiverNextExpectedSeq = 0;
   Time m_nackTimer = Time (0);
   uint32_t m_milestone_rx = 0;
   uint32_t m_lastNACK = 0;

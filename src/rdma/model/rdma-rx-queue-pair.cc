@@ -93,9 +93,7 @@ RdmaRxQueuePair::GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const 
 bool
 RdmaRxQueuePair::IsFinished ()
 {
-  // TODO cyq: if is dcqcn
-  return ReceiverNextExpectedSeq >= m_size;
-  // return m_receivedSize >= m_size;
+  return m_receivedSize >= m_size;
 }
 
 // IRN inner class implementation

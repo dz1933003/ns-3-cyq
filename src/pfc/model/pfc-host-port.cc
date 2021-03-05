@@ -204,21 +204,21 @@ PfcHostPort::Transmit ()
           qp->IsFinished () == false && qp->m_startTime <= Simulator::Now () &&
           (m_l2RetransmissionMode != IRN || qp->m_irn.GetWindowSize () < m_irn.maxBitmapSize))
         {
-          if (isDcqcn && !qp->IsFinishedSend ())
+          if (isDcqcn)
             {
-              if (qp->GetRemainBytes () > 0 && !qp->IsWinBound ())
+              if (qp->GetRemainBytes () > 0 && !qp->IsWinBound () && !qp->IsFinishedSend ())
                 {
                   if (qp->m_nextAvail > Simulator::Now ()) // Not available now
                     continue;
+                  m_lastQpIndex = qIdx;
+                  auto p = GenData (qp);
+                  // TODO cyq: Not finished here!
+                  if (qp->IsFinishedSend ())
+                    m_queuePairTxCompleteTrace (qp);
+                  m_nTxBytes += p->GetSize ();
+                  PktSent (qp, p, Time (0));
+                  return p;
                 }
-              m_lastQpIndex = qIdx;
-              auto p = GenData (qp);
-              // TODO cyq: Not finished here!
-              if (qp->IsFinishedSend ())
-                m_queuePairTxCompleteTrace (qp);
-              m_nTxBytes += p->GetSize ();
-              PktSent (qp, p, Time (0));
-              return p;
             }
           else
             {
@@ -364,7 +364,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   QbbHeader qbb;
                   qbb.SetSourcePort (qp->m_dPort); // exchange ports
                   qbb.SetDestinationPort (qp->m_sPort);
-                  qbb.SetSequenceNumber (qp->ReceiverNextExpectedSeq);
+                  qbb.SetSequenceNumber (qp->m_receivedSize);
                   qbb.SetCnp (ecn == Ipv4Header::EcnType::ECN_CE);
                   qbb.SetFlags (x == 1 ? QbbHeader::ACK : QbbHeader::SACK);
                   p->AddHeader (qbb);
@@ -740,16 +740,16 @@ PfcHostPort::DoDispose ()
 int
 PfcHostPort::ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t size)
 {
-  uint32_t expected = q->ReceiverNextExpectedSeq;
+  uint32_t expected = q->m_receivedSize;
   if (seq == expected)
     {
-      q->ReceiverNextExpectedSeq = expected + size;
-      if (q->ReceiverNextExpectedSeq >= q->m_milestone_rx)
+      q->m_receivedSize = expected + size;
+      if (q->m_receivedSize >= q->m_milestone_rx)
         {
           q->m_milestone_rx += m_ack_interval;
           return 1; //Generate ACK
         }
-      else if (q->ReceiverNextExpectedSeq % m_chunk == 0)
+      else if (q->m_receivedSize % m_chunk == 0)
         {
           return 1;
         }
@@ -767,7 +767,7 @@ PfcHostPort::ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t si
           q->m_lastNACK = expected;
           if (m_backto0)
             {
-              q->ReceiverNextExpectedSeq = q->ReceiverNextExpectedSeq / m_chunk * m_chunk;
+              q->m_receivedSize = q->m_receivedSize / m_chunk * m_chunk;
             }
           return 2;
         }
