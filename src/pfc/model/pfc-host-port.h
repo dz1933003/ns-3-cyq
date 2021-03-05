@@ -167,7 +167,7 @@ public:
    * L2 retransmission mode
    */
   enum L2_RTX_MODE {
-    NONE, // No retransmission
+    NONE_RTX, // No retransmission
     B20, // Back to zero (Not implemented)
     B2N, // Back to N (Not implemented)
     IRN // Selective ACK
@@ -188,8 +188,6 @@ public:
    */
   static uint32_t L2RtxModeStringToNum (const std::string &mode);
 
-  // IRN related configurations
-
   /**
    * Setup IRN configurations
    *
@@ -199,6 +197,29 @@ public:
    * \param n timeout low threshold packets of a flow
    */
   void SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n);
+
+  /**
+   * Congestion control mode
+   */
+  enum CC_MODE {
+    NONE_CC, // No cc
+    DCQCN // Dcqcn
+  };
+
+  /**
+   * Set congestion control mode
+   * 
+   * \param mode congestion control mode
+   */
+  void SetCcMode (uint32_t mode);
+
+  /**
+   * Convert congestion control mode string to number
+   * 
+   * \param mode congestion control mode name
+   * \return mode number
+   */
+  static uint32_t CcModeStringToNum (const std::string &mode);
 
 protected:
   /**
@@ -257,6 +278,8 @@ private:
   uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
 
   uint32_t m_l2RetransmissionMode; //!< L2 retransmission mode
+
+  uint32_t m_ccMode; //!< congestion control mode
 
   struct
   {

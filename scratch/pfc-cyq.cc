@@ -157,7 +157,7 @@ main (int argc, char *argv[])
               const auto l2RtxMode =
                   host.contains ("L2Retransmission")
                       ? PfcHostPort::L2RtxModeStringToNum (host["L2Retransmission"]["Mode"])
-                      : PfcHostPort::L2_RTX_MODE::NONE;
+                      : PfcHostPort::L2_RTX_MODE::NONE_RTX;
               impl->SetL2RetransmissionMode (l2RtxMode);
               if (l2RtxMode == PfcHostPort::L2_RTX_MODE::IRN)
                 {

@@ -61,7 +61,7 @@ PfcHostPort::GetTypeId (void)
 
 PfcHostPort::PfcHostPort ()
     : m_pfcEnabled (true),
-      m_l2RetransmissionMode (L2_RTX_MODE::NONE),
+      m_l2RetransmissionMode (L2_RTX_MODE::NONE_RTX),
       m_nTxBytes (0),
       m_nRxBytes (0)
 {
@@ -136,9 +136,9 @@ PfcHostPort::L2RtxModeStringToNum (const std::string &mode)
 {
   NS_LOG_FUNCTION (mode);
   if (mode == "NONE")
-    return NONE;
+    return L2_RTX_MODE::NONE_RTX;
   else if (mode == "IRN")
-    return IRN;
+    return L2_RTX_MODE::IRN;
   else
     NS_ASSERT_MSG (false, "PfcHostPort::L2RtxModeStringToNum: "
                           "Unknown L2 retransmission mode");
@@ -152,6 +152,26 @@ PfcHostPort::SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n)
   m_irn.rtoHigh = rtoh;
   m_irn.rtoLow = rtol;
   m_irn.rtoLowThreshold = n;
+}
+
+void
+PfcHostPort::SetCcMode (uint32_t mode)
+{
+  NS_LOG_FUNCTION (mode);
+  m_ccMode = mode;
+}
+
+uint32_t
+PfcHostPort::CcModeStringToNum (const std::string &mode)
+{
+  NS_LOG_FUNCTION (mode);
+  if (mode == "NONE")
+    return CC_MODE::NONE_CC;
+  else if (mode == "DCQCN")
+    return CC_MODE::DCQCN;
+  else
+    NS_ASSERT_MSG (false, "PfcHostPort::CcModeStringToNum: "
+                          "Unknown congestion control mode");
 }
 
 Ptr<Packet>
@@ -177,7 +197,7 @@ PfcHostPort::Transmit ()
       const auto state = qp->m_irn.GetIrnState (irnSeq);
       m_rtxPacketQueue.pop_front ();
       // Set up IRN timer
-      if (m_l2RetransmissionMode == IRN)
+      if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
         {
           // filter out ACKed packets
           if (state == RdmaTxQueuePair::NACK || state == RdmaTxQueuePair::UNACK)
@@ -202,7 +222,8 @@ PfcHostPort::Transmit ()
       // 4. In IRN mode the sending window is not full.
       if ((m_pausedStates[qp->m_priority] == false || m_pfcEnabled == false) &&
           qp->IsFinished () == false && qp->m_startTime <= Simulator::Now () &&
-          (m_l2RetransmissionMode != IRN || qp->m_irn.GetWindowSize () < m_irn.maxBitmapSize))
+          (m_l2RetransmissionMode != L2_RTX_MODE::IRN ||
+           qp->m_irn.GetWindowSize () < m_irn.maxBitmapSize))
         {
           if (isDcqcn)
             {
@@ -229,7 +250,7 @@ PfcHostPort::Transmit ()
                 m_queuePairTxCompleteTrace (qp);
               m_nTxBytes += p->GetSize ();
               // Set up IRN timer
-              if (m_l2RetransmissionMode == IRN)
+              if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
                 {
                   auto id = IrnTimer (qp, irnSeq);
                   qp->m_irn.SetRtxEvent (irnSeq, id);
@@ -391,11 +412,11 @@ PfcHostPort::Receive (Ptr<Packet> p)
           else
             {
               // retransmission and rx byte count
-              if (m_l2RetransmissionMode == NONE)
+              if (m_l2RetransmissionMode == L2_RTX_MODE::NONE_RTX)
                 {
                   qp->m_receivedSize += payloadSize;
                 }
-              else if (m_l2RetransmissionMode == IRN)
+              else if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
                 {
                   const uint32_t expectedAck = qp->m_irn.GetNextSequenceNumber ();
                   if (irnAck < expectedAck) // in window
@@ -566,7 +587,7 @@ PfcHostPort::GenData (Ptr<RdmaTxQueuePair> qp, uint32_t &o_irnSeq)
   QbbHeader qbb;
   qbb.SetSourcePort (qp->m_sPort);
   qbb.SetDestinationPort (qp->m_dPort);
-  if (m_l2RetransmissionMode == IRN)
+  if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
     {
       const auto seq = qp->m_irn.GetNextSequenceNumber ();
       o_irnSeq = seq;
