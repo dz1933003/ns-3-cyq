@@ -1,0 +1,21 @@
+[
+  {
+    "QueueIndex": [
+      0
+    ],
+    "Ecn": {
+      "kMin": "500KiB",
+      "kMax": "2MiB",
+      "pMax": 1
+    },
+    "Headroom": "1MiB",
+    "Reserve": "1MiB",
+    "ResumeOffset": "1MiB"
+  },
+  {
+    "QueueIndex": [
+      1
+    ],
+    "Headroom": "2MiB"
+  }
+]

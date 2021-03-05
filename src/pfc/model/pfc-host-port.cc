@@ -738,18 +738,18 @@ PfcHostPort::DoDispose ()
 }
 
 int
-PfcHostPort::ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t size)
+PfcHostPort::ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> qp, uint32_t size)
 {
-  uint32_t expected = q->m_receivedSize;
+  uint32_t expected = qp->m_receivedSize;
   if (seq == expected)
     {
-      q->m_receivedSize = expected + size;
-      if (q->m_receivedSize >= q->m_b2n_0.m_milestone_rx)
+      qp->m_receivedSize = expected + size;
+      if (qp->m_receivedSize >= qp->m_b2n_0.m_milestone_rx)
         {
-          q->m_b2n_0.m_milestone_rx += m_ack_interval;
-          return 1; //Generate ACK
+          qp->m_b2n_0.m_milestone_rx += m_ack_interval;
+          return 1; // Generate ACK
         }
-      else if (q->m_receivedSize % m_chunk == 0)
+      else if (qp->m_receivedSize % m_chunk == 0)
         {
           return 1;
         }
@@ -761,13 +761,13 @@ PfcHostPort::ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t si
   else if (seq > expected)
     {
       // Generate NACK
-      if (Simulator::Now () >= q->m_b2n_0.m_nackTimer || q->m_b2n_0.m_lastNACK != expected)
+      if (Simulator::Now () >= qp->m_b2n_0.m_nackTimer || qp->m_b2n_0.m_lastNACK != expected)
         {
-          q->m_b2n_0.m_nackTimer = Simulator::Now () + MicroSeconds (m_nack_interval);
-          q->m_b2n_0.m_lastNACK = expected;
+          qp->m_b2n_0.m_nackTimer = Simulator::Now () + MicroSeconds (m_nack_interval);
+          qp->m_b2n_0.m_lastNACK = expected;
           if (m_backto0)
             {
-              q->m_receivedSize = q->m_receivedSize / m_chunk * m_chunk;
+              qp->m_receivedSize = qp->m_receivedSize / m_chunk * m_chunk;
             }
           return 2;
         }

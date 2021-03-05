@@ -57,7 +57,7 @@ public:
   bool m_var_win = true, m_fast_react = true;
   bool m_rateBound = true;
 
-  int ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t size);
+  int ReceiverCheckSeq (uint32_t seq, Ptr<RdmaRxQueuePair> qp, uint32_t size);
 
   void RecoverQueue (Ptr<RdmaTxQueuePair> qp);
   void QpComplete (Ptr<RdmaTxQueuePair> qp);
