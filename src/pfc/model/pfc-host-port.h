@@ -238,19 +238,19 @@ private:
   // TODO cyq: config in file
   struct Dcqcn //!< DCQCN configuration
   {
-    double g = 0.00390625; //!< feedback weight
+    double g = 0.00390625; //!< Control gain parameter which determines the level of rate decrease
     double rateFracOnFirstCnp = 1; //!< the fraction of line rate to set on first CNP
-    bool isEcnClampTargetRate = false;
-    Time rpgTimeReset = Time ("900us");
-    Time rateDecreaseInterval = Time ("4us");
-    uint32_t rpgThreshold = 1;
-    double alphaResumeInterval = 1;
+    bool clampTargetRate = false; //!< Clamp target rate on CNP
+    Time incRateInterval = Time ("900us"); //!< The rate increase interval at RP
+    Time decRateInterval = Time ("4us"); //!< The interval of rate decrease check
+    uint32_t fastRecTimes = 1; //!< Fast recovery times
+    Time alphaResumeInterval = Time ("1us"); //!< The interval of resuming alpha
 
-    DataRate rai = DataRate ("50Mb/s"); //!< Rate of additive increase
-    DataRate rhai = DataRate ("100Mb/s"); //!< Rate of hyper-additive increase
+    DataRate rai = DataRate ("50Mb/s"); //!< Rate increase of additive increase
+    DataRate rhai = DataRate ("100Mb/s"); //!< Rate increase of hyper-additive increase
 
     DataRate minRate = DataRate ("1Mbps"); //!< Min sending rate
-    bool isRateBound = true;
+    bool isRateBound = true; //!< using DCQCN rate control
   } m_dcqcn;
 
   struct B2x //!< B2N or B20 configuration

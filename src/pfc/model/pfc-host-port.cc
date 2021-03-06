@@ -824,8 +824,8 @@ PfcHostPort::DcqcnUpdateAlpha (Ptr<RdmaTxQueuePair> qp)
 void
 PfcHostPort::DcqcnScheduleUpdateAlpha (Ptr<RdmaTxQueuePair> qp)
 {
-  qp->m_dcqcn.m_eventUpdateAlpha = Simulator::Schedule (MicroSeconds (m_dcqcn.alphaResumeInterval),
-                                                        &PfcHostPort::DcqcnUpdateAlpha, this, qp);
+  qp->m_dcqcn.m_eventUpdateAlpha =
+      Simulator::Schedule (m_dcqcn.alphaResumeInterval, &PfcHostPort::DcqcnUpdateAlpha, this, qp);
 }
 
 void
@@ -834,7 +834,7 @@ PfcHostPort::DcqcnDecRate (Ptr<RdmaTxQueuePair> qp)
   DcqcnScheduleDecRate (qp, Time (0));
   if (qp->m_dcqcn.m_decreaseCnpArrived)
     {
-      if (m_dcqcn.isEcnClampTargetRate || qp->m_dcqcn.m_rpTimeStage != 0)
+      if (m_dcqcn.clampTargetRate || qp->m_dcqcn.m_rpTimeStage != 0)
         qp->m_dcqcn.m_targetRate = qp->m_rate;
       qp->m_rate = std::max (m_dcqcn.minRate,
                              DataRate (qp->m_rate.GetBitRate () * (1 - qp->m_dcqcn.m_alpha / 2)));
@@ -842,23 +842,23 @@ PfcHostPort::DcqcnDecRate (Ptr<RdmaTxQueuePair> qp)
       qp->m_dcqcn.m_rpTimeStage = 0;
       qp->m_dcqcn.m_decreaseCnpArrived = false;
       Simulator::Cancel (qp->m_dcqcn.m_rpTimer);
-      qp->m_dcqcn.m_rpTimer =
-          Simulator::Schedule (m_dcqcn.rpgTimeReset, &PfcHostPort::DcqcnScheduleIncRate, this, qp);
+      qp->m_dcqcn.m_rpTimer = Simulator::Schedule (m_dcqcn.incRateInterval,
+                                                   &PfcHostPort::DcqcnScheduleIncRate, this, qp);
     }
 }
 
 void
 PfcHostPort::DcqcnScheduleDecRate (Ptr<RdmaTxQueuePair> qp, const Time &delta)
 {
-  qp->m_dcqcn.m_eventDecreaseRate = Simulator::Schedule (m_dcqcn.rateDecreaseInterval + delta,
-                                                         &PfcHostPort::DcqcnDecRate, this, qp);
+  qp->m_dcqcn.m_eventDecreaseRate =
+      Simulator::Schedule (m_dcqcn.decRateInterval + delta, &PfcHostPort::DcqcnDecRate, this, qp);
 }
 
 void
 PfcHostPort::DcqcnScheduleIncRate (Ptr<RdmaTxQueuePair> qp)
 {
   qp->m_dcqcn.m_rpTimer =
-      Simulator::Schedule (m_dcqcn.rpgTimeReset, &PfcHostPort::DcqcnScheduleIncRate, this, qp);
+      Simulator::Schedule (m_dcqcn.incRateInterval, &PfcHostPort::DcqcnScheduleIncRate, this, qp);
   DcqcnIncRate (qp);
   qp->m_dcqcn.m_rpTimeStage++;
 }
@@ -867,9 +867,9 @@ void
 PfcHostPort::DcqcnIncRate (Ptr<RdmaTxQueuePair> qp)
 {
   // check which increase phase: fast recovery, active increase, hyper increase
-  if (qp->m_dcqcn.m_rpTimeStage < m_dcqcn.rpgThreshold)
+  if (qp->m_dcqcn.m_rpTimeStage < m_dcqcn.fastRecTimes)
     DcqcnFastRecovery (qp); // fast recovery
-  else if (qp->m_dcqcn.m_rpTimeStage == m_dcqcn.rpgThreshold)
+  else if (qp->m_dcqcn.m_rpTimeStage == m_dcqcn.fastRecTimes)
     DcqcnActiveIncrease (qp); // active increase
   else
     DcqcnHyperIncrease (qp); // hyper increase

@@ -15,7 +15,17 @@
       "NackInterval": "500us"
     },
     "CcMode": {
-      "Mode": "DCQCN"
+      "Mode": "DCQCN",
+      "EwmaGain": 0.00390625,
+      "ClampTargetRate": false,
+      "IncRateInterval": "900us",
+      "DecRateInterval": "4us",
+      "FastRecTimes": 1,
+      "AlphaResumeInterval": "1us",
+      "RateAI": "50Mbps",
+      "RateHAI": "100Mbps",
+      "MinRate": "1Mbps",
+      "RateBound": true
     }
   },
   "Host": [
