@@ -45,6 +45,11 @@ static std::string traceTag = ""; // Prefix for log file name
 uint32_t nQueue; // Global interface queue number (control queue is not counted)
 uint32_t ecmpSeed; // ECMP seed
 DpskNetDevice::TxMode portTxMode; // Global interface transmission mode (active or passive)
+
+/********************************
+ * Global simulation infomation *
+ ********************************/
+
 boost::bimap<std::string, Ptr<Node>> allNodes; // Node name to Node pointer
 std::map<Ptr<Node>, std::vector<Ptr<DpskNetDevice>>> allPorts; // Node pointer to its interfaces
 boost::bimap<Ptr<Node>, Ipv4Address> allIpv4Addresses; // Node pointer to its IPv4 addr
@@ -88,6 +93,9 @@ std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairRtt;
 /***************************************
  * Help functions for simulation setup *
  ***************************************/
+
+void ConfigPortL2Rtx (Ptr<PfcHostPort> port, const json &globalConf);
+void ConfigPortCcMode (Ptr<PfcHostPort> port, const json &globalConf);
 
 void ConfigMmuPort (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile);
 void ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
@@ -154,28 +162,9 @@ main (int argc, char *argv[])
               impl->SetupQueues (nQueue);
               impl->EnablePfc (host.contains ("PfcEnable") ? host["PfcEnable"].get<bool> () : true);
               // L2 retransmission mode settings
-              const auto l2RtxMode =
-                  host.contains ("L2Retransmission")
-                      ? PfcHostPort::L2RtxModeStringToNum (host["L2Retransmission"]["Mode"])
-                      : PfcHostPort::L2_RTX_MODE::NONE_RTX;
-              impl->SetL2RetransmissionMode (l2RtxMode);
-              if (l2RtxMode == PfcHostPort::L2_RTX_MODE::IRN)
-                {
-                  const uint32_t size = host["L2Retransmission"]["MaxBitmapSize"];
-                  const Time rtoHigh (host["L2Retransmission"]["RtoHigh"].get<std::string> ());
-                  const Time rtoLow (host["L2Retransmission"]["RtoLow"].get<std::string> ());
-                  const uint32_t n = host["L2Retransmission"]["RtoLowThreshold"];
-                  impl->SetupIrn (size, rtoHigh, rtoLow, n);
-                }
+              ConfigPortL2Rtx (impl, conf["Global"]);
               // Congestion control mode settings
-              const auto ccMode = host.contains ("CcMode")
-                                      ? PfcHostPort::CcModeStringToNum (host["CcMode"]["Mode"])
-                                      : PfcHostPort::CC_MODE::NONE_CC;
-              impl->SetCcMode (ccMode);
-              if (ccMode == PfcHostPort::CC_MODE::DCQCN)
-                {
-                  // TODO cyq: dcqcn settings
-                }
+              ConfigPortCcMode (impl, conf["Global"]);
               allPorts[node].push_back (dev);
             }
           // Install DPSK
@@ -348,6 +337,57 @@ main (int argc, char *argv[])
   const auto sim_end = std::chrono::system_clock::now ();
   const std::chrono::duration<double> elapsed_seconds = sim_end - sim_start;
   NS_LOG_UNCOND ("Elapsed " << elapsed_seconds.count () << "s");
+}
+
+/***************************
+ * Host port configuration *
+ ***************************/
+
+void
+ConfigPortL2Rtx (Ptr<PfcHostPort> port, const json &globalConf)
+{
+  if (globalConf.contains ("L2Retransmission"))
+    {
+      const auto rtxConf = globalConf["L2Retransmission"];
+      const auto l2RtxMode = PfcHostPort::L2RtxModeStringToNum (rtxConf["Mode"]);
+      port->SetL2RetransmissionMode (l2RtxMode);
+      if (l2RtxMode == PfcHostPort::L2_RTX_MODE::IRN)
+        {
+          const uint32_t size = rtxConf["MaxBitmapSize"];
+          const Time rtoHigh (rtxConf["RtoHigh"].get<std::string> ());
+          const Time rtoLow (rtxConf["RtoLow"].get<std::string> ());
+          const uint32_t n = rtxConf["RtoLowThreshold"];
+          port->SetupIrn (size, rtoHigh, rtoLow, n);
+        }
+      else if (l2RtxMode == PfcHostPort::L2_RTX_MODE::B2N ||
+               l2RtxMode == PfcHostPort::L2_RTX_MODE::B20)
+        {
+          // TODO cyq: config B2N or B20
+        }
+    }
+  else
+    {
+      port->SetL2RetransmissionMode (PfcHostPort::L2_RTX_MODE::NONE_RTX);
+    }
+}
+
+void
+ConfigPortCcMode (Ptr<PfcHostPort> port, const json &globalConf)
+{
+  if (globalConf.contains ("CcMode"))
+    {
+      const auto ccConf = globalConf["CcMode"];
+      const auto ccMode = PfcHostPort::CcModeStringToNum (ccConf["Mode"]);
+      port->SetCcMode (ccMode);
+      if (ccMode == PfcHostPort::CC_MODE::DCQCN)
+        {
+          // TODO cyq: dcqcn settings
+        }
+    }
+  else
+    {
+      port->SetCcMode (PfcHostPort::CC_MODE::NONE_CC);
+    }
 }
 
 /*********************

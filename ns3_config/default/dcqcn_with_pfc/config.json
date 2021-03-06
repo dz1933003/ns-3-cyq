@@ -1,7 +1,13 @@
 {
   "Global": {
     "QueueNumber": 1,
-    "EcmpSeed": 1
+    "EcmpSeed": 1,
+    "L2Retransmission": {
+      "Mode": "B2N"
+    },
+    "CcMode": {
+      "Mode": "DCQCN"
+    }
   },
   "Host": [
     {
@@ -9,13 +15,7 @@
         "h1",
         "h2"
       ],
-      "PortNumber": 1,
-      "L2Retransmission": {
-        "Mode": "B2N"
-      },
-      "CcMode": {
-        "Mode": "DCQCN"
-      }
+      "PortNumber": 1
     }
   ],
   "Switch": [

@@ -1,7 +1,14 @@
 {
   "Global": {
     "QueueNumber": 1,
-    "EcmpSeed": 1
+    "EcmpSeed": 1,
+    "L2Retransmission": {
+      "Mode": "IRN",
+      "MaxBitmapSize": 3,
+      "RtoHigh": "858179ns",
+      "RtoLow": "19318ns",
+      "RtoLowThreshold": 1
+    }
   },
   "Host": [
     {
@@ -10,14 +17,7 @@
         "h2"
       ],
       "PortNumber": 1,
-      "PfcEnable": false,
-      "L2Retransmission": {
-        "Mode": "IRN",
-        "MaxBitmapSize": 3,
-        "RtoHigh": "858179ns",
-        "RtoLow": "19318ns",
-        "RtoLowThreshold": 1
-      }
+      "PfcEnable": false
     }
   ],
   "Switch": [
