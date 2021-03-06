@@ -325,6 +325,7 @@ main (int argc, char *argv[])
       const uint64_t size = cyq::DataSize::GetBytes (sizeInput);
       auto txQp = CreateObject<RdmaTxQueuePair> (startTime, sourceIp, destinationIp, sourcePort,
                                                  destinationPort, size, priority);
+      // TODO cyq: Setup B2N window here
       auto sendDpskLayer = allNodes.left.at (fromNode)->GetObject<PfcHost> ();
       sendDpskLayer->AddRdmaTxQueuePair (txQp);
       auto receiveDpskLayer = allNodes.left.at (toNode)->GetObject<PfcHost> ();

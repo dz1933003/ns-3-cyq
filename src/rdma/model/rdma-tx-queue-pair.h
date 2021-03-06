@@ -50,18 +50,17 @@ public:
   uint64_t m_txSize; //!< total valid sent size (next seq to send)
 
   /* B2N & B20 */
-  uint64_t m_unackSize; // the highest unacked seq
+  uint64_t m_unackSize; //!< the highest unacked seq for B2N or B20
 
   // TODO cyq: configure this in file
   /* RDMA window */
-  bool m_var_win = true; // variable window size
-  uint32_t m_win = 2000000; // bound of on-the-fly packets
+  bool m_isVarWin = true; //!< whether enabled variable window size for B2N or B20
+  uint32_t m_winSize = 2000000; //!< bound of on-the-fly bytes for B2N or B20
 
-  // TODO cyq: configure this in file
   /* Rate limiter */
-  DataRate m_max_rate = DataRate ("100Gbps"); // max rate
-  DataRate m_rate = DataRate ("100Gbps"); //< Current rate
-  Time m_nextAvail = Time (0); //< Soonest time of next send
+  DataRate m_maxRate; //!< queue pair max rate
+  DataRate m_rate; //!< current queue pair rate
+  Time m_nextAvail; //!< soonest time of next send of queue pair
 
   static TypeId GetTypeId (void);
   RdmaTxQueuePair ();
@@ -85,7 +84,7 @@ public:
    * 
    * \return remaining bytes
    */
-  uint64_t GetRemainBytes ();
+  uint64_t GetRemainBytes () const;
 
   uint32_t GetHash (void);
   static uint32_t GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const uint16_t &sPort,
@@ -97,7 +96,7 @@ public:
    *
    * \return true for finished
    */
-  bool IsTxFinished ();
+  bool IsTxFinished () const;
 
   /**
    * Finished with all packets are acked.
@@ -105,40 +104,56 @@ public:
    * 
    * \return true for finished
    */
-  bool IsAckedFinished ();
+  bool IsAckedFinished () const;
+
+  /**
+   * Setup queue pair rate limiter (now used for DCQCN only)
+   * 
+   * \param maxRate
+   * \param initRate
+   */
+  void SetupRate (const DataRate &maxRate, const DataRate &initRate);
+
+  /**
+   * Setup B2N or B20 window
+   * 
+   * \param isVarWin whether a variable window size
+   * \param winSize window size
+   */
+  void B2xSetup (const bool &isVarWin, const uint32_t &winSize);
 
   /**
    * Recover queue when receive NACK for B2N or B20
    */
-  void B2Recover ();
+  void B2xRecover ();
 
   /**
    * Acknowleage sequence for B2N or B20
    * 
    * \param ack ack sequence
    */
-  void B2Ack (uint64_t ack);
+  void B2xAck (const uint64_t &ack);
 
   /**
    * Get on the fly bytes for B2N or B20
    * 
    * \return on the fly bytes
    */
-  uint64_t B2GetOnTheFly ();
+  uint64_t B2xGetOnTheFly () const;
 
   /**
    * Whether B2N or B20 window is full
    * 
    * \return true if window is full
    */
-  bool B2IsWinBound ();
+  bool B2xIsWinBound () const;
 
   /**
    * B2N or B20 window size
    * 
    * \return window size by byte
    */
-  uint64_t GetWin ();
+  uint64_t B2xGetWin () const;
 
   /**
    * IRN tx bitmap state
@@ -239,9 +254,9 @@ public:
   {
   public:
     double m_alpha = 1;
-    bool m_alpha_cnp_arrived = false; // indicate if CNP arrived in the last slot
-    bool m_first_cnp = true; // indicate if the current CNP is the first CNP
-    bool m_decrease_cnp_arrived = false; // indicate if CNP arrived in the last slot
+    bool m_firstCnp = true; // indicate if the current CNP is the first CNP
+    bool m_alphaCnpArrived = false; // indicate if CNP arrived in the last slot
+    bool m_decreaseCnpArrived = false; // indicate if CNP arrived in the last slot
     uint32_t m_rpTimeStage = 0;
 
     DataRate m_targetRate; //< Target rate
@@ -250,13 +265,10 @@ public:
     EventId m_eventDecreaseRate;
     EventId m_rpTimer;
 
-    void
-    CleanupTimer ()
-    {
-      Simulator::Cancel (m_eventUpdateAlpha);
-      Simulator::Cancel (m_eventDecreaseRate);
-      Simulator::Cancel (m_rpTimer);
-    }
+    /**
+     * Cleanup DCQCN rate control timer when queue pair is complete
+     */
+    void CleanupTimer ();
   } m_dcqcn;
 };
 
