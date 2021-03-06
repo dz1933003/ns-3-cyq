@@ -42,62 +42,6 @@ class PfcHostPort : public DpskNetDeviceImpl
 {
 public:
   /**
-   * Copy from HPCC
-   */
-
-  EventId m_nextTransmitEvent; //< The next send event
-
-  double m_nack_interval = 500;
-  uint32_t m_chunk = 4000;
-  uint32_t m_ack_interval = 1;
-  bool m_var_win = true;
-  bool m_rateBound = true;
-
-  void UpdateNextAvail (Ptr<RdmaTxQueuePair> qp, Time interframeGap, uint32_t pkt_size);
-
-  /******************************
-   * Mellanox's version of DCQCN
-   *****************************/
-  class Dcqcn
-  {
-  public:
-    // Mellanox's version of CNP receive
-    void cnp_received_mlx (Ptr<RdmaTxQueuePair> qp);
-
-  private:
-    double m_g = 0.00390625; //feedback weight
-    double m_rateOnFirstCNP = 1; // the fraction of line rate to set on first CNP
-    bool m_EcnClampTgtRate = false;
-    double m_rpgTimeReset = 900;
-    double m_rateDecreaseInterval = 4;
-    uint32_t m_rpgThreshold = 1;
-    double m_alpha_resume_interval = 1;
-    DataRate m_rai = DataRate ("50Mb/s"); //< Rate of additive increase
-    DataRate m_rhai = DataRate ("100Mb/s"); //< Rate of hyper-additive increase
-
-    DataRate m_minRate = DataRate ("1Mbps"); //< Min sending rate
-    DataRate m_dev_rate = DataRate ("100Gbps"); // m_dev.GetBitRate()
-
-    // the Mellanox's version of alpha update:
-    // every fixed time slot, update alpha.
-    void UpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp);
-    void ScheduleUpdateAlphaMlx (Ptr<RdmaTxQueuePair> qp);
-
-    // Mellanox's version of rate decrease
-    // It checks every m_rateDecreaseInterval if CNP arrived (m_decrease_cnp_arrived).
-    // If so, decrease rate, and reset all rate increase related things
-    void CheckRateDecreaseMlx (Ptr<RdmaTxQueuePair> qp);
-    void ScheduleDecreaseRateMlx (Ptr<RdmaTxQueuePair> qp, uint32_t delta);
-
-    // Mellanox's version of rate increase
-    void RateIncEventTimerMlx (Ptr<RdmaTxQueuePair> qp);
-    void RateIncEventMlx (Ptr<RdmaTxQueuePair> qp);
-    void FastRecoveryMlx (Ptr<RdmaTxQueuePair> qp);
-    void ActiveIncreaseMlx (Ptr<RdmaTxQueuePair> qp);
-    void HyperIncreaseMlx (Ptr<RdmaTxQueuePair> qp);
-  } m_dcqcn;
-
-  /**
    * \brief Get the TypeId
    *
    * \return The TypeId for this class
@@ -272,13 +216,39 @@ private:
 
   uint32_t m_ccMode; //!< congestion control mode
 
-  struct
+  EventId m_nextTransmitEvent; //< device next send event
+
+  struct //!< IRN configuration
   {
     uint32_t maxBitmapSize; //!< Maximum bitmap size
     Time rtoHigh; //!< Retransmission timeout high
     Time rtoLow; //!< Retransmission timeout low
     uint32_t rtoLowThreshold; //!< Retransmission timeout low threshold
-  } m_irn; //!< IRN configuration
+  } m_irn;
+
+  struct Dcqcn //!< DCQCN configuration
+  {
+    double g = 0.00390625; //!< feedback weight
+    double rateFracOnFirstCnp = 1; //!< the fraction of line rate to set on first CNP
+    bool isEcnClampTargetRate = false;
+    Time rpgTimeReset = Time ("900us");
+    Time rateDecreaseInterval = Time ("4us");
+    uint32_t rpgThreshold = 1;
+    double alphaResumeInterval = 1;
+
+    DataRate rai = DataRate ("50Mb/s"); //!< Rate of additive increase
+    DataRate rhai = DataRate ("100Mb/s"); //!< Rate of hyper-additive increase
+
+    DataRate minRate = DataRate ("1Mbps"); //!< Min sending rate
+    bool isRateBound = true;
+  } m_dcqcn;
+
+  struct B2x //!< B2N or B20 configuration
+  {
+    Time nackInterval = Time ("500us"); //!< NACK generate interval time
+    uint32_t chunk = 4000; //!< Chunk size by byte
+    uint32_t ackInterval = 1; //!< ACK generate interval bytes
+  } m_b2x;
 
   /**
    * Generate data packet of target transmitting queue pair
@@ -347,6 +317,88 @@ private:
    * \param irnSeq sequence number of this data packet
    */
   void IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq);
+
+  /**
+   * Update next packet available time for the queue pair
+   * 
+   * \param qp queue pair
+   * \param interframeGap net device interframe gap time
+   * \param size last transmitted packet size
+   */
+  void UpdateNextAvail (Ptr<RdmaTxQueuePair> qp, const Time &interframeGap, const uint32_t &size);
+
+  /**
+   * DCQCN CNP receive handler
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnCnpReceived (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN update alpha with scheduling
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnUpdateAlpha (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN schedule next alpha update
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnScheduleUpdateAlpha (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN decrease rate with scheduling.
+   * It checks every decrease interval if CNP arrived (decrease CNP arrived).
+   * If so, decrease rate, and reset all rate increase related things.
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnDecRate (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN schedule next rate decrease
+   * 
+   * \param qp queue pair
+   * \param delta scheduling delay time
+   */
+  void DcqcnScheduleDecRate (Ptr<RdmaTxQueuePair> qp, const Time &delta);
+
+  /**
+   * DCQCN schedule next rate increase
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnScheduleIncRate (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN increase rate
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnIncRate (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN fast recovery of increase rate
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnFastRecovery (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN active increase rate
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnActiveIncrease (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN hyper increase rate
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnHyperIncrease (Ptr<RdmaTxQueuePair> qp);
 
   /**
    * The trace source fired for received a PFC packet.

@@ -52,7 +52,6 @@ public:
   /* B2N & B20 */
   uint64_t m_unackSize; //!< the highest unacked seq for B2N or B20
 
-  // TODO cyq: configure this in file
   /* RDMA window */
   bool m_isVarWin; //!< whether enabled variable window size for B2N or B20
   uint32_t m_winSize; //!< bound of on-the-fly bytes for B2N or B20
