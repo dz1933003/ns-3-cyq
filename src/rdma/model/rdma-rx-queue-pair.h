@@ -134,16 +134,16 @@ public:
 
   /**
    * \ingroup rdma
-   * \class B2n_0
+   * \class B2x
    * \brief Rdma rx queue pair back to N or back to zero infomation.
    */
-  class B2N_0
+  class B2x
   {
   public:
     Time m_nackTimer = Time (0);
     uint32_t m_milestone_rx = 0;
     uint32_t m_lastNACK = 0;
-  } m_b2n_0;
+  } m_b2x;
 };
 
 } // namespace ns3
