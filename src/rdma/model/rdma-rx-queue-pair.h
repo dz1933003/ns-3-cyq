@@ -141,8 +141,8 @@ public:
   {
   public:
     Time m_nackTimer = Time (0);
-    uint32_t m_milestone_rx = 0;
-    uint32_t m_lastNACK = 0;
+    uint32_t m_rxMilestone = 0;
+    uint32_t m_lastNack = 0;
   } m_b2x;
 };
 

@@ -436,14 +436,14 @@ PfcHostPort::Receive (Ptr<Packet> p)
           else if (m_l2RetransmissionMode == L2_RTX_MODE::B20 ||
                    m_l2RetransmissionMode == L2_RTX_MODE::B2N)
             {
-              qp->m_b2x.m_milestone_rx = m_b2x.ackInterval;
+              qp->m_b2x.m_rxMilestone = m_b2x.ackInterval;
               const uint32_t expectedSeq = qp->m_receivedSize;
               if (seq == expectedSeq)
                 {
                   qp->m_receivedSize = expectedSeq + payloadSize;
-                  if (qp->m_receivedSize >= qp->m_b2x.m_milestone_rx)
+                  if (qp->m_receivedSize >= qp->m_b2x.m_rxMilestone)
                     {
-                      qp->m_b2x.m_milestone_rx += m_b2x.ackInterval;
+                      qp->m_b2x.m_rxMilestone += m_b2x.ackInterval;
                       m_controlQueue.push (GenACK (qp, seq, 0, isCe));
                       m_dev->TriggerTransmit ();
                     }
@@ -456,10 +456,10 @@ PfcHostPort::Receive (Ptr<Packet> p)
               else if (seq > expectedSeq)
                 {
                   const Time now = Simulator::Now ();
-                  if (now >= qp->m_b2x.m_nackTimer || qp->m_b2x.m_lastNACK != expectedSeq)
+                  if (now >= qp->m_b2x.m_nackTimer || qp->m_b2x.m_lastNack != expectedSeq)
                     {
                       qp->m_b2x.m_nackTimer = now + m_b2x.nackInterval;
-                      qp->m_b2x.m_lastNACK = expectedSeq;
+                      qp->m_b2x.m_lastNack = expectedSeq;
                       if (m_l2RetransmissionMode == L2_RTX_MODE::B20)
                         qp->m_receivedSize = qp->m_receivedSize / m_b2x.chunk * m_b2x.chunk;
                       m_controlQueue.push (GenSACK (qp, seq, 0, 0, isCe));
