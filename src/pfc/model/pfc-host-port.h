@@ -165,6 +165,30 @@ public:
    */
   static uint32_t CcModeStringToNum (const std::string &mode);
 
+  struct Dcqcn
+  {
+    double g; //!< Control gain parameter which determines the level of rate decrease
+    double rateFracOnFirstCnp; //!< the fraction of line rate to set on first CNP
+    bool clampTargetRate; //!< Clamp target rate on CNP
+    Time incRateInterval; //!< The rate increase interval at RP
+    Time decRateInterval; //!< The interval of rate decrease check
+    uint32_t fastRecTimes; //!< Fast recovery times
+    Time alphaResumeInterval; //!< The interval of resuming alpha
+
+    DataRate rai; //!< Rate increase of additive increase
+    DataRate rhai; //!< Rate increase of hyper-additive increase
+
+    DataRate minRate; //!< Min sending rate
+    bool isRateBound; //!< using DCQCN rate control
+  };
+
+  /**
+   * Setup DCQCN configurations
+   * 
+   * \param dcqcn DCQCN configuration structure
+   */
+  void SetupDcqcn (PfcHostPort::Dcqcn dcqcn);
+
 protected:
   /**
    * PFC host port transmitting logic.
@@ -235,23 +259,7 @@ private:
     uint32_t rtoLowThreshold; //!< Retransmission timeout low threshold
   } m_irn;
 
-  // TODO cyq: config in file
-  struct Dcqcn //!< DCQCN configuration
-  {
-    double g = 0.00390625; //!< Control gain parameter which determines the level of rate decrease
-    double rateFracOnFirstCnp = 1; //!< the fraction of line rate to set on first CNP
-    bool clampTargetRate = false; //!< Clamp target rate on CNP
-    Time incRateInterval = Time ("900us"); //!< The rate increase interval at RP
-    Time decRateInterval = Time ("4us"); //!< The interval of rate decrease check
-    uint32_t fastRecTimes = 1; //!< Fast recovery times
-    Time alphaResumeInterval = Time ("1us"); //!< The interval of resuming alpha
-
-    DataRate rai = DataRate ("50Mb/s"); //!< Rate increase of additive increase
-    DataRate rhai = DataRate ("100Mb/s"); //!< Rate increase of hyper-additive increase
-
-    DataRate minRate = DataRate ("1Mbps"); //!< Min sending rate
-    bool isRateBound = true; //!< using DCQCN rate control
-  } m_dcqcn;
+  Dcqcn m_dcqcn; //!< DCQCN configuration
 
   struct B2x //!< B2N or B20 configuration
   {

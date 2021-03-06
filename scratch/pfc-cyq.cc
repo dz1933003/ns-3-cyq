@@ -387,7 +387,19 @@ ConfigPortCc (Ptr<PfcHostPort> port, const json &globalConf)
       port->SetCcMode (ccMode);
       if (ccMode == PfcHostPort::CC_MODE::DCQCN)
         {
-          // TODO cyq: dcqcn settings
+          PfcHostPort::Dcqcn dcqcn;
+          dcqcn.g = ccConf["EwmaGain"];
+          dcqcn.rateFracOnFirstCnp = 1;
+          dcqcn.clampTargetRate = ccConf["ClampTargetRate"];
+          dcqcn.incRateInterval = Time (ccConf["IncRateInterval"].get<std::string> ());
+          dcqcn.decRateInterval = Time (ccConf["DecRateInterval"].get<std::string> ());
+          dcqcn.fastRecTimes = ccConf["FastRecTimes"];
+          dcqcn.alphaResumeInterval = Time (ccConf["AlphaResumeInterval"].get<std::string> ());
+          dcqcn.rai = DataRate (ccConf["RateAI"].get<std::string> ());
+          dcqcn.rhai = DataRate (ccConf["RateHAI"].get<std::string> ());
+          dcqcn.minRate = DataRate (ccConf["MinRate"].get<std::string> ());
+          dcqcn.isRateBound = ccConf["RateBound"];
+          port->SetupDcqcn (dcqcn);
         }
     }
   else

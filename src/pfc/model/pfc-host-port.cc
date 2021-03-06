@@ -195,6 +195,13 @@ PfcHostPort::CcModeStringToNum (const std::string &mode)
                           "Unknown congestion control mode");
 }
 
+void
+PfcHostPort::SetupDcqcn (PfcHostPort::Dcqcn dcqcn)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  m_dcqcn = dcqcn;
+}
+
 Ptr<Packet>
 PfcHostPort::Transmit ()
 {
