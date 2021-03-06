@@ -134,6 +134,15 @@ public:
   void SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n);
 
   /**
+   * Setup B2N or B20 configurations
+   * 
+   * \param chunk chunk size
+   * \param ackInterval ACK interval bytes
+   * \param nackInterval NACK interval time
+   */
+  void SetupB2x (uint32_t chunk, uint32_t ackInterval, Time nackInterval);
+
+  /**
    * Congestion control mode
    */
   enum CC_MODE {
@@ -226,6 +235,7 @@ private:
     uint32_t rtoLowThreshold; //!< Retransmission timeout low threshold
   } m_irn;
 
+  // TODO cyq: config in file
   struct Dcqcn //!< DCQCN configuration
   {
     double g = 0.00390625; //!< feedback weight
@@ -245,9 +255,9 @@ private:
 
   struct B2x //!< B2N or B20 configuration
   {
-    Time nackInterval = Time ("500us"); //!< NACK generate interval time
-    uint32_t chunk = 4000; //!< Chunk size by byte
-    uint32_t ackInterval = 1; //!< ACK generate interval bytes
+    uint32_t chunk; //!< Chunk size by byte
+    uint32_t ackInterval; //!< ACK generate interval bytes
+    Time nackInterval; //!< NACK generate interval time
   } m_b2x;
 
   /**

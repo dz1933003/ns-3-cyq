@@ -365,7 +365,10 @@ ConfigPortL2Rtx (Ptr<PfcHostPort> port, const json &globalConf)
       else if (l2RtxMode == PfcHostPort::L2_RTX_MODE::B2N ||
                l2RtxMode == PfcHostPort::L2_RTX_MODE::B20)
         {
-          // TODO cyq: config B2N or B20
+          const uint32_t chunk = rtxConf["Chunk"];
+          const uint32_t ackInterval = rtxConf["AckInterval"];
+          const Time nackInterval (rtxConf["NackInterval"].get<std::string> ());
+          port->SetupB2x (chunk, ackInterval, nackInterval);
         }
     }
   else
@@ -426,7 +429,7 @@ ConfigQueueL2Rtx (Ptr<RdmaTxQueuePair> qp, uint64_t qpBdp, const json &globalCon
             {
               winSize = 0;
             }
-          qp->B2xSetup (isVarWin, winSize);
+          qp->SetupB2x (isVarWin, winSize);
         }
     }
 }

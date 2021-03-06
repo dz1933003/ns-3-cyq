@@ -119,7 +119,7 @@ public:
    * \param isVarWin whether a variable window size
    * \param winSize window size
    */
-  void B2xSetup (const bool &isVarWin, const uint32_t &winSize);
+  void SetupB2x (const bool &isVarWin, const uint32_t &winSize);
 
   /**
    * Recover queue when receive NACK for B2N or B20

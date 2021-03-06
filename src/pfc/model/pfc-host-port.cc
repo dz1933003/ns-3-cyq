@@ -167,6 +167,15 @@ PfcHostPort::SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n)
 }
 
 void
+PfcHostPort::SetupB2x (uint32_t chunk, uint32_t ackInterval, Time nackInterval)
+{
+  NS_LOG_FUNCTION (chunk << ackInterval << nackInterval);
+  m_b2x.chunk = chunk;
+  m_b2x.ackInterval = ackInterval;
+  m_b2x.nackInterval = nackInterval;
+}
+
+void
 PfcHostPort::SetCcMode (uint32_t mode)
 {
   NS_LOG_FUNCTION (mode);

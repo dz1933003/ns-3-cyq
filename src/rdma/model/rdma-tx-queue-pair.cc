@@ -132,7 +132,7 @@ RdmaTxQueuePair::SetupRate (const DataRate &maxRate, const DataRate &initRate)
 // B2N and B20 function implementation
 
 void
-RdmaTxQueuePair::B2xSetup (const bool &isVarWin, const uint32_t &winSize)
+RdmaTxQueuePair::SetupB2x (const bool &isVarWin, const uint32_t &winSize)
 {
   m_isVarWin = isVarWin;
   m_winSize = winSize;

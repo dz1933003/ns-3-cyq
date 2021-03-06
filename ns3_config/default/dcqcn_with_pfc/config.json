@@ -9,7 +9,10 @@
         "Global": true,
         "Variable": true,
         "Size": 2000000
-      }
+      },
+      "Chunk": 4000,
+      "AckInterval": 1,
+      "NackInterval": "500us"
     },
     "CcMode": {
       "Mode": "DCQCN"
