@@ -95,11 +95,13 @@ std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairRtt;
  ***************************************/
 
 void ConfigPortL2Rtx (Ptr<PfcHostPort> port, const json &globalConf);
-void ConfigPortCcMode (Ptr<PfcHostPort> port, const json &globalConf);
+void ConfigPortCc (Ptr<PfcHostPort> port, const json &globalConf);
 
 void ConfigMmuPort (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile);
 void ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                      const std::string &configFile);
+
+void ConfigQueueL2Rtx (Ptr<RdmaTxQueuePair> qp, uint64_t qpBdp, const json &globalConf);
 
 void CalculateRoute ();
 void CalculateRoute (Ptr<Node> host);
@@ -164,7 +166,7 @@ main (int argc, char *argv[])
               // L2 retransmission mode settings
               ConfigPortL2Rtx (impl, conf["Global"]);
               // Congestion control mode settings
-              ConfigPortCcMode (impl, conf["Global"]);
+              ConfigPortCc (impl, conf["Global"]);
               allPorts[node].push_back (dev);
             }
           // Install DPSK
@@ -314,7 +316,8 @@ main (int argc, char *argv[])
       const uint64_t size = cyq::DataSize::GetBytes (sizeInput);
       auto txQp = CreateObject<RdmaTxQueuePair> (startTime, sourceIp, destinationIp, sourcePort,
                                                  destinationPort, size, priority);
-      // TODO cyq: Setup B2N window here
+      ConfigQueueL2Rtx (txQp, pairBdp[allNodes.left.at (fromNode)][allNodes.left.at (toNode)],
+                        conf["Global"]);
       auto sendDpskLayer = allNodes.left.at (fromNode)->GetObject<PfcHost> ();
       sendDpskLayer->AddRdmaTxQueuePair (txQp);
       auto receiveDpskLayer = allNodes.left.at (toNode)->GetObject<PfcHost> ();
@@ -372,7 +375,7 @@ ConfigPortL2Rtx (Ptr<PfcHostPort> port, const json &globalConf)
 }
 
 void
-ConfigPortCcMode (Ptr<PfcHostPort> port, const json &globalConf)
+ConfigPortCc (Ptr<PfcHostPort> port, const json &globalConf)
 {
   if (globalConf.contains ("CcMode"))
     {
@@ -387,6 +390,44 @@ ConfigPortCcMode (Ptr<PfcHostPort> port, const json &globalConf)
   else
     {
       port->SetCcMode (PfcHostPort::CC_MODE::NONE_CC);
+    }
+}
+
+void
+ConfigQueueL2Rtx (Ptr<RdmaTxQueuePair> qp, uint64_t qpBdp, const json &globalConf)
+{
+  if (globalConf.contains ("L2Retransmission"))
+    {
+      const auto rtxConf = globalConf["L2Retransmission"];
+      const auto l2RtxMode = PfcHostPort::L2RtxModeStringToNum (rtxConf["Mode"]);
+      if (l2RtxMode == PfcHostPort::L2_RTX_MODE::B2N || l2RtxMode == PfcHostPort::L2_RTX_MODE::B20)
+        {
+          const auto winConf = rtxConf["Window"];
+          const bool hasWin = winConf["Enable"];
+          const bool isGlobalWin = winConf["Global"];
+          const bool isVarWin = winConf["Variable"];
+          const bool hasWinSize = winConf.contains ("Size");
+          uint32_t winSize = maxBdp;
+          if (hasWin)
+            {
+              if (hasWinSize)
+                {
+                  winSize = winConf["Size"];
+                }
+              else
+                {
+                  if (isGlobalWin)
+                    winSize = maxBdp;
+                  else
+                    winSize = qpBdp;
+                }
+            }
+          else
+            {
+              winSize = 0;
+            }
+          qp->B2xSetup (isVarWin, winSize);
+        }
     }
 }
 
@@ -612,6 +653,7 @@ CalculateRttBdp ()
               const uint64_t bdp = rtt.GetSeconds () * bandwidth.GetBitRate () / 8;
               const uint64_t queueBdp = queueRtt.GetSeconds () * bandwidth.GetBitRate () / 8;
               pairRtt[src][dst] = rtt;
+              pairBdp[src][dst] = bdp;
               maxBdp = std::max (bdp, maxBdp);
               maxRtt = std::max (rtt, maxRtt);
               maxQueueBdp = std::max (queueBdp, maxQueueBdp);

@@ -3,7 +3,13 @@
     "QueueNumber": 1,
     "EcmpSeed": 1,
     "L2Retransmission": {
-      "Mode": "B2N"
+      "Mode": "B2N",
+      "Window": {
+        "Enable": true,
+        "Global": true,
+        "Variable": true,
+        "Size": 2000000
+      }
     },
     "CcMode": {
       "Mode": "DCQCN"

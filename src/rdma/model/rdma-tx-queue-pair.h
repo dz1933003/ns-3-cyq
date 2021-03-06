@@ -54,8 +54,8 @@ public:
 
   // TODO cyq: configure this in file
   /* RDMA window */
-  bool m_isVarWin = true; //!< whether enabled variable window size for B2N or B20
-  uint32_t m_winSize = 2000000; //!< bound of on-the-fly bytes for B2N or B20
+  bool m_isVarWin; //!< whether enabled variable window size for B2N or B20
+  uint32_t m_winSize; //!< bound of on-the-fly bytes for B2N or B20
 
   /* Rate limiter */
   DataRate m_maxRate; //!< queue pair max rate
