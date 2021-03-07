@@ -217,9 +217,8 @@ PfcHostPort::Transmit ()
       return p;
     }
 
-  // TODO cyq: rate limit when DCQCN?
   // Retransmit packet (for IRN only now)
-  if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
+  if (m_l2RetransmissionMode == L2_RTX_MODE::IRN && m_rtxPacketQueue.empty () == false)
     {
       if (m_ccMode == CC_MODE::NONE_CC)
         while (m_rtxPacketQueue.empty () == false)
@@ -241,6 +240,7 @@ PfcHostPort::Transmit ()
           }
       if (m_ccMode == CC_MODE::DCQCN)
         {
+          // TODO cyq: Optimize loop by checking QP rtx packets
           for (uint i = 0; i < m_rtxPacketQueue.size (); i++)
             {
               const auto qp = m_rtxPacketQueue[i].first;
@@ -262,29 +262,6 @@ PfcHostPort::Transmit ()
                   m_nTxBytes += p->GetSize ();
                   return p;
                 }
-            }
-          // no rtx can send
-          if (m_rtxPacketQueue.empty () == false)
-            {
-              // // For DCQCN schedule next transmit
-              const Time now = Simulator::Now ();
-              const Time maxInfTime = Simulator::GetMaximumSimulationTime ();
-              Time minAvailTime = maxInfTime;
-              // Find minimum next avail packet transmission time
-              for (auto qp : m_txQueuePairs)
-                {
-                  if (qp->IsTxFinished ())
-                    continue;
-                  minAvailTime = Min (qp->m_nextAvail, minAvailTime);
-                }
-              // Schedule next transmission if no previous scheduling transmission event
-              if (m_nextTransmitEvent.IsExpired () && minAvailTime < maxInfTime &&
-                  minAvailTime > now)
-                {
-                  m_nextTransmitEvent = Simulator::Schedule (
-                      minAvailTime - now, &DpskNetDevice::TriggerTransmit, m_dev);
-                }
-              return 0;
             }
         }
     }
@@ -907,7 +884,6 @@ PfcHostPort::DcqcnDecRate (Ptr<RdmaTxQueuePair> qp)
       Simulator::Cancel (qp->m_dcqcn.m_rpTimer);
       qp->m_dcqcn.m_rpTimer = Simulator::Schedule (m_dcqcn.incRateInterval,
                                                    &PfcHostPort::DcqcnScheduleIncRate, this, qp);
-      NS_LOG_UNCOND (Simulator::Now () << qp->m_rate);
     }
 }
 
