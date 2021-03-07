@@ -233,7 +233,9 @@ PfcHostPort::Transmit ()
             {
               auto id = IrnTimer (qp, irnSeq);
               qp->m_irn.SetRtxEvent (irnSeq, id);
-              return ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
+              auto p = ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
+              m_nTxBytes += p->GetSize ();
+              return p;
             }
         }
     }
@@ -278,7 +280,6 @@ PfcHostPort::Transmit ()
       // Finished check
       if (qp->IsTxFinished ())
         m_queuePairTxCompleteTrace (qp);
-      m_nTxBytes += p->GetSize ();
       // Set up IRN timer
       if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
         {
@@ -288,6 +289,7 @@ PfcHostPort::Transmit ()
       // DCQCN schedule next send by rate limiter
       if (m_ccMode == CC_MODE::DCQCN)
         UpdateNextAvail (qp, Time (0), p->GetSize ());
+      m_nTxBytes += p->GetSize ();
       return p;
     }
 
