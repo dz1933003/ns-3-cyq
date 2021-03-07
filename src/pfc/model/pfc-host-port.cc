@@ -217,6 +217,7 @@ PfcHostPort::Transmit ()
       return p;
     }
 
+  // TODO cyq: rate limit when DCQCN?
   // Retransmit packet (for IRN only now)
   if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
     {
@@ -243,54 +244,51 @@ PfcHostPort::Transmit ()
     {
       uint32_t qIdx = (m_lastQpIndex + i + 1) % flowCnt;
       auto qp = m_txQueuePairs[qIdx];
-      // Sending constrains:
-      // 1. PFC RESUME.
-      // 2. QP is not finished.
-      // 3. QP is started.
-      // 4. In IRN mode the sending window is not full.
-      if ((m_pausedStates[qp->m_priority] == false || m_pfcEnabled == false) &&
-          qp->IsTxFinished () == false && qp->m_startTime <= Simulator::Now () &&
-          (m_l2RetransmissionMode != L2_RTX_MODE::IRN ||
-           qp->m_irn.GetWindowSize () < m_irn.maxBitmapSize))
+      // PFC RESUME
+      if (m_pfcEnabled && m_pausedStates[qp->m_priority])
+        continue;
+      // QP is not finished
+      if (qp->IsTxFinished ())
+        continue;
+      // QP is started
+      if (qp->m_startTime > Simulator::Now ())
+        continue;
+      if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
         {
-          if (m_ccMode == CC_MODE::NONE_CC)
-            {
-              m_lastQpIndex = qIdx;
-              uint32_t irnSeq;
-              auto p = GenData (qp, irnSeq); // get sequence number out
-              if (qp->IsTxFinished ())
-                m_queuePairTxCompleteTrace (qp);
-              m_nTxBytes += p->GetSize ();
-              // Set up IRN timer
-              if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
-                {
-                  auto id = IrnTimer (qp, irnSeq);
-                  qp->m_irn.SetRtxEvent (irnSeq, id);
-                }
-              return p;
-            }
-          else if (m_ccMode == CC_MODE::DCQCN)
-            {
-              // TODO cyq: In IRN mode, the DCQCN window is disabled because IRN have one.
-              if (qp->GetRemainBytes () > 0 && !qp->B2xIsWinBound () && !qp->IsTxFinished ())
-                {
-                  if (qp->m_nextAvail > Simulator::Now ()) // Not available now
-                    continue;
-                  m_lastQpIndex = qIdx;
-                  auto p = GenData (qp);
-                  if (qp->IsTxFinished ())
-                    m_queuePairTxCompleteTrace (qp);
-                  m_nTxBytes += p->GetSize ();
-                  UpdateNextAvail (qp, Time (0), p->GetSize ());
-                  return p;
-                }
-            }
-          else
-            {
-              NS_ASSERT_MSG (false, "PfcHostPort::Transmit: "
-                                    "CC mode not valid");
-            }
+          // In IRN mode the sending window is not full
+          if (qp->m_irn.GetWindowSize () >= m_irn.maxBitmapSize)
+            continue;
         }
+      else if (m_l2RetransmissionMode == L2_RTX_MODE::B20 ||
+               m_l2RetransmissionMode == L2_RTX_MODE::B2N)
+        {
+          // DCQCN B2X window bound (disabled in IRN)
+          if (qp->B2xIsWinBound ())
+            continue;
+        }
+      // DCQCN is ready to transmit
+      if (m_ccMode == CC_MODE::DCQCN && qp->m_nextAvail > Simulator::Now ())
+        continue;
+
+      // Round robin
+      m_lastQpIndex = qIdx;
+      // get sequence number out for logging retransmission
+      uint32_t irnSeq;
+      auto p = GenData (qp, irnSeq);
+      // Finished check
+      if (qp->IsTxFinished ())
+        m_queuePairTxCompleteTrace (qp);
+      m_nTxBytes += p->GetSize ();
+      // Set up IRN timer
+      if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
+        {
+          auto id = IrnTimer (qp, irnSeq);
+          qp->m_irn.SetRtxEvent (irnSeq, id);
+        }
+      // DCQCN schedule next send by rate limiter
+      if (m_ccMode == CC_MODE::DCQCN)
+        UpdateNextAvail (qp, Time (0), p->GetSize ());
+      return p;
     }
 
   // No packet to send
@@ -429,7 +427,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                       qp->m_irn.UpdateIrnState (irnAck);
                     }
                   // Send ACK and trigger transmit
-                  m_controlQueue.push (GenACK (qp, seq, irnAck, isCe));
+                  m_controlQueue.push (GenACK (qp, 0, irnAck, isCe));
                   m_dev->TriggerTransmit ();
                 }
               else if (irnAck == expectedAck) // expected new packet
@@ -437,7 +435,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   qp->m_receivedSize += payloadSize;
                   qp->m_irn.UpdateIrnState (irnAck);
                   // Send ACK by retransmit mode and trigger transmit
-                  m_controlQueue.push (GenACK (qp, seq, irnAck, isCe));
+                  m_controlQueue.push (GenACK (qp, 0, irnAck, isCe));
                   m_dev->TriggerTransmit ();
                 }
               else // out of order
@@ -445,7 +443,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   qp->m_receivedSize += payloadSize;
                   qp->m_irn.UpdateIrnState (irnAck);
                   // Send SACK and trigger transmit
-                  m_controlQueue.push (GenSACK (qp, seq, irnAck, expectedAck, isCe));
+                  m_controlQueue.push (GenSACK (qp, 0, irnAck, expectedAck, isCe));
                   m_dev->TriggerTransmit ();
                 }
             }
@@ -504,6 +502,9 @@ PfcHostPort::Receive (Ptr<Packet> p)
               if (m_ccMode == CC_MODE::DCQCN && qp->IsTxFinished ())
                 qp->m_dcqcn.CleanupTimer ();
 
+              if (m_ccMode == CC_MODE::DCQCN && cnp)
+                DcqcnCnpReceived (qp);
+
               m_dev->TriggerTransmit (); // Because BDP-FC needs to check new bitmap and send
               return false; // Not data so no need to send to node
             }
@@ -552,6 +553,10 @@ PfcHostPort::Receive (Ptr<Packet> p)
                 {
                   m_rtxPacketQueue.push_back ({qp, i});
                 }
+
+              if (m_ccMode == CC_MODE::DCQCN && cnp)
+                DcqcnCnpReceived (qp);
+
               m_dev->TriggerTransmit ();
               return false; // Not data so no need to send to node
             }
