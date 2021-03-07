@@ -710,6 +710,8 @@ void TraceBufferUsed (Time interval, Time end, std::string name, uint32_t portIn
 void TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex);
 void TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex);
 
+void TraceIrnRtxByte (Time interval, Time end, std::string name, uint32_t portIndex);
+
 void TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type, uint16_t time);
 void TraceCbfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, uint64_t fccl);
 
@@ -757,6 +759,23 @@ DoTrace (const std::string &configFile)
               for (const auto &portIndex : target["PortIndex"])
                 {
                   Simulator::Schedule (start, &TraceRxByte, interval, end, name, portIndex);
+                }
+            }
+        }
+    }
+  if (conf["IrnRtxByte"]["Enable"] == true)
+    {
+      logStreams["IrnRtxByte"] << "Time,Node,PortIndex,IrnRtxByte\n";
+      const auto interval = Time (conf["IrnRtxByte"]["Interval"].get<std::string> ());
+      const auto start = Time (conf["IrnRtxByte"]["Start"].get<std::string> ());
+      const auto end = Time (conf["IrnRtxByte"]["End"].get<std::string> ());
+      for (const auto &target : conf["IrnRtxByte"]["Target"])
+        {
+          for (const auto &name : target["Name"])
+            {
+              for (const auto &portIndex : target["PortIndex"])
+                {
+                  Simulator::Schedule (start, &TraceIrnRtxByte, interval, end, name, portIndex);
                 }
             }
         }
@@ -995,6 +1014,21 @@ TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex)
                        << "\n";
   if (Simulator::Now () < end)
     Simulator::Schedule (interval, &TraceRxByte, interval, end, name, portIndex);
+}
+
+void
+TraceIrnRtxByte (Time interval, Time end, std::string name, uint32_t portIndex)
+{
+  const auto node = allNodes.left.at (name);
+  const auto port = allPorts[node][portIndex];
+  if (hostNodes.find (node) != hostNodes.end ())
+    {
+      uint64_t irnRtxBytes = port->GetObject<PfcHostPort> ()->m_irnRtxBytes;
+      logStreams["IrnRtxByte"] << Simulator::Now () << "," << name << "," << portIndex << ","
+                               << irnRtxBytes << "\n";
+    }
+  if (Simulator::Now () < end)
+    Simulator::Schedule (interval, &TraceIrnRtxByte, interval, end, name, portIndex);
 }
 
 void

@@ -61,9 +61,11 @@ PfcHostPort::GetTypeId (void)
 
 PfcHostPort::PfcHostPort ()
     : m_pfcEnabled (true),
+      m_rtxQueuingCnt (0),
       m_l2RetransmissionMode (L2_RTX_MODE::NONE_RTX),
       m_nTxBytes (0),
-      m_nRxBytes (0)
+      m_nRxBytes (0),
+      m_irnRtxBytes (0)
 {
   NS_LOG_FUNCTION (this);
   m_name = "PfcHostPort";
@@ -114,6 +116,8 @@ PfcHostPort::AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp)
 
   m_txQueuePairs.push_back (qp);
   m_txQueuePairTable.insert ({qp->GetHash (), m_txQueuePairs.size () - 1});
+
+  m_rtxSeqQueues.push_back (std::queue<uint32_t> ());
 
   Simulator::Schedule (qp->m_startTime, &DpskNetDevice::TriggerTransmit, m_dev);
 }
@@ -217,24 +221,37 @@ PfcHostPort::Transmit ()
       return p;
     }
 
-  // TODO cyq: rate limit when DCQCN?
-  // Retransmit packet (for IRN only now)
-  if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
+  if (m_l2RetransmissionMode == L2_RTX_MODE::IRN && m_rtxQueuingCnt > 0)
     {
-      while (m_rtxPacketQueue.empty () == false)
+      uint32_t flowCnt = m_txQueuePairs.size ();
+      for (uint32_t i = 0; i < flowCnt; i++)
         {
-          const auto qp = m_rtxPacketQueue.front ().first;
-          const auto irnSeq = m_rtxPacketQueue.front ().second;
+          const uint32_t qIdx = (m_lastQpIndex + i + 1) % flowCnt;
+          const auto qp = m_txQueuePairs[qIdx];
+          const auto irnSeq = m_rtxSeqQueues[qIdx].front ();
           const auto state = qp->m_irn.GetIrnState (irnSeq);
-          m_rtxPacketQueue.pop_front ();
-          // Set up IRN timer
+
+          if (m_ccMode == CC_MODE::DCQCN && qp->m_nextAvail > Simulator::Now ())
+            continue;
+
+          m_rtxSeqQueues[qIdx].pop ();
+          m_rtxQueuingCnt--;
+
           if (state == RdmaTxQueuePair::NACK ||
               state == RdmaTxQueuePair::UNACK) // filter out ACKed packets
             {
-              auto id = IrnTimer (qp, irnSeq);
+              // Round robin
+              m_lastQpIndex = qIdx;
+              // Set up IRN timer
+              const auto id = IrnTimer (qp, irnSeq);
               qp->m_irn.SetRtxEvent (irnSeq, id);
-              auto p = ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
+              const auto p = ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
+              // DCQCN schedule next send by rate limiter
+              if (m_ccMode == CC_MODE::DCQCN)
+                UpdateNextAvail (qp, Time (0), p->GetSize ());
+              // Statistic Tx
               m_nTxBytes += p->GetSize ();
+              m_irnRtxBytes += p->GetSize ();
               return p;
             }
         }
@@ -277,7 +294,7 @@ PfcHostPort::Transmit ()
       // get sequence number out for logging retransmission
       uint32_t irnSeq;
       auto p = GenData (qp, irnSeq);
-      // Finished check
+      // Finished trace
       if (qp->IsTxFinished ())
         m_queuePairTxCompleteTrace (qp);
       // Set up IRN timer
@@ -289,6 +306,7 @@ PfcHostPort::Transmit ()
       // DCQCN schedule next send by rate limiter
       if (m_ccMode == CC_MODE::DCQCN)
         UpdateNextAvail (qp, Time (0), p->GetSize ());
+      // Statistic Tx
       m_nTxBytes += p->GetSize ();
       return p;
     }
@@ -553,7 +571,9 @@ PfcHostPort::Receive (Ptr<Packet> p)
               qp->m_irn.SackIrnState (irnAck, irnNack);
               for (auto i = irnNack; i < irnAck; i++)
                 {
-                  m_rtxPacketQueue.push_back ({qp, i});
+                  const auto qpIdx = m_txQueuePairTable[qp->GetHash ()];
+                  m_rtxSeqQueues[qpIdx].push (i);
+                  m_rtxQueuingCnt++;
                 }
 
               if (m_ccMode == CC_MODE::DCQCN && cnp)
@@ -786,7 +806,10 @@ PfcHostPort::IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq)
   const auto state = qp->m_irn.GetIrnState (irnSeq);
   if (state == RdmaTxQueuePair::NACK || state == RdmaTxQueuePair::UNACK)
     {
-      m_rtxPacketQueue.push_back ({qp, irnSeq});
+      const auto qpIdx = m_txQueuePairTable[qp->GetHash ()];
+      m_rtxSeqQueues[qpIdx].push (irnSeq);
+      m_rtxQueuingCnt++;
+
       m_dev->TriggerTransmit ();
     }
 }

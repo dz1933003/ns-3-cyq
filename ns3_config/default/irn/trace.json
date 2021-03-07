@@ -58,5 +58,21 @@
         ]
       }
     ]
+  },
+  "IrnRtxByte": {
+    "Enable": true,
+    "Interval": "1s",
+    "Start": "0s",
+    "End": "3s",
+    "Target": [
+      {
+        "Name": [
+          "h1"
+        ],
+        "PortIndex": [
+          0
+        ]
+      }
+    ]
   }
 }
