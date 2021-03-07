@@ -242,7 +242,7 @@ private:
 
   std::vector<std::queue<uint32_t>>
       m_rtxSeqQueues; //!< packets need to be retransmitted, qp index with IRN seq
-  uint32_t m_rtxQueuingCnt = 0; //!< retransmitted packets in queue
+  uint32_t m_rtxQueuingCnt; //!< retransmitted packets in queue
 
   uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
 
@@ -448,6 +448,8 @@ public:
 
   uint64_t m_nTxBytes; //!< total transmit bytes
   uint64_t m_nRxBytes; //!< total receive bytes
+
+  uint64_t m_irnRtxBytes; //!< IRN retransmission bytes
 
 private:
   /**

@@ -61,9 +61,11 @@ PfcHostPort::GetTypeId (void)
 
 PfcHostPort::PfcHostPort ()
     : m_pfcEnabled (true),
+      m_rtxQueuingCnt (0),
       m_l2RetransmissionMode (L2_RTX_MODE::NONE_RTX),
       m_nTxBytes (0),
-      m_nRxBytes (0)
+      m_nRxBytes (0),
+      m_irnRtxBytes (0)
 {
   NS_LOG_FUNCTION (this);
   m_name = "PfcHostPort";
@@ -243,12 +245,13 @@ PfcHostPort::Transmit ()
               // Set up IRN timer
               const auto id = IrnTimer (qp, irnSeq);
               qp->m_irn.SetRtxEvent (irnSeq, id);
-              auto p = ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
+              const auto p = ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
               // DCQCN schedule next send by rate limiter
               if (m_ccMode == CC_MODE::DCQCN)
                 UpdateNextAvail (qp, Time (0), p->GetSize ());
               // Statistic Tx
               m_nTxBytes += p->GetSize ();
+              m_irnRtxBytes += p->GetSize ();
               return p;
             }
         }

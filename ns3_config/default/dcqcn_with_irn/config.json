@@ -4,10 +4,10 @@
     "EcmpSeed": 1,
     "L2Retransmission": {
       "Mode": "IRN",
-      "MaxBitmapSize": 3,
-      "RtoHigh": "858179ns",
-      "RtoLow": "19318ns",
-      "RtoLowThreshold": 1
+      "MaxBitmapSize": 1051,
+      "RtoHigh": "8404727ns",
+      "RtoLow": "16119ns",
+      "RtoLowThreshold": 3
     },
     "CcMode": {
       "Mode": "DCQCN",

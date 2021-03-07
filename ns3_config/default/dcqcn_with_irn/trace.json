@@ -59,8 +59,11 @@
       }
     ]
   },
-  "PfcRx": {
+  "IrnRtxByte": {
     "Enable": true,
+    "Interval": "1ms",
+    "Start": "1s",
+    "End": "1.2s",
     "Target": [
       {
         "Name": [
