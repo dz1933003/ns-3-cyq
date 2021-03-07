@@ -12,9 +12,9 @@
     },
     "BufferUsed": {
       "Enable": true,
-      "Interval": "1s",
-      "Start": "0s",
-      "End": "3s",
+      "Interval": "1ms",
+      "Start": "1s",
+      "End": "1.2s",
       "Target": [
         {
           "Name": [
@@ -29,25 +29,25 @@
   },
   "TxByte": {
     "Enable": true,
-    "Interval": "1s",
-    "Start": "0s",
-    "End": "3s",
+    "Interval": "1ms",
+    "Start": "1s",
+    "End": "1.2s",
     "Target": [
       {
         "Name": [
-          "s1"
+          "h1"
         ],
         "PortIndex": [
-          1
+          0
         ]
       }
     ]
   },
   "RxByte": {
     "Enable": true,
-    "Interval": "1s",
-    "Start": "0s",
-    "End": "3s",
+    "Interval": "1ms",
+    "Start": "1s",
+    "End": "1.2s",
     "Target": [
       {
         "Name": [
@@ -61,9 +61,9 @@
   },
   "IrnRtxByte": {
     "Enable": true,
-    "Interval": "1s",
-    "Start": "0s",
-    "End": "3s",
+    "Interval": "1ms",
+    "Start": "1s",
+    "End": "1.2s",
     "Target": [
       {
         "Name": [

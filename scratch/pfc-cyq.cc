@@ -45,12 +45,17 @@ static std::string traceTag = ""; // Prefix for log file name
 uint32_t nQueue; // Global interface queue number (control queue is not counted)
 uint32_t ecmpSeed; // ECMP seed
 DpskNetDevice::TxMode portTxMode; // Global interface transmission mode (active or passive)
+
+/********************************
+ * Global simulation infomation *
+ ********************************/
+
 boost::bimap<std::string, Ptr<Node>> allNodes; // Node name to Node pointer
 std::map<Ptr<Node>, std::vector<Ptr<DpskNetDevice>>> allPorts; // Node pointer to its interfaces
 boost::bimap<Ptr<Node>, Ipv4Address> allIpv4Addresses; // Node pointer to its IPv4 addr
 std::set<Ptr<Node>> hostNodes; // Nodes that are hosts
 std::set<Ptr<Node>> switchNodes; // Nodes that are switches
-std::map<Ptr<ns3::NetDevice>, uint64_t>
+std::map<Ptr<ns3::DpskNetDevice>, uint64_t>
     dataQueueSize; // Switch iface to data queue size string (Support No PFC only)
 std::map<uint32_t, Ptr<RdmaTxQueuePair>> allTxQueuePairs; // Tx QP hash to its pointer
 std::map<uint32_t, Ptr<RdmaRxQueuePair>> allRxQueuePairs; // Rx QP hash to its pointer
@@ -89,9 +94,14 @@ std::map<Ptr<Node>, std::map<Ptr<Node>, Time>> pairRtt;
  * Help functions for simulation setup *
  ***************************************/
 
+void ConfigPortL2Rtx (Ptr<PfcHostPort> port, const json &globalConf);
+void ConfigPortCc (Ptr<PfcHostPort> port, const json &globalConf);
+
 void ConfigMmuPort (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile);
-void ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
+void ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<DpskNetDevice> port,
                      const std::string &configFile);
+
+void ConfigQueueL2Rtx (Ptr<RdmaTxQueuePair> qp, uint64_t qpBdp, const json &globalConf);
 
 void CalculateRoute ();
 void CalculateRoute (Ptr<Node> host);
@@ -154,19 +164,9 @@ main (int argc, char *argv[])
               impl->SetupQueues (nQueue);
               impl->EnablePfc (host.contains ("PfcEnable") ? host["PfcEnable"].get<bool> () : true);
               // L2 retransmission mode settings
-              const auto l2RtxMode =
-                  host.contains ("L2Retransmission")
-                      ? PfcHostPort::L2RtxModeStringToNum (host["L2Retransmission"]["Mode"])
-                      : PfcHostPort::L2_RTX_MODE::NONE;
-              impl->SetL2RetransmissionMode (l2RtxMode);
-              if (l2RtxMode == PfcHostPort::L2_RTX_MODE::IRN)
-                {
-                  const uint32_t size = host["L2Retransmission"]["MaxBitmapSize"];
-                  const Time rtoHigh (host["L2Retransmission"]["RtoHigh"].get<std::string> ());
-                  const Time rtoLow (host["L2Retransmission"]["RtoLow"].get<std::string> ());
-                  const uint32_t n = host["L2Retransmission"]["RtoLowThreshold"];
-                  impl->SetupIrn (size, rtoHigh, rtoLow, n);
-                }
+              ConfigPortL2Rtx (impl, conf["Global"]);
+              // Congestion control mode settings
+              ConfigPortCc (impl, conf["Global"]);
               allPorts[node].push_back (dev);
             }
           // Install DPSK
@@ -278,13 +278,13 @@ main (int argc, char *argv[])
           .delay = delay,
           .bandwidth = dataRate,
           .queueSize =
-              dataQueueSize.find (d_dev) == dataQueueSize.end () ? 0 : dataQueueSize[s_dev]};
+              dataQueueSize.find (d_dev) == dataQueueSize.end () ? 0 : dataQueueSize[d_dev]};
       onewayOutDev[d_node][s_node] = {
           .device = d_dev,
           .delay = delay,
           .bandwidth = dataRate,
           .queueSize =
-              dataQueueSize.find (s_dev) == dataQueueSize.end () ? 0 : dataQueueSize[d_dev]};
+              dataQueueSize.find (s_dev) == dataQueueSize.end () ? 0 : dataQueueSize[s_dev]};
     }
 
   NS_LOG_UNCOND ("====Route====");
@@ -316,6 +316,8 @@ main (int argc, char *argv[])
       const uint64_t size = cyq::DataSize::GetBytes (sizeInput);
       auto txQp = CreateObject<RdmaTxQueuePair> (startTime, sourceIp, destinationIp, sourcePort,
                                                  destinationPort, size, priority);
+      ConfigQueueL2Rtx (txQp, pairBdp[allNodes.left.at (fromNode)][allNodes.left.at (toNode)],
+                        conf["Global"]);
       auto sendDpskLayer = allNodes.left.at (fromNode)->GetObject<PfcHost> ();
       sendDpskLayer->AddRdmaTxQueuePair (txQp);
       auto receiveDpskLayer = allNodes.left.at (toNode)->GetObject<PfcHost> ();
@@ -340,6 +342,110 @@ main (int argc, char *argv[])
   NS_LOG_UNCOND ("Elapsed " << elapsed_seconds.count () << "s");
 }
 
+/***************************
+ * Host port configuration *
+ ***************************/
+
+void
+ConfigPortL2Rtx (Ptr<PfcHostPort> port, const json &globalConf)
+{
+  if (globalConf.contains ("L2Retransmission"))
+    {
+      const auto rtxConf = globalConf["L2Retransmission"];
+      const auto l2RtxMode = PfcHostPort::L2RtxModeStringToNum (rtxConf["Mode"]);
+      port->SetL2RetransmissionMode (l2RtxMode);
+      if (l2RtxMode == PfcHostPort::L2_RTX_MODE::IRN)
+        {
+          const uint32_t size = rtxConf["MaxBitmapSize"];
+          const Time rtoHigh (rtxConf["RtoHigh"].get<std::string> ());
+          const Time rtoLow (rtxConf["RtoLow"].get<std::string> ());
+          const uint32_t n = rtxConf["RtoLowThreshold"];
+          port->SetupIrn (size, rtoHigh, rtoLow, n);
+        }
+      else if (l2RtxMode == PfcHostPort::L2_RTX_MODE::B2N ||
+               l2RtxMode == PfcHostPort::L2_RTX_MODE::B20)
+        {
+          const uint32_t chunk = rtxConf["Chunk"];
+          const uint32_t ackInterval = rtxConf["AckInterval"];
+          const Time nackInterval (rtxConf["NackInterval"].get<std::string> ());
+          port->SetupB2x (chunk, ackInterval, nackInterval);
+        }
+    }
+  else
+    {
+      port->SetL2RetransmissionMode (PfcHostPort::L2_RTX_MODE::NONE_RTX);
+    }
+}
+
+void
+ConfigPortCc (Ptr<PfcHostPort> port, const json &globalConf)
+{
+  if (globalConf.contains ("CcMode"))
+    {
+      const auto ccConf = globalConf["CcMode"];
+      const auto ccMode = PfcHostPort::CcModeStringToNum (ccConf["Mode"]);
+      port->SetCcMode (ccMode);
+      if (ccMode == PfcHostPort::CC_MODE::DCQCN)
+        {
+          PfcHostPort::Dcqcn dcqcn;
+          dcqcn.g = ccConf["EwmaGain"];
+          dcqcn.rateFracOnFirstCnp = 1;
+          dcqcn.clampTargetRate = ccConf["ClampTargetRate"];
+          dcqcn.incRateInterval = Time (ccConf["IncRateInterval"].get<std::string> ());
+          dcqcn.decRateInterval = Time (ccConf["DecRateInterval"].get<std::string> ());
+          dcqcn.fastRecTimes = ccConf["FastRecTimes"];
+          dcqcn.alphaResumeInterval = Time (ccConf["AlphaResumeInterval"].get<std::string> ());
+          dcqcn.rai = DataRate (ccConf["RateAI"].get<std::string> ());
+          dcqcn.rhai = DataRate (ccConf["RateHAI"].get<std::string> ());
+          dcqcn.minRate = DataRate (ccConf["MinRate"].get<std::string> ());
+          dcqcn.isRateBound = ccConf["RateBound"];
+          port->SetupDcqcn (dcqcn);
+        }
+    }
+  else
+    {
+      port->SetCcMode (PfcHostPort::CC_MODE::NONE_CC);
+    }
+}
+
+void
+ConfigQueueL2Rtx (Ptr<RdmaTxQueuePair> qp, uint64_t qpBdp, const json &globalConf)
+{
+  if (globalConf.contains ("L2Retransmission"))
+    {
+      const auto rtxConf = globalConf["L2Retransmission"];
+      const auto l2RtxMode = PfcHostPort::L2RtxModeStringToNum (rtxConf["Mode"]);
+      if (l2RtxMode == PfcHostPort::L2_RTX_MODE::B2N || l2RtxMode == PfcHostPort::L2_RTX_MODE::B20)
+        {
+          const auto winConf = rtxConf["Window"];
+          const bool hasWin = winConf["Enable"];
+          const bool isGlobalWin = winConf["Global"];
+          const bool isVarWin = winConf["Variable"];
+          const bool hasWinSize = winConf.contains ("Size");
+          uint32_t winSize = maxBdp;
+          if (hasWin)
+            {
+              if (hasWinSize)
+                {
+                  winSize = winConf["Size"];
+                }
+              else
+                {
+                  if (isGlobalWin)
+                    winSize = maxBdp;
+                  else
+                    winSize = qpBdp;
+                }
+            }
+          else
+            {
+              winSize = 0;
+            }
+          qp->SetupB2x (isVarWin, winSize);
+        }
+    }
+}
+
 /*********************
  * MMU configuration *
  *********************/
@@ -359,7 +465,7 @@ ConfigMmuPort (Ptr<Node> node, Ptr<SwitchMmu> mmu, const std::string &configFile
 }
 
 void
-ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
+ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<DpskNetDevice> port,
                 const std::string &configFile)
 {
   std::ifstream file (configFile);
@@ -371,15 +477,21 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
           const auto portType = PfcSwitch::DeviceToL2Type (port);
           if (portType == PfcSwitch::PFC)
             {
+              if (index == 0)
+                dataQueueSize.insert ({port, 0});
               if (queue.contains ("Headroom"))
                 {
                   const uint64_t headroom = cyq::DataSize::GetBytes (queue["Headroom"]);
                   mmu->ConfigHeadroom (port, index, headroom);
+                  if (index == 0)
+                    dataQueueSize[port] += headroom;
                 }
               if (queue.contains ("Reserve"))
                 {
                   const uint64_t reserve = cyq::DataSize::GetBytes (queue["Reserve"]);
                   mmu->ConfigReserve (port, index, reserve);
+                  if (index == 0)
+                    dataQueueSize[port] += reserve;
                 }
               if (queue.contains ("ResumeOffset"))
                 {
@@ -393,6 +505,8 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                 {
                   const uint64_t ingress = cyq::DataSize::GetBytes (queue["Ingress"]);
                   mmu->ConfigCbfcBufferSize (port, index, ingress);
+                  if (index == 0)
+                    dataQueueSize.insert ({port, ingress});
                 }
               if (queue.contains ("Period"))
                 {
@@ -406,6 +520,8 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                 {
                   const uint64_t ingress = cyq::DataSize::GetBytes (queue["Ingress"]);
                   mmu->ConfigCbpfcBufferSize (port, index, ingress);
+                  if (index == 0)
+                    dataQueueSize.insert ({port, ingress});
                 }
               if (queue.contains ("Period"))
                 {
@@ -419,6 +535,8 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                 {
                   const uint64_t ingress = cyq::DataSize::GetBytes (queue["Ingress"]);
                   mmu->ConfigPtpfcBufferSize (port, index, ingress);
+                  if (index == 0)
+                    dataQueueSize.insert ({port, ingress});
                 }
             }
           else if (portType == PfcSwitch::NOPFC)
@@ -427,7 +545,8 @@ ConfigMmuQueue (Ptr<Node> node, Ptr<SwitchMmu> mmu, Ptr<NetDevice> port,
                 {
                   const uint64_t ingress = cyq::DataSize::GetBytes (queue["Ingress"]);
                   mmu->ConfigNoPfcBufferSize (port, index, ingress);
-                  dataQueueSize.insert ({port, ingress});
+                  if (index == 0)
+                    dataQueueSize.insert ({port, ingress});
                 }
             }
           if (queue.contains ("Ecn"))
@@ -591,6 +710,8 @@ void TraceBufferUsed (Time interval, Time end, std::string name, uint32_t portIn
 void TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex);
 void TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex);
 
+void TraceIrnRtxByte (Time interval, Time end, std::string name, uint32_t portIndex);
+
 void TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type, uint16_t time);
 void TraceCbfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, uint64_t fccl);
 
@@ -638,6 +759,23 @@ DoTrace (const std::string &configFile)
               for (const auto &portIndex : target["PortIndex"])
                 {
                   Simulator::Schedule (start, &TraceRxByte, interval, end, name, portIndex);
+                }
+            }
+        }
+    }
+  if (conf["IrnRtxByte"]["Enable"] == true)
+    {
+      logStreams["IrnRtxByte"] << "Time,Node,PortIndex,IrnRtxByte\n";
+      const auto interval = Time (conf["IrnRtxByte"]["Interval"].get<std::string> ());
+      const auto start = Time (conf["IrnRtxByte"]["Start"].get<std::string> ());
+      const auto end = Time (conf["IrnRtxByte"]["End"].get<std::string> ());
+      for (const auto &target : conf["IrnRtxByte"]["Target"])
+        {
+          for (const auto &name : target["Name"])
+            {
+              for (const auto &portIndex : target["PortIndex"])
+                {
+                  Simulator::Schedule (start, &TraceIrnRtxByte, interval, end, name, portIndex);
                 }
             }
         }
@@ -876,6 +1014,21 @@ TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex)
                        << "\n";
   if (Simulator::Now () < end)
     Simulator::Schedule (interval, &TraceRxByte, interval, end, name, portIndex);
+}
+
+void
+TraceIrnRtxByte (Time interval, Time end, std::string name, uint32_t portIndex)
+{
+  const auto node = allNodes.left.at (name);
+  const auto port = allPorts[node][portIndex];
+  if (hostNodes.find (node) != hostNodes.end ())
+    {
+      uint64_t irnRtxBytes = port->GetObject<PfcHostPort> ()->m_irnRtxBytes;
+      logStreams["IrnRtxByte"] << Simulator::Now () << "," << name << "," << portIndex << ","
+                               << irnRtxBytes << "\n";
+    }
+  if (Simulator::Now () < end)
+    Simulator::Schedule (interval, &TraceIrnRtxByte, interval, end, name, portIndex);
 }
 
 void

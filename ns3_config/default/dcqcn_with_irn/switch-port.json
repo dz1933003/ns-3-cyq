@@ -1,0 +1,10 @@
+[
+  {
+    "PortIndex": 0,
+    "QueueConfigFile": "ns3_config/default/dcqcn_with_irn/switch-queue.json"
+  },
+  {
+    "PortIndex": 1,
+    "QueueConfigFile": "ns3_config/default/dcqcn_with_irn/switch-queue.json"
+  }
+]

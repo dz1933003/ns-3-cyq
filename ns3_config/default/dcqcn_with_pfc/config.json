@@ -1,0 +1,63 @@
+{
+  "Global": {
+    "QueueNumber": 1,
+    "EcmpSeed": 1,
+    "L2Retransmission": {
+      "Mode": "B2N",
+      "Window": {
+        "Enable": true,
+        "Global": true,
+        "Variable": true,
+        "Size": 2000000
+      },
+      "Chunk": 4000,
+      "AckInterval": 1,
+      "NackInterval": "500us"
+    },
+    "CcMode": {
+      "Mode": "DCQCN",
+      "EwmaGain": 0.00390625,
+      "ClampTargetRate": false,
+      "IncRateInterval": "900us",
+      "DecRateInterval": "4us",
+      "FastRecTimes": 1,
+      "AlphaResumeInterval": "1us",
+      "RateAI": "50Mbps",
+      "RateHAI": "100Mbps",
+      "MinRate": "1Mbps",
+      "RateBound": true
+    }
+  },
+  "Host": [
+    {
+      "Name": [
+        "h1",
+        "h2"
+      ],
+      "PortNumber": 1
+    }
+  ],
+  "Switch": [
+    {
+      "Name": [
+        "s1"
+      ],
+      "Port": [
+        {
+          "Type": "PFC"
+        },
+        {
+          "Type": "PFC"
+        }
+      ],
+      "Config": {
+        "Buffer": "12MiB",
+        "ConfigFile": "ns3_config/default/dcqcn_with_pfc/switch-port.json"
+      }
+    }
+  ],
+  "LinkConfigFile": "ns3_config/default/dcqcn_with_pfc/link.csv",
+  "FlowConfigFile": "ns3_config/default/dcqcn_with_pfc/flow.csv",
+  "TraceConfigFile": "ns3_config/default/dcqcn_with_pfc/trace.json",
+  "LogOutputFolder": "ns3_log/default/dcqcn_with_pfc"
+}

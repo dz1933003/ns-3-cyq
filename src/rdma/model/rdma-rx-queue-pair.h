@@ -41,7 +41,7 @@ public:
   uint64_t m_size; //!< source port, dst port
   uint16_t m_priority; //!< flow priority
 
-  uint64_t m_receivedSize; //!< total valid received size
+  uint64_t m_receivedSize; //!< total valid received size (next expected sequence)
 
   static TypeId GetTypeId (void);
   RdmaRxQueuePair ();
@@ -131,6 +131,19 @@ public:
     std::deque<IRN_STATE> m_states; //!< packet state bitmap window
     uint32_t m_baseSeq = 1; //!< bitmap window base sequence i.e. number of index 0
   } m_irn; //!< IRN infomation
+
+  /**
+   * \ingroup rdma
+   * \class B2x
+   * \brief Rdma rx queue pair back to N or back to zero infomation.
+   */
+  class B2x
+  {
+  public:
+    Time m_nackTimer = Time (0);
+    uint32_t m_rxMilestone = 0;
+    uint32_t m_lastNack = 0;
+  } m_b2x;
 };
 
 } // namespace ns3

@@ -102,7 +102,7 @@ public:
    * L2 retransmission mode
    */
   enum L2_RTX_MODE {
-    NONE, // No retransmission
+    NONE_RTX, // No retransmission
     B20, // Back to zero (Not implemented)
     B2N, // Back to N (Not implemented)
     IRN // Selective ACK
@@ -123,8 +123,6 @@ public:
    */
   static uint32_t L2RtxModeStringToNum (const std::string &mode);
 
-  // IRN related configurations
-
   /**
    * Setup IRN configurations
    *
@@ -134,6 +132,62 @@ public:
    * \param n timeout low threshold packets of a flow
    */
   void SetupIrn (uint32_t size, Time rtoh, Time rtol, uint32_t n);
+
+  /**
+   * Setup B2N or B20 configurations
+   * 
+   * \param chunk chunk size
+   * \param ackInterval ACK interval bytes
+   * \param nackInterval NACK interval time
+   */
+  void SetupB2x (uint32_t chunk, uint32_t ackInterval, Time nackInterval);
+
+  /**
+   * Congestion control mode
+   */
+  enum CC_MODE {
+    NONE_CC, // No cc
+    DCQCN // Dcqcn
+  };
+
+  /**
+   * Set congestion control mode
+   * 
+   * \param mode congestion control mode
+   */
+  void SetCcMode (uint32_t mode);
+
+  /**
+   * Convert congestion control mode string to number
+   * 
+   * \param mode congestion control mode name
+   * \return mode number
+   */
+  static uint32_t CcModeStringToNum (const std::string &mode);
+
+  struct Dcqcn
+  {
+    double g; //!< Control gain parameter which determines the level of rate decrease
+    double rateFracOnFirstCnp; //!< the fraction of line rate to set on first CNP
+    bool clampTargetRate; //!< Clamp target rate on CNP
+    Time incRateInterval; //!< The rate increase interval at RP
+    Time decRateInterval; //!< The interval of rate decrease check
+    uint32_t fastRecTimes; //!< Fast recovery times
+    Time alphaResumeInterval; //!< The interval of resuming alpha
+
+    DataRate rai; //!< Rate increase of additive increase
+    DataRate rhai; //!< Rate increase of hyper-additive increase
+
+    DataRate minRate; //!< Min sending rate
+    bool isRateBound; //!< using DCQCN rate control
+  };
+
+  /**
+   * Setup DCQCN configurations
+   * 
+   * \param dcqcn DCQCN configuration structure
+   */
+  void SetupDcqcn (PfcHostPort::Dcqcn dcqcn);
 
 protected:
   /**
@@ -186,20 +240,34 @@ private:
   std::vector<Ptr<RdmaTxQueuePair>> m_txQueuePairs; //!< transmit queue pair vector for round-robin
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> m_rxQueuePairs; //!< hash and received queue pairs
 
-  std::deque<std::pair<Ptr<RdmaTxQueuePair>, uint32_t>>
-      m_rtxPacketQueue; //!< packets that need to be retransmitted, qp with seq number
+  std::vector<std::queue<uint32_t>>
+      m_rtxSeqQueues; //!< packets need to be retransmitted, qp index with IRN seq
+  uint32_t m_rtxQueuingCnt; //!< retransmitted packets in queue
 
   uint32_t m_lastQpIndex; //!< last transmitted queue pair index (for round-robin)
 
   uint32_t m_l2RetransmissionMode; //!< L2 retransmission mode
 
-  struct
+  uint32_t m_ccMode; //!< congestion control mode
+
+  EventId m_nextTransmitEvent; //< device next send event
+
+  struct //!< IRN configuration
   {
     uint32_t maxBitmapSize; //!< Maximum bitmap size
     Time rtoHigh; //!< Retransmission timeout high
     Time rtoLow; //!< Retransmission timeout low
     uint32_t rtoLowThreshold; //!< Retransmission timeout low threshold
-  } m_irn; //!< IRN configuration
+  } m_irn;
+
+  Dcqcn m_dcqcn; //!< DCQCN configuration
+
+  struct B2x //!< B2N or B20 configuration
+  {
+    uint32_t chunk; //!< Chunk size by byte
+    uint32_t ackInterval; //!< ACK generate interval bytes
+    Time nackInterval; //!< NACK generate interval time
+  } m_b2x;
 
   /**
    * Generate data packet of target transmitting queue pair
@@ -232,20 +300,25 @@ private:
    * Generate ACK packet of target transmitting queue pair
    *
    * \param qp queue pair
+   * \param seq sequence number
    * \param irnAck ack sequence number of this packet
+   * \param cnp whether tag CNP flag
    * \return ACK packet
    */
-  Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck);
+  Ptr<Packet> GenACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, uint32_t irnAck, bool cnp);
 
   /**
    * Generate SACK packet of target transmitting queue pair
    *
    * \param qp queue pair
+   * \param seq sequence number
    * \param irnAck ack sequence number of this packet
    * \param irnNack cumulative acknowledgment (expected sequence number)
+   * \param cnp whether tag CNP flag
    * \return SACK packet
    */
-  Ptr<Packet> GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t irnAck, uint32_t irnNack);
+  Ptr<Packet> GenSACK (Ptr<RdmaRxQueuePair> qp, uint32_t seq, uint32_t irnAck, uint32_t irnNack,
+                       bool cnp);
 
   /**
    * Schedule IRN retransmission timer for each packet of one queue pair
@@ -263,6 +336,88 @@ private:
    * \param irnSeq sequence number of this data packet
    */
   void IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq);
+
+  /**
+   * Update next packet available time for the queue pair
+   * 
+   * \param qp queue pair
+   * \param interframeGap net device interframe gap time
+   * \param size last transmitted packet size
+   */
+  void UpdateNextAvail (Ptr<RdmaTxQueuePair> qp, const Time &interframeGap, const uint32_t &size);
+
+  /**
+   * DCQCN CNP receive handler
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnCnpReceived (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN update alpha with scheduling
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnUpdateAlpha (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN schedule next alpha update
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnScheduleUpdateAlpha (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN decrease rate with scheduling.
+   * It checks every decrease interval if CNP arrived (decrease CNP arrived).
+   * If so, decrease rate, and reset all rate increase related things.
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnDecRate (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN schedule next rate decrease
+   * 
+   * \param qp queue pair
+   * \param delta scheduling delay time
+   */
+  void DcqcnScheduleDecRate (Ptr<RdmaTxQueuePair> qp, const Time &delta);
+
+  /**
+   * DCQCN schedule next rate increase
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnScheduleIncRate (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN increase rate
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnIncRate (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN fast recovery of increase rate
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnFastRecovery (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN active increase rate
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnActiveIncrease (Ptr<RdmaTxQueuePair> qp);
+
+  /**
+   * DCQCN hyper increase rate
+   * 
+   * \param qp queue pair
+   */
+  void DcqcnHyperIncrease (Ptr<RdmaTxQueuePair> qp);
 
   /**
    * The trace source fired for received a PFC packet.
@@ -293,6 +448,8 @@ public:
 
   uint64_t m_nTxBytes; //!< total transmit bytes
   uint64_t m_nRxBytes; //!< total receive bytes
+
+  uint64_t m_irnRtxBytes; //!< IRN retransmission bytes
 
 private:
   /**

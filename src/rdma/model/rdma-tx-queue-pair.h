@@ -25,6 +25,8 @@
 #include "ns3/ipv4-address.h"
 #include "ns3/simulator.h"
 #include "ns3/packet.h"
+#include "ns3/data-rate.h"
+
 #include <deque>
 
 namespace ns3 {
@@ -37,13 +39,27 @@ namespace ns3 {
 class RdmaTxQueuePair : public Object
 {
 public:
+  /* Flow infomation */
   Time m_startTime; //!< queue pair arrival time
   Ipv4Address m_sIp, m_dIp; //!< source IP, dst IP
   uint16_t m_sPort, m_dPort; //!< source port, dst port
   uint64_t m_size; //!< source port, dst port
   uint16_t m_priority; //!< flow priority
 
-  uint64_t m_sentSize; //!< total valid sent size
+  /* Transmission statics */
+  uint64_t m_txSize; //!< total valid sent size (next seq to send)
+
+  /* B2N & B20 */
+  uint64_t m_unackSize; //!< the highest unacked seq for B2N or B20
+
+  /* RDMA window */
+  bool m_isVarWin; //!< whether enabled variable window size for B2N or B20
+  uint32_t m_winSize; //!< bound of on-the-fly bytes for B2N or B20
+
+  /* Rate limiter */
+  DataRate m_maxRate; //!< queue pair max rate
+  DataRate m_rate; //!< current queue pair rate
+  Time m_nextAvail; //!< soonest time of next send of queue pair
 
   static TypeId GetTypeId (void);
   RdmaTxQueuePair ();
@@ -67,16 +83,76 @@ public:
    * 
    * \return remaining bytes
    */
-  uint64_t GetRemainBytes ();
+  uint64_t GetRemainBytes () const;
 
   uint32_t GetHash (void);
   static uint32_t GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const uint16_t &sPort,
                            const uint16_t &dPort);
 
   /**
-   * \return true for finished queue pair
+   * Finished tx but may not all packets are acked.
+   * But finished all acked with IRN.
+   *
+   * \return true for finished
    */
-  bool IsFinished ();
+  bool IsTxFinished () const;
+
+  /**
+   * Finished with all packets are acked.
+   * This is only for B2N and B20 with DCQCN.
+   * 
+   * \return true for finished
+   */
+  bool IsAckedFinished () const;
+
+  /**
+   * Setup queue pair rate limiter (now used for DCQCN only)
+   * 
+   * \param maxRate
+   * \param initRate
+   */
+  void SetupRate (const DataRate &maxRate, const DataRate &initRate);
+
+  /**
+   * Setup B2N or B20 window
+   * 
+   * \param isVarWin whether a variable window size
+   * \param winSize window size
+   */
+  void SetupB2x (const bool &isVarWin, const uint32_t &winSize);
+
+  /**
+   * Recover queue when receive NACK for B2N or B20
+   */
+  void B2xRecover ();
+
+  /**
+   * Acknowleage sequence for B2N or B20
+   * 
+   * \param ack ack sequence
+   */
+  void B2xAck (const uint64_t &ack);
+
+  /**
+   * Get on the fly bytes for B2N or B20
+   * 
+   * \return on the fly bytes
+   */
+  uint64_t B2xGetOnTheFly () const;
+
+  /**
+   * Whether B2N or B20 window is full
+   * 
+   * \return true if window is full
+   */
+  bool B2xIsWinBound () const;
+
+  /**
+   * B2N or B20 window size
+   * 
+   * \return window size by byte
+   */
+  uint64_t B2xGetWin () const;
 
   /**
    * IRN tx bitmap state
@@ -167,6 +243,32 @@ public:
     std::deque<EventId> m_rtxEvents; //!< packet retransmission event bitmap window
     uint32_t m_baseSeq = 1; //!< bitmap window base sequence i.e. number of index 0
   } m_irn; //!< IRN infomation
+
+  /**
+   * \ingroup rdma
+   * \class Dcqcn
+   * \brief Rdma tx queue pair DCQCN infomation.
+   */
+  class Dcqcn
+  {
+  public:
+    double m_alpha = 1;
+    bool m_firstCnp = true; // indicate if the current CNP is the first CNP
+    bool m_alphaCnpArrived = false; // indicate if CNP arrived in the last slot
+    bool m_decreaseCnpArrived = false; // indicate if CNP arrived in the last slot
+    uint32_t m_rpTimeStage = 0;
+
+    DataRate m_targetRate; //< Target rate
+
+    EventId m_eventUpdateAlpha;
+    EventId m_eventDecreaseRate;
+    EventId m_rpTimer;
+
+    /**
+     * Cleanup DCQCN rate control timer when queue pair is complete
+     */
+    void CleanupTimer ();
+  } m_dcqcn;
 };
 
 } // namespace ns3

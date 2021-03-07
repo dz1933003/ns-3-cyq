@@ -79,6 +79,84 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "(gdb) pfc-cyq default/pfc",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/scratch/pfc-cyq",
+            "args": [
+                "ns3_config/default/pfc/config.json"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "./build/lib/"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) pfc-cyq default/dcqcn_with_pfc",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/scratch/pfc-cyq",
+            "args": [
+                "ns3_config/default/dcqcn_with_pfc/config.json"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "./build/lib/"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) pfc-cyq default/dcqcn_with_irn",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/scratch/pfc-cyq",
+            "args": [
+                "ns3_config/default/dcqcn_with_irn/config.json"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "./build/lib/"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
 }

@@ -56,15 +56,17 @@ RdmaTxQueuePair::RdmaTxQueuePair (Time startTime, Ipv4Address sIp, Ipv4Address d
       m_dPort (dPort),
       m_size (size),
       m_priority (priority),
-      m_sentSize (0)
+      m_txSize (0),
+      m_unackSize (0),
+      m_nextAvail (0)
 {
   NS_LOG_FUNCTION (this << startTime << sIp << dIp << sPort << dPort << size << priority);
 }
 
 uint64_t
-RdmaTxQueuePair::GetRemainBytes ()
+RdmaTxQueuePair::GetRemainBytes () const
 {
-  return (m_size >= m_sentSize) ? m_size - m_sentSize : 0;
+  return (m_size >= m_txSize) ? m_size - m_txSize : 0;
 }
 
 uint32_t
@@ -109,9 +111,76 @@ RdmaTxQueuePair::GetHash (const Ipv4Address &sIp, const Ipv4Address &dIp, const 
 }
 
 bool
-RdmaTxQueuePair::IsFinished ()
+RdmaTxQueuePair::IsTxFinished () const
 {
-  return m_sentSize >= m_size;
+  return m_txSize >= m_size;
+}
+
+bool
+RdmaTxQueuePair::IsAckedFinished () const
+{
+  return m_unackSize >= m_size;
+}
+
+void
+RdmaTxQueuePair::SetupRate (const DataRate &maxRate, const DataRate &initRate)
+{
+  m_maxRate = maxRate;
+  m_rate = initRate;
+}
+
+// B2N and B20 function implementation
+
+void
+RdmaTxQueuePair::SetupB2x (const bool &isVarWin, const uint32_t &winSize)
+{
+  m_isVarWin = isVarWin;
+  m_winSize = winSize;
+}
+
+void
+RdmaTxQueuePair::B2xRecover ()
+{
+  m_txSize = m_unackSize;
+}
+
+void
+RdmaTxQueuePair::B2xAck (const uint64_t &ack)
+{
+  if (ack > m_unackSize)
+    m_unackSize = ack;
+}
+
+uint64_t
+RdmaTxQueuePair::B2xGetOnTheFly () const
+{
+  return m_txSize - m_unackSize;
+}
+
+bool
+RdmaTxQueuePair::B2xIsWinBound () const
+{
+  const uint64_t w = B2xGetWin ();
+  return w != 0 && B2xGetOnTheFly () >= w;
+}
+
+uint64_t
+RdmaTxQueuePair::B2xGetWin () const
+{
+  if (m_winSize == 0)
+    return 0;
+  uint64_t w;
+  if (m_isVarWin)
+    {
+      w = m_winSize * m_rate.GetBitRate () / m_maxRate.GetBitRate ();
+      if (w == 0)
+        w = 1; // must > 0
+    }
+  else
+    {
+      w = m_winSize;
+    }
+  return w;
 }
 
 // IRN inner class implementation
@@ -232,6 +301,16 @@ uint32_t
 RdmaTxQueuePair::Irn::GetWindowSize () const
 {
   return m_states.size ();
+}
+
+// DCQCN inner class implementation
+
+void
+RdmaTxQueuePair::Dcqcn::CleanupTimer ()
+{
+  Simulator::Cancel (m_eventUpdateAlpha);
+  Simulator::Cancel (m_eventDecreaseRate);
+  Simulator::Cancel (m_rpTimer);
 }
 
 } // namespace ns3
