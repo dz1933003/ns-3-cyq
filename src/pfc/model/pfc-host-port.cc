@@ -115,6 +115,8 @@ PfcHostPort::AddRdmaTxQueuePair (Ptr<RdmaTxQueuePair> qp)
   m_txQueuePairs.push_back (qp);
   m_txQueuePairTable.insert ({qp->GetHash (), m_txQueuePairs.size () - 1});
 
+  m_rtxSeqQueues.push_back (std::queue<uint32_t> ());
+
   Simulator::Schedule (qp->m_startTime, &DpskNetDevice::TriggerTransmit, m_dev);
 }
 
@@ -217,51 +219,37 @@ PfcHostPort::Transmit ()
       return p;
     }
 
-  // Retransmit packet (for IRN only now)
-  if (m_l2RetransmissionMode == L2_RTX_MODE::IRN && m_rtxPacketQueue.empty () == false)
+  if (m_l2RetransmissionMode == L2_RTX_MODE::IRN && m_rtxQueuingCnt > 0)
     {
-      if (m_ccMode == CC_MODE::NONE_CC)
-        while (m_rtxPacketQueue.empty () == false)
-          {
-            const auto qp = m_rtxPacketQueue.front ().first;
-            const auto irnSeq = m_rtxPacketQueue.front ().second;
-            const auto state = qp->m_irn.GetIrnState (irnSeq);
-            m_rtxPacketQueue.pop_front ();
-            // Set up IRN timer
-            if (state == RdmaTxQueuePair::NACK ||
-                state == RdmaTxQueuePair::UNACK) // filter out ACKed packets
-              {
-                auto id = IrnTimer (qp, irnSeq);
-                qp->m_irn.SetRtxEvent (irnSeq, id);
-                auto p = ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
-                m_nTxBytes += p->GetSize ();
-                return p;
-              }
-          }
-      if (m_ccMode == CC_MODE::DCQCN)
+      uint32_t flowCnt = m_txQueuePairs.size ();
+      for (uint32_t i = 0; i < flowCnt; i++)
         {
-          // TODO cyq: Optimize loop by checking QP rtx packets
-          for (uint i = 0; i < m_rtxPacketQueue.size (); i++)
+          const uint32_t qIdx = (m_lastQpIndex + i + 1) % flowCnt;
+          const auto qp = m_txQueuePairs[qIdx];
+          const auto irnSeq = m_rtxSeqQueues[qIdx].front ();
+          const auto state = qp->m_irn.GetIrnState (irnSeq);
+
+          if (m_ccMode == CC_MODE::DCQCN && qp->m_nextAvail > Simulator::Now ())
+            continue;
+
+          m_rtxSeqQueues[qIdx].pop ();
+          m_rtxQueuingCnt--;
+
+          if (state == RdmaTxQueuePair::NACK ||
+              state == RdmaTxQueuePair::UNACK) // filter out ACKed packets
             {
-              const auto qp = m_rtxPacketQueue[i].first;
-              const auto irnSeq = m_rtxPacketQueue[i].second;
-              const auto state = qp->m_irn.GetIrnState (irnSeq);
-
-              if (m_ccMode == CC_MODE::DCQCN && qp->m_nextAvail > Simulator::Now ())
-                continue;
-
-              m_rtxPacketQueue.erase (m_rtxPacketQueue.begin () + i);
+              // Round robin
+              m_lastQpIndex = qIdx;
               // Set up IRN timer
-              if (state == RdmaTxQueuePair::NACK ||
-                  state == RdmaTxQueuePair::UNACK) // filter out ACKed packets
-                {
-                  auto id = IrnTimer (qp, irnSeq);
-                  qp->m_irn.SetRtxEvent (irnSeq, id);
-                  auto p = ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
-                  UpdateNextAvail (qp, Time (0), p->GetSize ());
-                  m_nTxBytes += p->GetSize ();
-                  return p;
-                }
+              const auto id = IrnTimer (qp, irnSeq);
+              qp->m_irn.SetRtxEvent (irnSeq, id);
+              auto p = ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
+              // DCQCN schedule next send by rate limiter
+              if (m_ccMode == CC_MODE::DCQCN)
+                UpdateNextAvail (qp, Time (0), p->GetSize ());
+              // Statistic Tx
+              m_nTxBytes += p->GetSize ();
+              return p;
             }
         }
     }
@@ -303,10 +291,9 @@ PfcHostPort::Transmit ()
       // get sequence number out for logging retransmission
       uint32_t irnSeq;
       auto p = GenData (qp, irnSeq);
-      // Finished check
+      // Finished trace
       if (qp->IsTxFinished ())
         m_queuePairTxCompleteTrace (qp);
-      m_nTxBytes += p->GetSize ();
       // Set up IRN timer
       if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
         {
@@ -316,6 +303,8 @@ PfcHostPort::Transmit ()
       // DCQCN schedule next send by rate limiter
       if (m_ccMode == CC_MODE::DCQCN)
         UpdateNextAvail (qp, Time (0), p->GetSize ());
+      // Statistic Tx
+      m_nTxBytes += p->GetSize ();
       return p;
     }
 
@@ -579,7 +568,9 @@ PfcHostPort::Receive (Ptr<Packet> p)
               qp->m_irn.SackIrnState (irnAck, irnNack);
               for (auto i = irnNack; i < irnAck; i++)
                 {
-                  m_rtxPacketQueue.push_back ({qp, i});
+                  const auto qpIdx = m_txQueuePairTable[qp->GetHash ()];
+                  m_rtxSeqQueues[qpIdx].push (i);
+                  m_rtxQueuingCnt++;
                 }
 
               if (m_ccMode == CC_MODE::DCQCN && cnp)
@@ -812,7 +803,10 @@ PfcHostPort::IrnTimerHandler (Ptr<RdmaTxQueuePair> qp, uint32_t irnSeq)
   const auto state = qp->m_irn.GetIrnState (irnSeq);
   if (state == RdmaTxQueuePair::NACK || state == RdmaTxQueuePair::UNACK)
     {
-      m_rtxPacketQueue.push_back ({qp, irnSeq});
+      const auto qpIdx = m_txQueuePairTable[qp->GetHash ()];
+      m_rtxSeqQueues[qpIdx].push (irnSeq);
+      m_rtxQueuingCnt++;
+
       m_dev->TriggerTransmit ();
     }
 }
