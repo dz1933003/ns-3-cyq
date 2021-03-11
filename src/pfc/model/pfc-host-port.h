@@ -240,6 +240,8 @@ private:
   std::vector<Ptr<RdmaTxQueuePair>> m_txQueuePairs; //!< transmit queue pair vector for round-robin
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> m_rxQueuePairs; //!< hash and received queue pairs
 
+  uint32_t m_rrBeginIdx = 0;
+
   std::vector<std::queue<uint32_t>>
       m_rtxSeqQueues; //!< packets need to be retransmitted, qp index with IRN seq
   uint32_t m_rtxQueuingCnt; //!< retransmitted packets in queue

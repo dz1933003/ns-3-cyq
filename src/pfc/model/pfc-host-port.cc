@@ -221,6 +221,29 @@ PfcHostPort::Transmit ()
       return p;
     }
 
+  // Update round robin begin index
+  {
+    uint32_t flowCnt = m_txQueuePairs.size ();
+    for (uint32_t i = m_rrBeginIdx; i < flowCnt; i++)
+      {
+        if (m_l2RetransmissionMode == L2_RTX_MODE::B20 ||
+            m_l2RetransmissionMode == L2_RTX_MODE::B2N)
+          {
+            if (m_txQueuePairs[i]->IsAckedFinished ())
+              m_rrBeginIdx = i;
+            else
+              break;
+          }
+        else
+          {
+            if (m_txQueuePairs[i]->IsTxFinished ())
+              m_rrBeginIdx++;
+            else
+              break;
+          }
+      }
+  }
+
   if (m_l2RetransmissionMode == L2_RTX_MODE::IRN && m_rtxQueuingCnt > 0)
     {
       uint32_t flowCnt = m_txQueuePairs.size ();
@@ -259,9 +282,10 @@ PfcHostPort::Transmit ()
 
   // Transmit data packet
   uint32_t flowCnt = m_txQueuePairs.size ();
-  for (uint32_t i = 0; i < flowCnt; i++)
+  for (uint32_t i = 0; i < flowCnt - m_rrBeginIdx; i++)
     {
-      uint32_t qIdx = (m_lastQpIndex + i + 1) % flowCnt;
+      uint32_t qIdx =
+          ((m_lastQpIndex - m_rrBeginIdx + i + 1) % (flowCnt - m_rrBeginIdx)) + m_rrBeginIdx;
       auto qp = m_txQueuePairs[qIdx];
       // PFC RESUME
       if (m_pfcEnabled && m_pausedStates[qp->m_priority])
