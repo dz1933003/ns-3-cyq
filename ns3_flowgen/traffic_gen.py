@@ -124,6 +124,7 @@ if __name__ == "__main__":
                 flow_dict[(src_host_id, dst_host_id)] += 1
             else:
                 flow_dict[(src_host_id, dst_host_id)] = 1
+            # Notice that time is (s) and size is (byte) by default
             output_file.write(
                 "%dns,%d,%d,%d,%d,%dB,%d\n"
                 % (
