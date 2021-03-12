@@ -125,7 +125,7 @@
       ],
       "Config": {
         "Buffer": "2862KB",
-        "ConfigFile": "ns3_config/sc21/delay200us/irn-acrossDC/switch-spine-port.json"
+        "ConfigFile": "ns3_config/sc21/delay200us/irn-interDC/switch-spine-port.json"
       }
     },
     {
@@ -191,7 +191,7 @@
       ],
       "Config": {
         "Buffer": "2544KB",
-        "ConfigFile": "ns3_config/sc21/delay200us/irn-acrossDC/switch-leaf-ToR-port.json"
+        "ConfigFile": "ns3_config/sc21/delay200us/irn-interDC/switch-leaf-ToR-port.json"
       }
     },
     {
@@ -218,12 +218,12 @@
       ],
       "Config": {
         "Buffer": "7272KB",
-        "ConfigFile": "ns3_config/sc21/delay200us/irn-acrossDC/switch-external-port.json"
+        "ConfigFile": "ns3_config/sc21/delay200us/irn-interDC/switch-external-port.json"
       }
     }
   ],
-  "LinkConfigFile": "ns3_config/sc21/delay200us/irn-acrossDC/link.csv",
-  "FlowConfigFile": "ns3_flowgen/tmp_traffic.csv",
-  "TraceConfigFile": "ns3_config/sc21/delay200us/irn-acrossDC/trace.json",
-  "LogOutputFolder": "ns3_log/sc21/delay200us/irn-acrossDC"
+  "LinkConfigFile": "ns3_config/sc21/delay200us/irn-interDC/link.csv",
+  "FlowConfigFile": "ns3_config/sc21/delay200us/irn-interDC/flow.csv",
+  "TraceConfigFile": "ns3_config/sc21/delay200us/irn-interDC/trace.json",
+  "LogOutputFolder": "ns3_log/sc21/delay200us/irn-interDC"
 }
