@@ -1,10 +1,10 @@
 [
   {
     "PortIndex": 0,
-    "QueueConfigFile": "ns3_config/sc21/delay200us/ptpfc/switch-acrossDC-queue.json"
+    "QueueConfigFile": "ns3_config/sc21/delay200us/dcqcn_with_ptpfc/switch-acrossDC-queue.json"
   },
   {
     "PortIndex": 1,
-    "QueueConfigFile": "ns3_config/sc21/delay200us/ptpfc/switch-interDC-queue.json"
+    "QueueConfigFile": "ns3_config/sc21/delay200us/dcqcn_with_ptpfc/switch-interDC-queue.json"
   }
 ]
