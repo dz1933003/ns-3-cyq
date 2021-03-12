@@ -8,7 +8,7 @@
       "kMax": "200KB",
       "pMax": 0.01
     },
-    "Headroom": "5MB",
+    "Headroom": "10MB",
     "Reserve": "1MB"
   }
 ]

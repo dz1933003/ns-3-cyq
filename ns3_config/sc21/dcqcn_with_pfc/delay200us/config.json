@@ -240,7 +240,7 @@
     }
   ],
   "LinkConfigFile": "ns3_config/sc21/dcqcn_with_pfc/delay200us/link.csv",
-  "FlowConfigFile": "ns3_config/sc21/dcqcn_with_pfc/delay200us/flow.csv",
+  "FlowConfigFile": "ns3_config/sc21/dcqcn_with_pfc/flow.csv",
   "TraceConfigFile": "ns3_config/sc21/dcqcn_with_pfc/delay200us/trace.json",
   "LogOutputFolder": "ns3_log/sc21/dcqcn_with_pfc/delay200us"
 }
