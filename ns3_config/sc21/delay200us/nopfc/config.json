@@ -216,7 +216,7 @@
     }
   ],
   "LinkConfigFile": "ns3_config/sc21/delay200us/nopfc/link.csv",
-  "FlowConfigFile": "ns3_flowgen/tmp_traffic.csv",
+  "FlowConfigFile": "ns3_config/sc21/delay200us/nopfc/flow.csv",
   "TraceConfigFile": "ns3_config/sc21/delay200us/nopfc/trace.json",
   "LogOutputFolder": "ns3_log/sc21/delay200us/nopfc"
 }

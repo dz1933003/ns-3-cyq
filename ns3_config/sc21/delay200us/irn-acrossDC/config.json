@@ -223,7 +223,7 @@
     }
   ],
   "LinkConfigFile": "ns3_config/sc21/delay200us/irn-acrossDC/link.csv",
-  "FlowConfigFile": "ns3_flowgen/tmp_traffic.csv",
+  "FlowConfigFile": "ns3_config/sc21/delay200us/irn-acrossDC/flow.csv",
   "TraceConfigFile": "ns3_config/sc21/delay200us/irn-acrossDC/trace.json",
   "LogOutputFolder": "ns3_log/sc21/delay200us/irn-acrossDC"
 }
