@@ -1,0 +1,34 @@
+[
+  {
+    "PortIndex": 0,
+    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 1,
+    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 2,
+    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 3,
+    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 4,
+    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 5,
+    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 6,
+    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 7,
+    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/switch-interDC-queue.json"
+  }
+]
