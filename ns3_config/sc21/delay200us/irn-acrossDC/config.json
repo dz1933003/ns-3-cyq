@@ -5,7 +5,7 @@
     "L2Retransmission": {
       "Mode": "IRN",
       "MaxBitmapSize": 3476,
-      "RtoHigh": "687872ns",
+      "RtoHigh": "1075152ns",
       "RtoLow": "417071ns",
       "RtoLowThreshold": 3
     }
