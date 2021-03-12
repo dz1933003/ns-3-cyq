@@ -8,6 +8,6 @@
       "kMax": "10MiB",
       "pMax": 1
     },
-    "Ingress": "10MB"
+    "Ingress": "11MB"
   }
 ]
