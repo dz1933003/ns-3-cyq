@@ -4,9 +4,9 @@
     "EcmpSeed": 1,
     "L2Retransmission": {
       "Mode": "IRN",
-      "MaxBitmapSize": 3476,
-      "RtoHigh": "1075152ns",
-      "RtoLow": "417071ns",
+      "MaxBitmapSize": 106,
+      "RtoHigh": "139914ns",
+      "RtoLow": "12714ns",
       "RtoLowThreshold": 3
     }
   },
