@@ -33,20 +33,6 @@ if __name__ == "__main__":
         type="string",
     )
     parser.add_option(
-        "-n",
-        "--nhost",
-        dest="nhost",
-        help="number of hosts",
-        type="int",
-    )
-    parser.add_option(
-        "--sindex",
-        dest="start_index",
-        help="start index",
-        default=0,
-        type="int",
-    )
-    parser.add_option(
         "--seed",
         dest="seed",
         help="random seed",
@@ -85,6 +71,15 @@ if __name__ == "__main__":
         default="tmp_traffic.csv",
         type="string",
     )
+    parser.add_option(
+        "--bipartite",
+        dest="bipartite",
+        help="bipartite configuration with "
+        "1. start index, 2. end index of part one; "
+        "3. start index, 4. end index of part two",
+        nargs=4,
+        type="int",
+    )
     options, args = parser.parse_args()
 
     # global members
@@ -95,12 +90,21 @@ if __name__ == "__main__":
     host_rand = random.Random(seed)
 
     # read options
-    if not options.nhost:
-        print("Error: please use -n to enter number of hosts")
+    if not options.bipartite:
+        print("Error: please use --bipartite to configure bipartite topology")
         sys.exit(0)
-
-    n_host = options.nhost  # host number
-    start_index = options.start_index  # host start index
+    start_index_1 = options.bipartite[0]
+    end_index_1 = options.bipartite[1]
+    start_index_2 = options.bipartite[2]
+    end_index_2 = options.bipartite[3]
+    # check bipartite overlap
+    if not (
+        start_index_1 <= end_index_1
+        and end_index_1 < start_index_2
+        and start_index_2 <= end_index_2
+    ):
+        print("Error: Bipartite overlap")
+        sys.exit(0)
     load = options.load  # traffic load
     bandwidth = get_bps_from_str(options.bandwidth)
     time = options.time * 1e9  # convert to ns
@@ -130,20 +134,31 @@ if __name__ == "__main__":
     )
     avg = cdf_rand.get_avg()
     avg_interval_arrival = 1 / (bandwidth * load / 8.0 / avg) * 1e9  # ns
-    host_list = [
+    host_list_1 = {
+        i for i in range(start_index_1, end_index_1 + 1)
+    }  # host id of part 1
+    host_list_2 = {
+        i for i in range(start_index_2, end_index_2 + 1)
+    }  # host id of part 1
+    all_host = [
         (base_time + int(possion_rand.get_rand(avg_interval_arrival)), i)
-        for i in range(start_index, start_index + n_host)
+        for i in range(start_index_1, end_index_1 + 1)
+    ] + [
+        (base_time + int(possion_rand.get_rand(avg_interval_arrival)), i)
+        for i in range(start_index_2, end_index_2 + 1)
     ]  # init host with (first sending time, host id)
-    heapq.heapify(host_list)
+    heapq.heapify(all_host)
     flow_dict = dict()
-    while len(host_list) > 0:
-        start_time, src_host_id = host_list[0]
+    while len(all_host) > 0:
+        start_time, src_host_id = all_host[0]
         next_time = start_time + int(possion_rand.get_rand(avg_interval_arrival))
-        dst_host_id = host_rand.randint(start_index, start_index + n_host - 1)
-        while dst_host_id == src_host_id:
-            dst_host_id = host_rand.randint(start_index, start_index + n_host - 1)
+        dst_host_id = (
+            host_rand.randint(start_index_2, end_index_2)
+            if src_host_id in host_list_1
+            else host_rand.randint(start_index_1, end_index_1)
+        )
         if next_time > time + base_time:
-            heapq.heappop(host_list)
+            heapq.heappop(all_host)
         else:
             flow_size = int(cdf_rand.get_rand())
             if flow_size <= 0:
@@ -165,5 +180,5 @@ if __name__ == "__main__":
                     0,
                 )
             )
-            heapq.heapreplace(host_list, (next_time, src_host_id))
+            heapq.heapreplace(all_host, (next_time, src_host_id))
     output_file.close()
