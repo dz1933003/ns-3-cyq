@@ -64,6 +64,13 @@ if __name__ == "__main__":
         type="float",
     )
     parser.add_option(
+        "--sport",
+        dest="s_port",
+        help="source port of all flows, by default 1",
+        default=1,
+        type="int",
+    )
+    parser.add_option(
         "-o",
         "--output",
         dest="output",
@@ -108,6 +115,7 @@ if __name__ == "__main__":
     load = options.load  # traffic load
     bandwidth = get_bps_from_str(options.bandwidth)
     time = options.time * 1e9  # convert to ns
+    s_port = options.s_port
     output = options.output
     if bandwidth == None:
         print("Error: bandwidth format incorrect")
@@ -174,7 +182,7 @@ if __name__ == "__main__":
                     start_time,
                     src_host_id,
                     dst_host_id,
-                    1,
+                    s_port,
                     flow_dict[(src_host_id, dst_host_id)],
                     flow_size,
                     0,

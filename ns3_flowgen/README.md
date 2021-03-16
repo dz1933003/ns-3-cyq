@@ -11,7 +11,7 @@ The code is converted from the HPCC opensource repository.
 This script will generate flows from any nodes to any other nodes.
 
 Example:
-`python traffic_gen.py -c cdf/WebSearch_distribution.txt -n 320 -l 0.3 -b 100G -t 0.1 --sindex 1` generates traffic according to the web search flow size distribution, for 320 hosts, host index start with 1, at 30% network load with 100Gbps host bandwidth for 0.1s.
+`python traffic_gen.py -c cdf/WebSearch_distribution.txt -n 320 -l 0.3 -b 100G -t 0.1 --sindex 1 --sport 2` generates traffic according to the web search flow size distribution, for 320 hosts, host index start with 1, source port 2, at 30% network load with 100Gbps host bandwidth for 0.1s.
 
 The generate traffic can be directly used by the simulation.
 
