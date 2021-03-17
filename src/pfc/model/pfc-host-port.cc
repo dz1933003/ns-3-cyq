@@ -491,12 +491,12 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   if (qp->m_receivedSize >= qp->m_b2x.m_rxMilestone)
                     {
                       qp->m_b2x.m_rxMilestone += m_b2x.ackInterval;
-                      m_controlQueue.push (GenACK (qp, seq, 0, isCe));
+                      m_controlQueue.push (GenACK (qp, qp->m_receivedSize, 0, isCe));
                       m_dev->TriggerTransmit ();
                     }
                   else if (qp->m_receivedSize % m_b2x.chunk == 0)
                     {
-                      m_controlQueue.push (GenACK (qp, seq, 0, isCe));
+                      m_controlQueue.push (GenACK (qp, qp->m_receivedSize, 0, isCe));
                       m_dev->TriggerTransmit ();
                     }
                 }
@@ -509,7 +509,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                       qp->m_b2x.m_lastNack = expectedSeq;
                       if (m_l2RetransmissionMode == L2_RTX_MODE::B20)
                         qp->m_receivedSize = qp->m_receivedSize / m_b2x.chunk * m_b2x.chunk;
-                      m_controlQueue.push (GenSACK (qp, seq, 0, 0, isCe));
+                      m_controlQueue.push (GenSACK (qp, qp->m_receivedSize, 0, 0, isCe));
                       m_dev->TriggerTransmit ();
                     }
                 }
