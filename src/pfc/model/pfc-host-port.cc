@@ -227,6 +227,9 @@ PfcHostPort::Transmit ()
       for (uint32_t i = 0; i < flowCnt; i++)
         {
           const uint32_t qIdx = (m_lastQpIndex + i + 1) % flowCnt;
+          if (m_rtxSeqQueues[qIdx].empty ())
+            continue;
+
           const auto qp = m_txQueuePairs[qIdx];
           if (m_rtxSeqQueues[qIdx].empty () == false)
             {
@@ -438,6 +441,9 @@ PfcHostPort::Receive (Ptr<Packet> p)
           if (m_l2RetransmissionMode == L2_RTX_MODE::NONE_RTX)
             {
               qp->m_receivedSize += payloadSize;
+
+              if (qp->IsFinished ())
+                m_queuePairRxCompleteTrace (qp);
             }
           else if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
             {
@@ -448,6 +454,9 @@ PfcHostPort::Receive (Ptr<Packet> p)
                     {
                       qp->m_receivedSize += payloadSize;
                       qp->m_irn.UpdateIrnState (irnAck);
+
+                      if (qp->IsFinished ())
+                        m_queuePairRxCompleteTrace (qp);
                     }
                   // Send ACK and trigger transmit
                   m_controlQueue.push (GenACK (qp, 0, irnAck, isCe));
@@ -457,6 +466,10 @@ PfcHostPort::Receive (Ptr<Packet> p)
                 {
                   qp->m_receivedSize += payloadSize;
                   qp->m_irn.UpdateIrnState (irnAck);
+
+                  if (qp->IsFinished ())
+                    m_queuePairRxCompleteTrace (qp);
+
                   // Send ACK by retransmit mode and trigger transmit
                   m_controlQueue.push (GenACK (qp, 0, irnAck, isCe));
                   m_dev->TriggerTransmit ();
@@ -481,12 +494,12 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   if (qp->m_receivedSize >= qp->m_b2x.m_rxMilestone)
                     {
                       qp->m_b2x.m_rxMilestone += m_b2x.ackInterval;
-                      m_controlQueue.push (GenACK (qp, seq, 0, isCe));
+                      m_controlQueue.push (GenACK (qp, qp->m_receivedSize, 0, isCe));
                       m_dev->TriggerTransmit ();
                     }
                   else if (qp->m_receivedSize % m_b2x.chunk == 0)
                     {
-                      m_controlQueue.push (GenACK (qp, seq, 0, isCe));
+                      m_controlQueue.push (GenACK (qp, qp->m_receivedSize, 0, isCe));
                       m_dev->TriggerTransmit ();
                     }
                 }
@@ -499,14 +512,14 @@ PfcHostPort::Receive (Ptr<Packet> p)
                       qp->m_b2x.m_lastNack = expectedSeq;
                       if (m_l2RetransmissionMode == L2_RTX_MODE::B20)
                         qp->m_receivedSize = qp->m_receivedSize / m_b2x.chunk * m_b2x.chunk;
-                      m_controlQueue.push (GenSACK (qp, seq, 0, 0, isCe));
+                      m_controlQueue.push (GenSACK (qp, qp->m_receivedSize, 0, 0, isCe));
                       m_dev->TriggerTransmit ();
                     }
                 }
-            }
 
-          if (qp->IsFinished ())
-            m_queuePairRxCompleteTrace (qp);
+              if (qp->IsFinished ())
+                m_queuePairRxCompleteTrace (qp);
+            }
 
           return true; // Forward up to node
         }
