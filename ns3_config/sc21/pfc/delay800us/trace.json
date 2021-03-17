@@ -6,13 +6,13 @@
     "Enable": true,
     "IngressDropPacket": {
       "Enable": true,
-      "Interval": "1ms",
+      "Interval": "10us",
       "Start": "1s",
       "End": "3s"
     },
     "BufferUsed": {
       "Enable": true,
-      "Interval": "1ms",
+      "Interval": "10us",
       "Start": "1s",
       "End": "3s",
       "Target": [
@@ -33,7 +33,7 @@
   },
   "TxByte": {
     "Enable": true,
-    "Interval": "1ms",
+    "Interval": "10us",
     "Start": "1s",
     "End": "3s",
     "Target": [
