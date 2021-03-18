@@ -1,22 +1,22 @@
 [
   {
     "PortIndex": 0,
-    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-interDC-queue.json"
+    "QueueConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/delay400us/switch-interDC-queue.json"
   },
   {
     "PortIndex": 1,
-    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-interDC-queue.json"
+    "QueueConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/delay400us/switch-interDC-queue.json"
   },
   {
     "PortIndex": 2,
-    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-interDC-queue.json"
+    "QueueConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/delay400us/switch-interDC-queue.json"
   },
   {
     "PortIndex": 3,
-    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-interDC-queue.json"
+    "QueueConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/delay400us/switch-interDC-queue.json"
   },
   {
     "PortIndex": 4,
-    "QueueConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-interDC-queue.json"
+    "QueueConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/delay400us/switch-interDC-queue.json"
   }
 ]

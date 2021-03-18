@@ -73,7 +73,7 @@
       ],
       "Config": {
         "Buffer": "3180KB",
-        "ConfigFile": "ns3_config/sc21/pfc/delay200us/switch-core-port.json"
+        "ConfigFile": "ns3_config/sc21-FatTree/pfc/delay200us/switch-core-port.json"
       }
     },
     {
@@ -127,7 +127,7 @@
       ],
       "Config": {
         "Buffer": "2544KB",
-        "ConfigFile": "ns3_config/sc21/pfc/delay200us/switch-aggre-edge-port.json"
+        "ConfigFile": "ns3_config/sc21-FatTree/pfc/delay200us/switch-aggre-edge-port.json"
       }
     },
     {
@@ -154,12 +154,12 @@
       ],
       "Config": {
         "Buffer": "14544KB",
-        "ConfigFile": "ns3_config/sc21/pfc/delay200us/switch-external-port.json"
+        "ConfigFile": "ns3_config/sc21-FatTree/pfc/delay200us/switch-external-port.json"
       }
     }
   ],
-  "LinkConfigFile": "ns3_config/sc21/pfc/delay200us/link.csv",
-  "FlowConfigFile": "ns3_config/sc21/pfc/flow.csv",
-  "TraceConfigFile": "ns3_config/sc21/pfc/delay200us/trace.json",
-  "LogOutputFolder": "ns3_log/sc21/pfc/delay200us"
+  "LinkConfigFile": "ns3_config/sc21-FatTree/pfc/delay200us/link.csv",
+  "FlowConfigFile": "ns3_config/sc21-FatTree/pfc/flow.csv",
+  "TraceConfigFile": "ns3_config/sc21-FatTree/pfc/delay200us/trace.json",
+  "LogOutputFolder": "ns3_log/sc21-FatTree/pfc/delay200us"
 }

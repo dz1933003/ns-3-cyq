@@ -94,7 +94,7 @@
       ],
       "Config": {
         "Buffer": "3180KB",
-        "ConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/switch-core-port.json"
+        "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_irn_acrossDC/delay400us/switch-core-port.json"
       }
     },
     {
@@ -148,7 +148,7 @@
       ],
       "Config": {
         "Buffer": "2544KB",
-        "ConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/switch-aggre-edge-port.json"
+        "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_irn_acrossDC/delay400us/switch-aggre-edge-port.json"
       }
     },
     {
@@ -175,12 +175,12 @@
       ],
       "Config": {
         "Buffer": "24544KB",
-        "ConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/switch-external-port.json"
+        "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_irn_acrossDC/delay400us/switch-external-port.json"
       }
     }
   ],
-  "LinkConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/link.csv",
-  "FlowConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/flow.csv",
-  "TraceConfigFile": "ns3_config/sc21/dcqcn_with_irn_acrossDC/delay400us/trace.json",
-  "LogOutputFolder": "ns3_log/sc21/dcqcn_with_irn_acrossDC/delay400us"
+  "LinkConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_irn_acrossDC/delay400us/link.csv",
+  "FlowConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_irn_acrossDC/flow.csv",
+  "TraceConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_irn_acrossDC/delay400us/trace.json",
+  "LogOutputFolder": "ns3_log/sc21-FatTree/dcqcn_with_irn_acrossDC/delay400us"
 }

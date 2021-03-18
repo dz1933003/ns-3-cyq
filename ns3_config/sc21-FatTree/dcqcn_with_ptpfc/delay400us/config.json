@@ -98,7 +98,7 @@
       ],
       "Config": {
         "Buffer": "3180KB",
-        "ConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-core-port.json"
+        "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/delay400us/switch-core-port.json"
       }
     },
     {
@@ -152,7 +152,7 @@
       ],
       "Config": {
         "Buffer": "2544KB",
-        "ConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-aggre-edge-port.json"
+        "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/delay400us/switch-aggre-edge-port.json"
       }
     },
     {
@@ -179,7 +179,7 @@
       ],
       "Config": {
         "Buffer": "3180KB",
-        "ConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-external-port.json"
+        "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/delay400us/switch-external-port.json"
       }
     },
     {
@@ -198,12 +198,12 @@
       ],
       "Config": {
         "Buffer": "22636KB",
-        "ConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-relay-port.json"
+        "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/delay400us/switch-relay-port.json"
       }
     }
   ],
-  "LinkConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/link.csv",
-  "FlowConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/flow.csv",
-  "TraceConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/trace.json",
-  "LogOutputFolder": "ns3_log/sc21/dcqcn_with_ptpfc/delay400us"
+  "LinkConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/delay400us/link.csv",
+  "FlowConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/flow.csv",
+  "TraceConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/delay400us/trace.json",
+  "LogOutputFolder": "ns3_log/sc21-FatTree/dcqcn_with_ptpfc/delay400us"
 }
