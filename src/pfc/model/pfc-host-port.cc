@@ -221,6 +221,7 @@ PfcHostPort::Transmit ()
       return p;
     }
 
+  // Notice that IRN is not enabled with PFC
   if (m_l2RetransmissionMode == L2_RTX_MODE::IRN && m_rtxQueuingCnt > 0)
     {
       uint32_t flowCnt = m_txQueuePairs.size ();
@@ -324,8 +325,10 @@ PfcHostPort::Transmit ()
       // Find minimum next avail packet transmission time
       for (auto qp : m_txQueuePairs)
         {
-          if (qp->IsTxFinished ())
+          if (m_l2RetransmissionMode != L2_RTX_MODE::IRN && qp->IsTxFinished ())
             continue;
+          if (m_l2RetransmissionMode == L2_RTX_MODE::IRN && qp->IsAckedFinished ())
+            continue; // Schedule IRN retransmission because rate limiter
           minAvailTime = Min (qp->m_nextAvail, minAvailTime);
         }
       // Schedule next transmission if no previous scheduling transmission event
@@ -529,10 +532,13 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
           if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
             {
+              // Log ack for IRN no matter using dcqcn
+              if (qp->m_irn.GetIrnState (irnAck) != RdmaTxQueuePair::ACK)
+                qp->B2xAck (qp->m_unackSize + qp->m_irn.GetPayloadSize (irnAck));
               qp->m_irn.AckIrnState (irnAck);
 
               // Cleanup timer for DCQCN
-              if (m_ccMode == CC_MODE::DCQCN && qp->IsTxFinished ())
+              if (m_ccMode == CC_MODE::DCQCN && qp->IsAckedFinished ())
                 qp->m_dcqcn.CleanupTimer ();
 
               if (m_ccMode == CC_MODE::DCQCN && cnp)
@@ -580,8 +586,12 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
           if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
             {
+              // Log ack for IRN no matter using dcqcn
+              if (qp->m_irn.GetIrnState (irnAck) != RdmaTxQueuePair::ACK)
+                qp->B2xAck (qp->m_unackSize + qp->m_irn.GetPayloadSize (irnAck));
               // Add retransmission packets and trigger transmitting
               qp->m_irn.SackIrnState (irnAck, irnNack);
+
               for (auto i = irnNack; i < irnAck; i++)
                 {
                   const auto qpIdx = m_txQueuePairTable[qp->GetHash ()];
