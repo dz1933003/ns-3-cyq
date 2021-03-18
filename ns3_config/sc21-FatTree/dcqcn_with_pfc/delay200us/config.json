@@ -97,7 +97,7 @@
         }
       ],
       "Config": {
-        "Buffer": "5724KB",
+        "Buffer": "3180KB",
         "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_pfc/delay200us/switch-core-port.json"
       }
     },
