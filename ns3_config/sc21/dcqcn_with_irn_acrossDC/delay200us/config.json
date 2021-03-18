@@ -8,6 +8,19 @@
       "RtoHigh": "1075152ns",
       "RtoLow": "417071ns",
       "RtoLowThreshold": 3
+    },
+    "CcMode": {
+      "Mode": "DCQCN",
+      "EwmaGain": 0.00390625,
+      "ClampTargetRate": false,
+      "IncRateInterval": "55us",
+      "DecRateInterval": "4us",
+      "FastRecTimes": 5,
+      "AlphaResumeInterval": "55us",
+      "RateAI": "40Mbps",
+      "RateHAI": "50Mbps",
+      "MinRate": "100Mbps",
+      "RateBound": true
     }
   },
   "Host": [
