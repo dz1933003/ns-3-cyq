@@ -10,5 +10,12 @@
     },
     "Headroom": "10MB",
     "Reserve": "1MB"
+  },
+  {
+    "QueueIndex": [
+      1
+    ],
+    "Headroom": "10MB",
+    "Reserve": "1MB"
   }
 ]

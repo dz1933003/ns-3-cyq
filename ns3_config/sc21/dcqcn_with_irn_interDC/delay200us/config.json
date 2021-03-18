@@ -124,7 +124,7 @@
         }
       ],
       "Config": {
-        "Buffer": "2862KB",
+        "Buffer": "5724KB",
         "ConfigFile": "ns3_config/sc21/dcqcn_with_irn_interDC/delay200us/switch-spine-port.json"
       }
     },
@@ -190,7 +190,7 @@
         }
       ],
       "Config": {
-        "Buffer": "2544KB",
+        "Buffer": "5088KB",
         "ConfigFile": "ns3_config/sc21/dcqcn_with_irn_interDC/delay200us/switch-leaf-ToR-port.json"
       }
     },
@@ -217,7 +217,7 @@
         }
       ],
       "Config": {
-        "Buffer": "7272KB",
+        "Buffer": "14544KB",
         "ConfigFile": "ns3_config/sc21/dcqcn_with_irn_interDC/delay200us/switch-external-port.json"
       }
     }

@@ -141,7 +141,7 @@
         }
       ],
       "Config": {
-        "Buffer": "2862KB",
+        "Buffer": "5724KB",
         "ConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-spine-port.json"
       }
     },
@@ -207,7 +207,7 @@
         }
       ],
       "Config": {
-        "Buffer": "2544KB",
+        "Buffer": "5088KB",
         "ConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-leaf-ToR-port.json"
       }
     },
@@ -234,7 +234,7 @@
         }
       ],
       "Config": {
-        "Buffer": "1590KB",
+        "Buffer": "3180KB",
         "ConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-external-port.json"
       }
     },
@@ -253,7 +253,7 @@
         }
       ],
       "Config": {
-        "Buffer": "11318KB",
+        "Buffer": "22636KB",
         "ConfigFile": "ns3_config/sc21/dcqcn_with_ptpfc/delay400us/switch-relay-port.json"
       }
     }
