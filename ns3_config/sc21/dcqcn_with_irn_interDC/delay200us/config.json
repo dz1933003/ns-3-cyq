@@ -17,8 +17,8 @@
       "DecRateInterval": "4us",
       "FastRecTimes": 5,
       "AlphaResumeInterval": "55us",
-      "RateAI": "40Mbps",
-      "RateHAI": "50Mbps",
+      "RateAI": "50Mbps",
+      "RateHAI": "100Mbps",
       "MinRate": "100Mbps",
       "RateBound": true
     }
