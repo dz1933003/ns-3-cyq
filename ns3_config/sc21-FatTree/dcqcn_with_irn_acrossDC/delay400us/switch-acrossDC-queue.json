@@ -1,0 +1,19 @@
+[
+  {
+    "QueueIndex": [
+      0
+    ],
+    "Ecn": {
+      "kMin": "5KB",
+      "kMax": "200KB",
+      "pMax": 0.01
+    },
+    "Ingress": "11MB"
+  },
+  {
+    "QueueIndex": [
+      1
+    ],
+    "Ingress": "11MB"
+  }
+]

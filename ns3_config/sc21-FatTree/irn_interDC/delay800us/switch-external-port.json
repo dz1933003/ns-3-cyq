@@ -1,0 +1,22 @@
+[
+  {
+    "PortIndex": 0,
+    "QueueConfigFile": "ns3_config/sc21/irn_interDC/delay800us/switch-acrossDC-queue.json"
+  },
+  {
+    "PortIndex": 1,
+    "QueueConfigFile": "ns3_config/sc21/irn_interDC/delay800us/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 2,
+    "QueueConfigFile": "ns3_config/sc21/irn_interDC/delay800us/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 3,
+    "QueueConfigFile": "ns3_config/sc21/irn_interDC/delay800us/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 4,
+    "QueueConfigFile": "ns3_config/sc21/irn_interDC/delay800us/switch-interDC-queue.json"
+  }
+]

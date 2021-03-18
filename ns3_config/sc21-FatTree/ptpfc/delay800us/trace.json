@@ -1,0 +1,85 @@
+{
+  "Fct": {
+    "Enable": true
+  },
+  "Switch": {
+    "Enable": true,
+    "IngressDropPacket": {
+      "Enable": true,
+      "Interval": "10us",
+      "Start": "1s",
+      "End": "3s"
+    },
+    "BufferUsed": {
+      "Enable": true,
+      "Interval": "10us",
+      "Start": "1s",
+      "End": "3s",
+      "Target": [
+        {
+          "Name": [
+            "s41",
+            "s42"
+          ],
+          "PortIndex": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "Name": [
+            "s43",
+            "s44"
+          ],
+          "PortIndex": [
+            1
+          ]
+        }
+      ]
+    }
+  },
+  "TxByte": {
+    "Enable": true,
+    "Interval": "10us",
+    "Start": "1s",
+    "End": "3s",
+    "Target": [
+      {
+        "Name": [
+          "s41",
+          "s42"
+        ],
+        "PortIndex": [
+          0
+        ]
+      },
+      {
+        "Name": [
+          "s43",
+          "s44"
+        ],
+        "PortIndex": [
+          0
+        ]
+      }
+    ]
+  },
+  "RxByte": {
+    "Enable": false,
+    "Interval": "100us",
+    "Start": "1.000s",
+    "End": "1.200s",
+    "Target": [
+      {
+        "Name": [
+          "s43"
+        ],
+        "PortIndex": [
+          1
+        ]
+      }
+    ]
+  }
+}

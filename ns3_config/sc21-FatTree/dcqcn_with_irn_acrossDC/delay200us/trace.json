@@ -6,14 +6,14 @@
     "Enable": true,
     "IngressDropPacket": {
       "Enable": true,
-      "Interval": "1s",
-      "Start": "0s",
+      "Interval": "10us",
+      "Start": "1s",
       "End": "3s"
     },
     "BufferUsed": {
       "Enable": true,
-      "Interval": "1s",
-      "Start": "0s",
+      "Interval": "10us",
+      "Start": "1s",
       "End": "3s",
       "Target": [
         {
@@ -22,7 +22,6 @@
             "s42"
           ],
           "PortIndex": [
-            0,
             1,
             2,
             3,
@@ -34,8 +33,8 @@
   },
   "TxByte": {
     "Enable": true,
-    "Interval": "1s",
-    "Start": "0s",
+    "Interval": "10us",
+    "Start": "1s",
     "End": "3s",
     "Target": [
       {

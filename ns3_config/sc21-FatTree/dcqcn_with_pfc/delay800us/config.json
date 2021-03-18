@@ -23,8 +23,8 @@
       "FastRecTimes": 5,
       "AlphaResumeInterval": "55us",
       "RateAI": "40Mbps",
-      "RateHAI": "100Mbps",
-      "MinRate": "1Mbps",
+      "RateHAI": "50Mbps",
+      "MinRate": "100Mbps",
       "RateBound": true
     }
   },
@@ -62,39 +62,7 @@
         "h29",
         "h30",
         "h31",
-        "h32",
-        "h33",
-        "h34",
-        "h35",
-        "h36",
-        "h37",
-        "h38",
-        "h39",
-        "h40",
-        "h41",
-        "h42",
-        "h43",
-        "h44",
-        "h45",
-        "h46",
-        "h47",
-        "h48",
-        "h49",
-        "h50",
-        "h51",
-        "h52",
-        "h53",
-        "h54",
-        "h55",
-        "h56",
-        "h57",
-        "h58",
-        "h59",
-        "h60",
-        "h61",
-        "h62",
-        "h63",
-        "h64"
+        "h32"
       ],
       "PortNumber": 1
     }
@@ -126,23 +94,11 @@
         },
         {
           "Type": "PFC"
-        },
-        {
-          "Type": "PFC"
-        },
-        {
-          "Type": "PFC"
-        },
-        {
-          "Type": "PFC"
-        },
-        {
-          "Type": "PFC"
         }
       ],
       "Config": {
-        "Buffer": "2862KB",
-        "ConfigFile": "ns3_config/sc21/delay200us/dcqcn_with_pfc/switch-spine-port.json"
+        "Buffer": "3180KB",
+        "ConfigFile": "ns3_config/sc21/dcqcn_with_pfc/delay800us/switch-core-port.json"
       }
     },
     {
@@ -192,23 +148,11 @@
         },
         {
           "Type": "PFC"
-        },
-        {
-          "Type": "PFC"
-        },
-        {
-          "Type": "PFC"
-        },
-        {
-          "Type": "PFC"
-        },
-        {
-          "Type": "PFC"
         }
       ],
       "Config": {
         "Buffer": "2544KB",
-        "ConfigFile": "ns3_config/sc21/delay200us/dcqcn_with_pfc/switch-leaf-ToR-port.json"
+        "ConfigFile": "ns3_config/sc21/dcqcn_with_pfc/delay800us/switch-aggre-edge-port.json"
       }
     },
     {
@@ -234,13 +178,13 @@
         }
       ],
       "Config": {
-        "Buffer": "7272KB",
-        "ConfigFile": "ns3_config/sc21/delay200us/dcqcn_with_pfc/switch-external-port.json"
+        "Buffer": "44544KB",
+        "ConfigFile": "ns3_config/sc21/dcqcn_with_pfc/delay800us/switch-external-port.json"
       }
     }
   ],
-  "LinkConfigFile": "ns3_config/sc21/delay200us/dcqcn_with_pfc/link.csv",
-  "FlowConfigFile": "ns3_config/sc21/delay200us/dcqcn_with_pfc/flow.csv",
-  "TraceConfigFile": "ns3_config/sc21/delay200us/dcqcn_with_pfc/trace.json",
-  "LogOutputFolder": "ns3_log/sc21/delay200us/dcqcn_with_pfc"
+  "LinkConfigFile": "ns3_config/sc21/dcqcn_with_pfc/delay800us/link.csv",
+  "FlowConfigFile": "ns3_config/sc21/dcqcn_with_pfc/flow.csv",
+  "TraceConfigFile": "ns3_config/sc21/dcqcn_with_pfc/delay800us/trace.json",
+  "LogOutputFolder": "ns3_log/sc21/dcqcn_with_pfc/delay800us"
 }
