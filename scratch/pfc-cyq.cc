@@ -141,6 +141,11 @@ main (int argc, char *argv[])
   NS_LOG_UNCOND ("QueueNumber: " << nQueue);
   NS_LOG_UNCOND ("EcmpSeed: " << ecmpSeed);
 
+  RngSeedManager::SetSeed (ecmpSeed);
+  Ptr<UniformRandomVariable> uint32Rand = CreateObject<UniformRandomVariable> ();
+  uint32Rand->SetAttribute ("Max", DoubleValue (UINT32_MAX));
+  uint32Rand->SetAttribute ("Min", DoubleValue (0));
+
   NS_LOG_UNCOND ("====Host====");
   for (const auto &host : conf["Host"])
     {
@@ -235,7 +240,7 @@ main (int argc, char *argv[])
           // Install PFC switch DPSK layer
           const auto pfcSwitch = CreateObject<PfcSwitch> ();
           pfcSwitch->InstallDpsk (dpsk);
-          pfcSwitch->SetEcmpSeed (ecmpSeed);
+          pfcSwitch->SetEcmpSeed (uint32Rand->GetInteger ());
           pfcSwitch->SetNQueues (nQueue);
           // Install switch MMU
           const auto mmu = CreateObject<SwitchMmu> ();

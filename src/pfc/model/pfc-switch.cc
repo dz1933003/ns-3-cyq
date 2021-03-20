@@ -24,7 +24,7 @@
 #include "ns3/log.h"
 #include "ns3/ethernet-header.h"
 #include "ns3/ipv4-header.h"
-#include "ns3/udp-header.h"
+#include "ns3/qbb-header.h"
 #include "pfc-header.h"
 #include "cbfc-header.h"
 #include "pfc-switch-tag.h"
@@ -298,7 +298,7 @@ PfcSwitch::GetOutDev (Ptr<const Packet> p)
   auto &nextHops = entry->second;
 
   union {
-    uint8_t u8[12];
+    uint8_t u8[12] = {0};
     uint32_t u32[3];
   } ecmpKey;
   size_t ecmpKeyLen = 0;
@@ -311,10 +311,10 @@ PfcSwitch::GetOutDev (Ptr<const Packet> p)
   if (protocol == 0x11) // UDP
     {
       // Reveal UDP header
-      UdpHeader udpHeader;
-      packet->PeekHeader (udpHeader);
-      uint32_t srcPort = udpHeader.GetSourcePort ();
-      uint32_t destPort = udpHeader.GetDestinationPort ();
+      QbbHeader qbbHeader;
+      packet->PeekHeader (qbbHeader);
+      uint32_t srcPort = qbbHeader.GetSourcePort ();
+      uint32_t destPort = qbbHeader.GetDestinationPort ();
       // Assemble UDP to ECMP key
       ecmpKey.u32[2] = srcPort | (destPort << 16);
       ecmpKeyLen++;
@@ -326,8 +326,21 @@ PfcSwitch::GetOutDev (Ptr<const Packet> p)
       return 0;
     }
 
-  uint32_t hashVal = CalcEcmpHash (ecmpKey.u8, ecmpKeyLen) % nextHops.size ();
+  uint32_t hashVal = CalcTime31Hash (ecmpKey.u8, ecmpKeyLen * 4) % nextHops.size ();
   return nextHops[hashVal];
+}
+
+uint32_t
+PfcSwitch::CalcTime31Hash (const uint8_t *key, size_t len)
+{
+  NS_LOG_FUNCTION (key << len);
+
+  uint32_t h = m_ecmpSeed;
+  for (size_t i = 0; i < len; i++)
+    {
+      h = 31 * h + key[i];
+    }
+  return h;
 }
 
 uint32_t
@@ -349,8 +362,7 @@ PfcSwitch::CalcEcmpHash (const uint8_t *key, size_t len)
           h ^= k;
           h = (h << 13) | (h >> 19);
           h += (h << 2) + 0xe6546b64;
-        }
-      while (--i);
+      } while (--i);
       key = (const uint8_t *) key_x4;
     }
   if (len & 3)
@@ -362,8 +374,7 @@ PfcSwitch::CalcEcmpHash (const uint8_t *key, size_t len)
         {
           k <<= 8;
           k |= *key--;
-        }
-      while (--i);
+      } while (--i);
       k *= 0xcc9e2d51;
       k = (k << 15) | (k >> 17);
       k *= 0x1b873593;
