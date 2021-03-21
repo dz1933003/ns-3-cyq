@@ -1,0 +1,46 @@
+{
+  "Global": {
+    "QueueNumber": 1,
+    "EcmpSeed": 1,
+    "L2Retransmission": {
+      "Mode": "IRN",
+      "MaxBitmapSize": 6686,
+      "RtoHigh": "2479960ns",
+      "RtoLow": "802238ns",
+      "RtoLowThreshold": 1
+    }
+  },
+  "Host": [
+    {
+      "Name": [
+        "h1",
+        "h2"
+      ],
+      "PortNumber": 1,
+      "PfcEnable": false
+    }
+  ],
+  "Switch": [
+    {
+      "Name": [
+        "s1"
+      ],
+      "Port": [
+        {
+          "Type": "NOPFC"
+        },
+        {
+          "Type": "NOPFC"
+        }
+      ],
+      "Config": {
+        "Buffer": "23MiB",
+        "ConfigFile": "ns3_config/irn/acrossDC/switch-port.json"
+      }
+    }
+  ],
+  "LinkConfigFile": "ns3_config/irn/acrossDC/link-80.csv",
+  "FlowConfigFile": "ns3_config/irn/flow.csv",
+  "TraceConfigFile": "ns3_config/irn/trace.json",
+  "LogOutputFolder": "ns3_log/irn/acrossDC/acrossConf"
+}

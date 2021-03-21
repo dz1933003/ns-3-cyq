@@ -4,9 +4,9 @@
     "EcmpSeed": 1,
     "L2Retransmission": {
       "Mode": "IRN",
-      "MaxBitmapSize": 6686,
-      "RtoHigh": "2479960ns",
-      "RtoLow": "802238ns",
+      "MaxBitmapSize": 219,
+      "RtoHigh": "110125ns",
+      "RtoLow": "26238ns",
       "RtoLowThreshold": 1
     }
   },
@@ -39,8 +39,8 @@
       }
     }
   ],
-  "LinkConfigFile": "ns3_config/irn/acrossDC/link.csv",
+  "LinkConfigFile": "ns3_config/irn/acrossDC/link-20.csv",
   "FlowConfigFile": "ns3_config/irn/flow.csv",
   "TraceConfigFile": "ns3_config/irn/trace.json",
-  "LogOutputFolder": "ns3_log/irn/acrossDC/acrossConf"
+  "LogOutputFolder": "ns3_log/irn/acrossDC/interConf"
 }

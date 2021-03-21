@@ -39,7 +39,7 @@
       }
     }
   ],
-  "LinkConfigFile": "ns3_config/irn/acrossDC/link.csv",
+  "LinkConfigFile": "ns3_config/irn/acrossDC/link-60.csv",
   "FlowConfigFile": "ns3_config/irn/flow.csv",
   "TraceConfigFile": "ns3_config/irn/trace.json",
   "LogOutputFolder": "ns3_log/irn/acrossDC/interConf"
