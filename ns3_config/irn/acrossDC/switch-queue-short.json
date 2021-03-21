@@ -1,0 +1,14 @@
+[
+  {
+    "QueueIndex": [
+      0
+    ],
+    "Ingress": "1MiB"
+  },
+  {
+    "QueueIndex": [
+      1
+    ],
+    "Ingress": "1MiB"
+  }
+]
