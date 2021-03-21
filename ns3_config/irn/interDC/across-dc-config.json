@@ -34,13 +34,13 @@
         }
       ],
       "Config": {
-        "Buffer": "23MiB",
-        "ConfigFile": "ns3_config/irn/acrossDC/switch-port.json"
+        "Buffer": "6MiB",
+        "ConfigFile": "ns3_config/irn/interDC/switch-port.json"
       }
     }
   ],
-  "LinkConfigFile": "ns3_config/irn/acrossDC/link.csv",
+  "LinkConfigFile": "ns3_config/irn/interDC/link.csv",
   "FlowConfigFile": "ns3_config/irn/flow.csv",
   "TraceConfigFile": "ns3_config/irn/trace.json",
-  "LogOutputFolder": "ns3_log/irn/acrossDC"
+  "LogOutputFolder": "ns3_log/irn/interDC/acrossConf"
 }

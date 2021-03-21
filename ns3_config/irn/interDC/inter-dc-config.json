@@ -4,7 +4,7 @@
     "EcmpSeed": 1,
     "L2Retransmission": {
       "Mode": "IRN",
-      "MaxBitmapSize": 300,
+      "MaxBitmapSize": 219,
       "RtoHigh": "110125ns",
       "RtoLow": "26238ns",
       "RtoLowThreshold": 1
@@ -42,5 +42,5 @@
   "LinkConfigFile": "ns3_config/irn/interDC/link.csv",
   "FlowConfigFile": "ns3_config/irn/flow.csv",
   "TraceConfigFile": "ns3_config/irn/trace.json",
-  "LogOutputFolder": "ns3_log/irn/interDC"
+  "LogOutputFolder": "ns3_log/irn/interDC/interConf"
 }
