@@ -21,3 +21,5 @@ for d in dirs:
 
 for p in ps:
     p.wait()
+
+print("Done!")
