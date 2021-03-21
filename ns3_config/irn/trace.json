@@ -8,13 +8,13 @@
       "Enable": true,
       "Interval": "1ms",
       "Start": "1s",
-      "End": "3s"
+      "End": "4s"
     },
     "BufferUsed": {
       "Enable": true,
       "Interval": "1ms",
       "Start": "1s",
-      "End": "3s",
+      "End": "4s",
       "Target": [
         {
           "Name": [
@@ -31,7 +31,7 @@
     "Enable": false,
     "Interval": "1s",
     "Start": "1s",
-    "End": "3s",
+    "End": "4s",
     "Target": [
       {
         "Name": [
@@ -47,7 +47,7 @@
     "Enable": true,
     "Interval": "1ms",
     "Start": "1s",
-    "End": "3s",
+    "End": "4s",
     "Target": [
       {
         "Name": [
@@ -63,7 +63,7 @@
     "Enable": true,
     "Interval": "1ms",
     "Start": "0s",
-    "End": "3s",
+    "End": "4s",
     "Target": [
       {
         "Name": [
