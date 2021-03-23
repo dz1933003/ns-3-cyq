@@ -99,6 +99,14 @@ public:
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> GetRdmaRxQueuePairs ();
 
   /**
+   * Get RDMA queue pair for receiving
+   *
+   * \param hash hash code of qp
+   * \return queue pair to receive
+   */
+  Ptr<RdmaRxQueuePair> GetRdmaRxQueuePair (uint32_t hash);
+
+  /**
    * L2 retransmission mode
    */
   enum L2_RTX_MODE {

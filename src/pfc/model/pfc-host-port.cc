@@ -136,6 +136,16 @@ PfcHostPort::GetRdmaRxQueuePairs ()
   return m_rxQueuePairs;
 }
 
+Ptr<RdmaRxQueuePair>
+PfcHostPort::GetRdmaRxQueuePair (uint32_t hash)
+{
+  NS_LOG_FUNCTION (hash);
+  if (m_rxQueuePairs.find (hash) != m_rxQueuePairs.end ())
+    return m_rxQueuePairs[hash];
+  else
+    return 0;
+}
+
 void
 PfcHostPort::SetL2RetransmissionMode (uint32_t mode)
 {

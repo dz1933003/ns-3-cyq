@@ -2,6 +2,12 @@
   "Fct": {
     "Enable": true
   },
+  "FlowRxByte": {
+    "Enable": true,
+    "Interval": "1ms",
+    "Start": "0s",
+    "End": "3s"
+  },
   "Switch": {
     "Enable": true,
     "IngressDropPacket": {

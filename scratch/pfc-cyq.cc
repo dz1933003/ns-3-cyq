@@ -708,6 +708,7 @@ void TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp);
 
 void CheckQueuePair ();
 
+void TraceFlowRxByte (Time interval, Time end);
 void TraceSwitch (const json &conf);
 void TraceIngressDropPacket (Time interval, Time end);
 void TraceBufferUsed (Time interval, Time end, std::string name, uint32_t portIndex);
@@ -729,6 +730,14 @@ DoTrace (const std::string &configFile)
   if (conf["Fct"]["Enable"] == true)
     {
       TraceFct ();
+    }
+  if (conf.contains ("FlowRxByte") && conf["FlowRxByte"]["Enable"] == true)
+    {
+      logStreams["FlowRxByte"] << "Time,FromNode,ToNode,SourcePort,DestinationPort,Size\n";
+      const auto interval = Time (conf["FlowRxByte"]["Interval"].get<std::string> ());
+      const auto start = Time (conf["FlowRxByte"]["Start"].get<std::string> ());
+      const auto end = Time (conf["FlowRxByte"]["End"].get<std::string> ());
+      Simulator::Schedule (start, &TraceFlowRxByte, interval, end);
     }
   if (conf["Switch"]["Enable"] == true)
     {
@@ -873,6 +882,27 @@ CheckQueuePair ()
       NS_LOG_UNCOND ("\nComplete Simulation: " << Simulator::Now ());
       Simulator::Stop ();
     }
+}
+
+void
+TraceFlowRxByte (Time interval, Time end)
+{
+  for (const auto host : hostNodes)
+    {
+      const auto rxQps = host->GetObject<PfcHost> ()->GetRdmaRxQueuePairs ();
+      for (const auto rxQpEntry : rxQps)
+        {
+          const auto qp = rxQpEntry.second;
+          if (qp->IsFinished ())
+            continue;
+          const auto fromNode = allNodes.right.at (allIpv4Addresses.right.at (qp->m_sIp));
+          const auto toNode = allNodes.right.at (allIpv4Addresses.right.at (qp->m_dIp));
+          logStreams["FlowRxByte"] << Simulator::Now () << "," << fromNode << "," << toNode << ","
+                                   << qp->m_sPort << "," << qp->m_dPort << "," << qp->m_receivedSize
+                                   << "\n";
+        }
+    }
+  Simulator::Schedule (interval, &TraceFlowRxByte, interval, end);
 }
 
 void
