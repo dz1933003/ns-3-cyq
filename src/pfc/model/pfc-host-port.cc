@@ -65,7 +65,8 @@ PfcHostPort::PfcHostPort ()
       m_l2RetransmissionMode (L2_RTX_MODE::NONE_RTX),
       m_nTxBytes (0),
       m_nRxBytes (0),
-      m_irnRtxBytes (0)
+      m_irnRtxBytes (0),
+      m_irnRtxRxBytes (0)
 {
   NS_LOG_FUNCTION (this);
   m_name = "PfcHostPort";
@@ -477,6 +478,10 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
                       if (qp->IsFinished ())
                         m_queuePairRxCompleteTrace (qp);
+                    }
+                  else // Duplicated packet
+                    {
+                      m_irnRtxRxBytes += payloadSize;
                     }
                   // Send ACK and trigger transmit
                   m_controlQueue.push (GenACK (qp, qp->m_receivedSize, irnAck, isCe));

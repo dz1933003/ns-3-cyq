@@ -458,6 +458,7 @@ public:
   uint64_t m_nRxBytes; //!< total receive bytes
 
   uint64_t m_irnRtxBytes; //!< IRN retransmission bytes
+  uint64_t m_irnRtxRxBytes; //!< IRN retransmission rx bytes
 
 private:
   /**
