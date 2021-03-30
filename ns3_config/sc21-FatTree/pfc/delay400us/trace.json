@@ -3,7 +3,7 @@
     "Enable": true
   },
   "Switch": {
-    "Enable": true,
+    "Enable": false,
     "IngressDropPacket": {
       "Enable": true,
       "Interval": "10us",
@@ -11,7 +11,7 @@
       "End": "3s"
     },
     "BufferUsed": {
-      "Enable": true,
+      "Enable": false,
       "Interval": "10us",
       "Start": "1s",
       "End": "3s",
@@ -32,7 +32,7 @@
     }
   },
   "TxByte": {
-    "Enable": true,
+    "Enable": false,
     "Interval": "10us",
     "Start": "1s",
     "End": "3s",

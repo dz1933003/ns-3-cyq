@@ -151,10 +151,11 @@ if __name__ == "__main__":
     all_host = [
         (base_time + int(possion_rand.get_rand(avg_interval_arrival)), i)
         for i in range(start_index_1, end_index_1 + 1)
-    ] + [
-        (base_time + int(possion_rand.get_rand(avg_interval_arrival)), i)
-        for i in range(start_index_2, end_index_2 + 1)
-    ]  # init host with (first sending time, host id)
+    ] 
+    # + [
+    #     (base_time + int(possion_rand.get_rand(avg_interval_arrival)), i)
+    #     for i in range(start_index_2, end_index_2 + 1)
+    # ]  # init host with (first sending time, host id)
     heapq.heapify(all_host)
     flow_dict = dict()
     while len(all_host) > 0:
@@ -162,8 +163,8 @@ if __name__ == "__main__":
         next_time = start_time + int(possion_rand.get_rand(avg_interval_arrival))
         dst_host_id = (
             host_rand.randint(start_index_2, end_index_2)
-            if src_host_id in host_list_1
-            else host_rand.randint(start_index_1, end_index_1)
+            # if src_host_id in host_list_1
+            # else host_rand.randint(start_index_1, end_index_1)
         )
         if next_time > time + base_time:
             heapq.heappop(all_host)

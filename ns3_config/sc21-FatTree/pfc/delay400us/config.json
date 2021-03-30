@@ -153,7 +153,7 @@
         }
       ],
       "Config": {
-        "Buffer": "24544KB",
+        "Buffer": "84544KB",
         "ConfigFile": "ns3_config/sc21-FatTree/pfc/delay400us/switch-external-port.json"
       }
     }
