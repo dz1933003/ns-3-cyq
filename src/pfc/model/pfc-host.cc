@@ -154,6 +154,19 @@ PfcHost::GetRdmaRxQueuePairs ()
   return result;
 }
 
+Ptr<RdmaRxQueuePair>
+PfcHost::GetRdmaRxQueuePair (uint32_t hash)
+{
+  NS_LOG_FUNCTION (hash);
+  for (const auto &dev : m_devices)
+    {
+      const auto temp = dev->GetObject<PfcHostPort> ()->GetRdmaRxQueuePair (hash);
+      if (temp != 0)
+        return temp;
+    }
+  return 0;
+}
+
 void
 PfcHost::AddRdmaRxQueuePairSize (uint32_t key, uint64_t size)
 {

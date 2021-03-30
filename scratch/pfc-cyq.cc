@@ -141,6 +141,11 @@ main (int argc, char *argv[])
   NS_LOG_UNCOND ("QueueNumber: " << nQueue);
   NS_LOG_UNCOND ("EcmpSeed: " << ecmpSeed);
 
+  RngSeedManager::SetSeed (ecmpSeed);
+  Ptr<UniformRandomVariable> uint32Rand = CreateObject<UniformRandomVariable> ();
+  uint32Rand->SetAttribute ("Max", DoubleValue (UINT32_MAX));
+  uint32Rand->SetAttribute ("Min", DoubleValue (0));
+
   NS_LOG_UNCOND ("====Host====");
   for (const auto &host : conf["Host"])
     {
@@ -235,7 +240,7 @@ main (int argc, char *argv[])
           // Install PFC switch DPSK layer
           const auto pfcSwitch = CreateObject<PfcSwitch> ();
           pfcSwitch->InstallDpsk (dpsk);
-          pfcSwitch->SetEcmpSeed (ecmpSeed);
+          pfcSwitch->SetEcmpSeed (uint32Rand->GetInteger ());
           pfcSwitch->SetNQueues (nQueue);
           // Install switch MMU
           const auto mmu = CreateObject<SwitchMmu> ();
@@ -703,6 +708,7 @@ void TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp);
 
 void CheckQueuePair ();
 
+void TraceFlowRxByte (Time interval, Time end);
 void TraceSwitch (const json &conf);
 void TraceIngressDropPacket (Time interval, Time end);
 void TraceBufferUsed (Time interval, Time end, std::string name, uint32_t portIndex);
@@ -711,6 +717,7 @@ void TraceTxByte (Time interval, Time end, std::string name, uint32_t portIndex)
 void TraceRxByte (Time interval, Time end, std::string name, uint32_t portIndex);
 
 void TraceIrnRtxByte (Time interval, Time end, std::string name, uint32_t portIndex);
+void TraceIrnRtxRxByte (Time interval, Time end, std::string name, uint32_t portIndex);
 
 void TracePfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, PfcHeader::PfcType type, uint16_t time);
 void TraceCbfcRx (Ptr<DpskNetDevice> dev, uint32_t qIndex, uint64_t fccl);
@@ -724,6 +731,14 @@ DoTrace (const std::string &configFile)
   if (conf["Fct"]["Enable"] == true)
     {
       TraceFct ();
+    }
+  if (conf.contains ("FlowRxByte") && conf["FlowRxByte"]["Enable"] == true)
+    {
+      logStreams["FlowRxByte"] << "Time,FromNode,ToNode,SourcePort,DestinationPort,Size\n";
+      const auto interval = Time (conf["FlowRxByte"]["Interval"].get<std::string> ());
+      const auto start = Time (conf["FlowRxByte"]["Start"].get<std::string> ());
+      const auto end = Time (conf["FlowRxByte"]["End"].get<std::string> ());
+      Simulator::Schedule (start, &TraceFlowRxByte, interval, end);
     }
   if (conf["Switch"]["Enable"] == true)
     {
@@ -780,6 +795,24 @@ DoTrace (const std::string &configFile)
             }
         }
     }
+  if (conf["IrnRtxRxByte"]["Enable"] == true)
+    {
+      logStreams["IrnRtxRxByte"] << "Time,Node,PortIndex,IrnRtxRxByte\n";
+      const auto interval = Time (conf["IrnRtxRxByte"]["Interval"].get<std::string> ());
+      const auto start = Time (conf["IrnRtxRxByte"]["Start"].get<std::string> ());
+      const auto end = Time (conf["IrnRtxRxByte"]["End"].get<std::string> ());
+      for (const auto &target : conf["IrnRtxRxByte"]["Target"])
+        {
+          for (const auto &name : target["Name"])
+            {
+              for (const auto &portIndex : target["PortIndex"])
+                {
+                  Simulator::Schedule (start, &TraceIrnRtxRxByte, interval, end, name, portIndex);
+                }
+            }
+        }
+    }
+
   if (conf.contains ("PfcRx") && conf["PfcRx"]["Enable"] == true)
     {
       logStreams["PfcRx"] << "Time,Node,IfIndex,qIndex,PfcType,Time\n";
@@ -868,6 +901,27 @@ CheckQueuePair ()
       NS_LOG_UNCOND ("\nComplete Simulation: " << Simulator::Now ());
       Simulator::Stop ();
     }
+}
+
+void
+TraceFlowRxByte (Time interval, Time end)
+{
+  for (const auto host : hostNodes)
+    {
+      const auto rxQps = host->GetObject<PfcHost> ()->GetRdmaRxQueuePairs ();
+      for (const auto rxQpEntry : rxQps)
+        {
+          const auto qp = rxQpEntry.second;
+          if (qp->IsFinished ())
+            continue;
+          const auto fromNode = allNodes.right.at (allIpv4Addresses.right.at (qp->m_sIp));
+          const auto toNode = allNodes.right.at (allIpv4Addresses.right.at (qp->m_dIp));
+          logStreams["FlowRxByte"] << Simulator::Now () << "," << fromNode << "," << toNode << ","
+                                   << qp->m_sPort << "," << qp->m_dPort << "," << qp->m_receivedSize
+                                   << "\n";
+        }
+    }
+  Simulator::Schedule (interval, &TraceFlowRxByte, interval, end);
 }
 
 void
@@ -1029,6 +1083,21 @@ TraceIrnRtxByte (Time interval, Time end, std::string name, uint32_t portIndex)
     }
   if (Simulator::Now () < end)
     Simulator::Schedule (interval, &TraceIrnRtxByte, interval, end, name, portIndex);
+}
+
+void
+TraceIrnRtxRxByte (Time interval, Time end, std::string name, uint32_t portIndex)
+{
+  const auto node = allNodes.left.at (name);
+  const auto port = allPorts[node][portIndex];
+  if (hostNodes.find (node) != hostNodes.end ())
+    {
+      uint64_t irnRtxRxBytes = port->GetObject<PfcHostPort> ()->m_irnRtxRxBytes;
+      logStreams["IrnRtxRxByte"] << Simulator::Now () << "," << name << "," << portIndex << ","
+                                 << irnRtxRxBytes << "\n";
+    }
+  if (Simulator::Now () < end)
+    Simulator::Schedule (interval, &TraceIrnRtxRxByte, interval, end, name, portIndex);
 }
 
 void

@@ -162,6 +162,15 @@ private:
   Ptr<DpskNetDevice> GetOutDev (Ptr<const Packet> p);
 
   /**
+   * Calculate Time 31 Hash
+   *
+   * \param key array of bytes to calculate
+   * \param len length of the array
+   * \return hash code
+   */
+  uint32_t CalcTime31Hash (const uint8_t *key, size_t len);
+
+  /**
    * Calculate ECMP Hash
    *
    * \param key array of bytes to calculate

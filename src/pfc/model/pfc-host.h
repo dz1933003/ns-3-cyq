@@ -125,6 +125,14 @@ public:
   std::map<uint32_t, Ptr<RdmaRxQueuePair>> GetRdmaRxQueuePairs ();
 
   /**
+   * Get RDMA queue pair for receiving
+   *
+   * \param hash hash code of qp
+   * \return queue pair to receive
+   */
+  Ptr<RdmaRxQueuePair> GetRdmaRxQueuePair (uint32_t hash);
+
+  /**
    * Add RDMA queue pair size for receiving port
    *
    * \param key hash key of the queue pair

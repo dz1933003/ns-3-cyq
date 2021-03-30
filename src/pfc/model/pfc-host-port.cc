@@ -65,7 +65,8 @@ PfcHostPort::PfcHostPort ()
       m_l2RetransmissionMode (L2_RTX_MODE::NONE_RTX),
       m_nTxBytes (0),
       m_nRxBytes (0),
-      m_irnRtxBytes (0)
+      m_irnRtxBytes (0),
+      m_irnRtxRxBytes (0)
 {
   NS_LOG_FUNCTION (this);
   m_name = "PfcHostPort";
@@ -134,6 +135,16 @@ PfcHostPort::GetRdmaRxQueuePairs ()
 {
   NS_LOG_FUNCTION_NOARGS ();
   return m_rxQueuePairs;
+}
+
+Ptr<RdmaRxQueuePair>
+PfcHostPort::GetRdmaRxQueuePair (uint32_t hash)
+{
+  NS_LOG_FUNCTION (hash);
+  if (m_rxQueuePairs.find (hash) != m_rxQueuePairs.end ())
+    return m_rxQueuePairs[hash];
+  else
+    return 0;
 }
 
 void
@@ -221,6 +232,7 @@ PfcHostPort::Transmit ()
       return p;
     }
 
+  // Notice that IRN is not enabled with PFC
   if (m_l2RetransmissionMode == L2_RTX_MODE::IRN && m_rtxQueuingCnt > 0)
     {
       uint32_t flowCnt = m_txQueuePairs.size ();
@@ -258,6 +270,16 @@ PfcHostPort::Transmit ()
                   m_nTxBytes += p->GetSize ();
                   m_irnRtxBytes += p->GetSize ();
                   return p;
+                }
+            }
+          else
+            {
+              // DCQCN avoid next avail earlier than now
+              // Otherwise no new transmission for this qp
+              if (m_ccMode == CC_MODE::DCQCN)
+                {
+                  if (qp->m_nextAvail <= Simulator::Now ())
+                    UpdateNextAvail (qp, Time ("1ns"), 0);
                 }
             }
         }
@@ -300,7 +322,7 @@ PfcHostPort::Transmit ()
       // get sequence number out for logging retransmission
       uint32_t irnSeq;
       auto p = GenData (qp, irnSeq);
-      // Finished trace
+      // Finished trace (only send all packets but not acked)
       if (qp->IsTxFinished ())
         m_queuePairTxCompleteTrace (qp);
       // Set up IRN timer
@@ -327,8 +349,10 @@ PfcHostPort::Transmit ()
       // Find minimum next avail packet transmission time
       for (auto qp : m_txQueuePairs)
         {
-          if (qp->IsTxFinished ())
+          if (m_l2RetransmissionMode != L2_RTX_MODE::IRN && qp->IsTxFinished ())
             continue;
+          if (m_l2RetransmissionMode == L2_RTX_MODE::IRN && qp->IsAckedFinished ())
+            continue; // Schedule IRN retransmission because rate limiter
           minAvailTime = Min (qp->m_nextAvail, minAvailTime);
         }
       // Schedule next transmission if no previous scheduling transmission event
@@ -458,8 +482,12 @@ PfcHostPort::Receive (Ptr<Packet> p)
                       if (qp->IsFinished ())
                         m_queuePairRxCompleteTrace (qp);
                     }
+                  else // Duplicated packet
+                    {
+                      m_irnRtxRxBytes += payloadSize;
+                    }
                   // Send ACK and trigger transmit
-                  m_controlQueue.push (GenACK (qp, 0, irnAck, isCe));
+                  m_controlQueue.push (GenACK (qp, qp->m_receivedSize, irnAck, isCe));
                   m_dev->TriggerTransmit ();
                 }
               else if (irnAck == expectedAck) // expected new packet
@@ -471,7 +499,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                     m_queuePairRxCompleteTrace (qp);
 
                   // Send ACK by retransmit mode and trigger transmit
-                  m_controlQueue.push (GenACK (qp, 0, irnAck, isCe));
+                  m_controlQueue.push (GenACK (qp, qp->m_receivedSize, irnAck, isCe));
                   m_dev->TriggerTransmit ();
                 }
               else // out of order
@@ -479,7 +507,7 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   qp->m_receivedSize += payloadSize;
                   qp->m_irn.UpdateIrnState (irnAck);
                   // Send SACK and trigger transmit
-                  m_controlQueue.push (GenSACK (qp, 0, irnAck, expectedAck, isCe));
+                  m_controlQueue.push (GenSACK (qp, qp->m_receivedSize, irnAck, expectedAck, isCe));
                   m_dev->TriggerTransmit ();
                 }
             }
@@ -532,14 +560,16 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
           if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
             {
+              // Log ack for IRN no matter using dcqcn
+              qp->B2xAck (seq);
               qp->m_irn.AckIrnState (irnAck);
 
               // Cleanup timer for DCQCN
-              if (m_ccMode == CC_MODE::DCQCN && qp->IsTxFinished ())
+              if (m_ccMode == CC_MODE::DCQCN && qp->IsAckedFinished ())
                 qp->m_dcqcn.CleanupTimer ();
 
-              if (m_ccMode == CC_MODE::DCQCN && cnp)
-                DcqcnCnpReceived (qp);
+              if (m_ccMode == CC_MODE::DCQCN && cnp && !qp->IsAckedFinished ())
+                DcqcnCnpReceived (qp); // Avoid excessive DCQCN events
 
               m_dev->TriggerTransmit (); // Because BDP-FC needs to check new bitmap and send
               return false; // Not data so no need to send to node
@@ -563,8 +593,8 @@ PfcHostPort::Receive (Ptr<Packet> p)
                     qp->m_dcqcn.CleanupTimer ();
                 }
 
-              if (cnp)
-                DcqcnCnpReceived (qp);
+              if (cnp && !qp->IsAckedFinished ())
+                DcqcnCnpReceived (qp); // Avoid excessive DCQCN events
 
               m_dev->TriggerTransmit (); // Because ACK may advance the on-the-fly window
               return false;
@@ -583,8 +613,11 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
           if (m_l2RetransmissionMode == L2_RTX_MODE::IRN)
             {
+              // Log ack for IRN no matter using dcqcn
+              qp->B2xAck (seq);
               // Add retransmission packets and trigger transmitting
               qp->m_irn.SackIrnState (irnAck, irnNack);
+
               for (auto i = irnNack; i < irnAck; i++)
                 {
                   const auto qpIdx = m_txQueuePairTable[qp->GetHash ()];
@@ -592,8 +625,8 @@ PfcHostPort::Receive (Ptr<Packet> p)
                   m_rtxQueuingCnt++;
                 }
 
-              if (m_ccMode == CC_MODE::DCQCN && cnp)
-                DcqcnCnpReceived (qp);
+              if (m_ccMode == CC_MODE::DCQCN && cnp && !qp->IsAckedFinished ())
+                DcqcnCnpReceived (qp); // Avoid excessive DCQCN events
 
               m_dev->TriggerTransmit ();
               return false; // Not data so no need to send to node
@@ -619,8 +652,8 @@ PfcHostPort::Receive (Ptr<Packet> p)
 
               qp->B2xRecover ();
 
-              if (cnp)
-                DcqcnCnpReceived (qp);
+              if (cnp && !qp->IsAckedFinished ())
+                DcqcnCnpReceived (qp); // Avoid excessive DCQCN events
 
               m_dev->TriggerTransmit (); // Because ACK may advance the on-the-fly window
               return false;
