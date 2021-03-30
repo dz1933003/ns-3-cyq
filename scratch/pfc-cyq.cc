@@ -885,7 +885,7 @@ TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp)
   const auto duration = endTime - startTime;
   logStreams["QueuePairRxComplete"]
       << fromNode << "," << toNode << "," << qp->m_sPort << "," << qp->m_dPort << "," << qp->m_size
-      << "," << qp->m_priority << "," << startTime << "," << endTime << "," << duration << "\n";
+      << "," << qp->m_priority << "," << startTime << "," << endTime << "," << duration.GetNanoSeconds() << "\n";
   rxCompleteCnt++;
   CheckQueuePair ();
 }

@@ -8,14 +8,14 @@
       "kMax": "200KB",
       "pMax": 0.01
     },
-    "Headroom": "10MB",
+    "Headroom": "40MB",
     "Reserve": "1MB"
   },
   {
     "QueueIndex": [
       1
     ],
-    "Headroom": "10MB",
+    "Headroom": "40MB",
     "Reserve": "1MB"
   }
 ]

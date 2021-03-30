@@ -197,7 +197,7 @@
         }
       ],
       "Config": {
-        "Buffer": "22636KB",
+        "Buffer": "82636KB",
         "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_ptpfc/delay400us/switch-relay-port.json"
       }
     }

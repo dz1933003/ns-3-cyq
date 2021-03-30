@@ -8,12 +8,12 @@
       "kMax": "200KB",
       "pMax": 0.01
     },
-    "Ingress": "11MB"
+    "Ingress": "41MB"
   },
   {
     "QueueIndex": [
       1
     ],
-    "Ingress": "11MB"
+    "Ingress": "41MB"
   }
 ]
