@@ -169,6 +169,7 @@ PfcHostPort::L2RtxModeStringToNum (const std::string &mode)
   else
     NS_ASSERT_MSG (false, "PfcHostPort::L2RtxModeStringToNum: "
                           "Unknown L2 retransmission mode");
+  return L2_RTX_MODE::NONE_RTX;
 }
 
 void
@@ -208,6 +209,7 @@ PfcHostPort::CcModeStringToNum (const std::string &mode)
   else
     NS_ASSERT_MSG (false, "PfcHostPort::CcModeStringToNum: "
                           "Unknown congestion control mode");
+  return CC_MODE::NONE_CC;
 }
 
 void
