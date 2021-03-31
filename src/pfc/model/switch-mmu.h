@@ -72,6 +72,14 @@ public:
    */
   void ConfigNQueue (uint32_t n);
 
+  /**
+   * Configurate dynamic PFC threshold
+   *
+   * \param enable if enable dynamic PFC threshold
+   * \param shift dynamic PFC threshold shift right value
+   */
+  void ConfigDynamicThreshold (bool enable, uint32_t shift);
+
 public:
   /**
    * Configurate buffer size
@@ -695,6 +703,7 @@ private:
   std::vector<Ptr<NetDevice>> m_devices; //!< devices managed by this mmu
 
   bool m_dynamicThreshold; //!< if enabled dynamic PFC threshold
+  uint32_t m_dynamicThresholdShift; //!< dynamic PFC threshold shift right value
 
   Ptr<UniformRandomVariable> uniRand; //!< random var stream
 

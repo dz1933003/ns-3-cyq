@@ -247,6 +247,8 @@ main (int argc, char *argv[])
           pfcSwitch->InstallMmu (mmu);
           const uint64_t buffer = cyq::DataSize::GetBytes (sw["Config"]["Buffer"]);
           mmu->ConfigBufferSize (buffer);
+          if (sw["Config"].contains ("Dynamic"))
+            mmu->ConfigDynamicThreshold (true, sw["Config"]["Dynamic"]);
           ConfigMmuPort (node, mmu, sw["Config"]["ConfigFile"]);
           pfcSwitch->InitSendCbfcFeedback ();
           pfcSwitch->InitSendCbpfcFeedback ();
