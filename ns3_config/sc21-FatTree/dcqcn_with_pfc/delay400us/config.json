@@ -97,6 +97,7 @@
       ],
       "Config": {
         "Buffer": "13180KB",
+        "Dynamic": 2,
         "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_pfc/delay400us/switch-core-port.json"
       }
     },
@@ -151,6 +152,7 @@
       ],
       "Config": {
         "Buffer": "12544KB",
+        "Dynamic": 2,
         "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_pfc/delay400us/switch-aggre-edge-port.json"
       }
     },
