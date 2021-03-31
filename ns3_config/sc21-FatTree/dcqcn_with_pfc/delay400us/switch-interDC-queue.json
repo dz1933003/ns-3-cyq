@@ -4,9 +4,9 @@
       0
     ],
     "Ecn": {
-      "kMin": "5KB",
-      "kMax": "200KB",
-      "pMax": 0.01
+      "kMin": "200KB",
+      "kMax": "800KB",
+      "pMax": 0.2
     },
     "Headroom": "159KB",
     "Reserve": "159KB"

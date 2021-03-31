@@ -6,9 +6,8 @@
       "Mode": "B2N",
       "Window": {
         "Enable": true,
-        "Global": true,
-        "Variable": true,
-        "Size": 2000000
+        "Global": false,
+        "Variable": true
       },
       "Chunk": 4000,
       "AckInterval": 1,
@@ -16,15 +15,15 @@
     },
     "CcMode": {
       "Mode": "DCQCN",
-      "EwmaGain": 0.00390625,
+      "EwmaGain": 0.0048828,
       "ClampTargetRate": false,
-      "IncRateInterval": "55us",
+      "IncRateInterval": "300us",
       "DecRateInterval": "4us",
-      "FastRecTimes": 5,
-      "AlphaResumeInterval": "55us",
-      "RateAI": "50Mbps",
-      "RateHAI": "100Mbps",
-      "MinRate": "100Mbps",
+      "FastRecTimes": 1,
+      "AlphaResumeInterval": "1us",
+      "RateAI": "5Mbps",
+      "RateHAI": "50Mbps",
+      "MinRate": "1Mbps",
       "RateBound": true
     }
   },
@@ -97,7 +96,7 @@
         }
       ],
       "Config": {
-        "Buffer": "3180KB",
+        "Buffer": "13180KB",
         "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_pfc/delay400us/switch-core-port.json"
       }
     },
@@ -151,7 +150,7 @@
         }
       ],
       "Config": {
-        "Buffer": "2544KB",
+        "Buffer": "12544KB",
         "ConfigFile": "ns3_config/sc21-FatTree/dcqcn_with_pfc/delay400us/switch-aggre-edge-port.json"
       }
     },
