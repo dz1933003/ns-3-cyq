@@ -40,7 +40,10 @@ SwitchMmu::GetTypeId (void)
 }
 
 SwitchMmu::SwitchMmu (void)
-    : m_bufferConfig (12 * 1024 * 1024), m_nQueues (0), m_dynamicThreshold (false)
+    : m_bufferConfig (12 * 1024 * 1024),
+      m_nQueues (0),
+      m_dynamicThreshold (false),
+      m_dynamicThresholdShift (0)
 {
   NS_LOG_FUNCTION_NOARGS ();
   uniRand = CreateObject<UniformRandomVariable> ();
@@ -94,6 +97,13 @@ void
 SwitchMmu::ConfigBufferSize (uint64_t size)
 {
   m_bufferConfig = size;
+}
+
+void
+SwitchMmu::ConfigDynamicThreshold (bool enable, uint32_t shift)
+{
+  m_dynamicThreshold = enable;
+  m_dynamicThresholdShift = shift;
 }
 
 /*****************
@@ -301,8 +311,7 @@ SwitchMmu::SetResume (Ptr<NetDevice> port, uint32_t qIndex)
 uint64_t
 SwitchMmu::GetPfcThreshold (Ptr<NetDevice> port, uint32_t qIndex)
 {
-  // cyq: add dynamic PFC threshold choice if needed
-  return 0;
+  return GetSharedBufferRemain () >> m_dynamicThresholdShift;
 }
 
 bool
@@ -902,7 +911,7 @@ SwitchMmu::Dump ()
   std::stringstream ss;
   for (const auto &dev : m_devices)
     {
-      for (uint32_t i; i <= m_nQueues; i++)
+      for (uint32_t i = 0; i <= m_nQueues; i++)
         {
           const auto portType = PfcSwitch::DeviceToL2Type (dev);
           if (portType == PfcSwitch::PFC)
