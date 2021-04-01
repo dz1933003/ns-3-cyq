@@ -51,7 +51,7 @@ NoPfcSwitchMmuQueue::GetBufferUsed ()
 uint64_t
 NoPfcSwitchMmuQueue::GetSharedBufferUsed ()
 {
-  return 0;
+  return ingressUsed > ingressSize ? ingressUsed - ingressSize : 0;
 }
 
 void

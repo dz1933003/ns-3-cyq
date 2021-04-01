@@ -676,7 +676,8 @@ SwitchMmu::CheckIngressAdmission (Ptr<NetDevice> port, uint32_t qIndex, uint32_t
   else if (portType == PfcSwitch::NOPFC)
     {
       auto queueConfig = DynamicCast<NoPfcSwitchMmuQueue> (m_switchMmuQueueConfig[port][qIndex]);
-      if (pSize + queueConfig->ingressUsed > queueConfig->ingressSize)
+      if (pSize + queueConfig->ingressUsed > queueConfig->ingressSize &&
+          pSize + GetSharedBufferUsed () > GetSharedBufferSize ())
         return false;
       return true;
     }
