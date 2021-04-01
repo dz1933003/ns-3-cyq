@@ -691,6 +691,7 @@ DpskNetDevice::SendFrom (Ptr<Packet> packet, const Address &source, const Addres
   else
     {
       NS_ASSERT_MSG (false, "DpskNetDevice::SendFrom(): m_txMode outbound");
+      return false;
     }
 }
 

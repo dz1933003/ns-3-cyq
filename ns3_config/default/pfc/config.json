@@ -27,6 +27,7 @@
       ],
       "Config": {
         "Buffer": "12MiB",
+        "Dynamic": 2,
         "ConfigFile": "ns3_config/default/pfc/switch-port.json"
       }
     }
