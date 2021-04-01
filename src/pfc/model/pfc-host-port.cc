@@ -245,34 +245,31 @@ PfcHostPort::Transmit ()
             continue;
 
           const auto qp = m_txQueuePairs[qIdx];
-          if (m_rtxSeqQueues[qIdx].empty () == false)
+          const auto irnSeq = m_rtxSeqQueues[qIdx].front ();
+          const auto state = qp->m_irn.GetIrnState (irnSeq);
+
+          if (m_ccMode == CC_MODE::DCQCN && qp->m_nextAvail > Simulator::Now ())
+            continue;
+
+          m_rtxSeqQueues[qIdx].pop ();
+          m_rtxQueuingCnt--;
+
+          if (state == RdmaTxQueuePair::NACK ||
+              state == RdmaTxQueuePair::UNACK) // filter out ACKed packets
             {
-              const auto irnSeq = m_rtxSeqQueues[qIdx].front ();
-              const auto state = qp->m_irn.GetIrnState (irnSeq);
-
-              if (m_ccMode == CC_MODE::DCQCN && qp->m_nextAvail > Simulator::Now ())
-                continue;
-
-              m_rtxSeqQueues[qIdx].pop ();
-              m_rtxQueuingCnt--;
-
-              if (state == RdmaTxQueuePair::NACK ||
-                  state == RdmaTxQueuePair::UNACK) // filter out ACKed packets
-                {
-                  // Round robin
-                  m_lastQpIndex = qIdx;
-                  // Set up IRN timer
-                  const auto id = IrnTimer (qp, irnSeq);
-                  qp->m_irn.SetRtxEvent (irnSeq, id);
-                  const auto p = ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
-                  // DCQCN schedule next send by rate limiter
-                  if (m_ccMode == CC_MODE::DCQCN)
-                    UpdateNextAvail (qp, Time (0), p->GetSize ());
-                  // Statistic Tx
-                  m_nTxBytes += p->GetSize ();
-                  m_irnRtxBytes += p->GetSize ();
-                  return p;
-                }
+              // Round robin
+              m_lastQpIndex = qIdx;
+              // Set up IRN timer
+              const auto id = IrnTimer (qp, irnSeq);
+              qp->m_irn.SetRtxEvent (irnSeq, id);
+              const auto p = ReGenData (qp, irnSeq, qp->m_irn.GetPayloadSize (irnSeq));
+              // DCQCN schedule next send by rate limiter
+              if (m_ccMode == CC_MODE::DCQCN)
+                UpdateNextAvail (qp, Time (0), p->GetSize ());
+              // Statistic Tx
+              m_nTxBytes += p->GetSize ();
+              m_irnRtxBytes += p->GetSize ();
+              return p;
             }
           else
             {
