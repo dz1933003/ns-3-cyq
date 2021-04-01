@@ -307,6 +307,7 @@ main (int argc, char *argv[])
   io::CSVReader<7> flowConfig (conf["FlowConfigFile"]);
   flowConfig.read_header (io::ignore_no_column, "StartTime", "FromNode", "ToNode", "SourcePort",
                           "DestinationPort", "Size", "Priority");
+  std::set<uint32_t> flowKeys;
   while (true)
     {
       std::string startInput;
@@ -328,8 +329,12 @@ main (int argc, char *argv[])
       auto sendDpskLayer = allNodes.left.at (fromNode)->GetObject<PfcHost> ();
       sendDpskLayer->AddRdmaTxQueuePair (txQp);
       auto receiveDpskLayer = allNodes.left.at (toNode)->GetObject<PfcHost> ();
+      if (flowKeys.find (txQp->GetHash ()) != flowKeys.end ())
+        NS_FATAL_ERROR ("Flow hash collision: " << fromNode << " " << toNode << " " << sourcePort
+                                                << " " << destinationPort);
       receiveDpskLayer->AddRdmaRxQueuePairSize (txQp->GetHash (), size);
       allTxQueuePairs[txQp->GetHash ()] = txQp;
+      flowKeys.insert (txQp->GetHash ());
     }
 
   NS_LOG_UNCOND ("====Trace====");
@@ -885,9 +890,10 @@ TraceQueuePairRxComplete (Ptr<RdmaRxQueuePair> qp)
   const auto startTime = allTxQueuePairs[qp->GetHash ()]->m_startTime;
   const auto endTime = Simulator::Now ();
   const auto duration = endTime - startTime;
-  logStreams["QueuePairRxComplete"]
-      << fromNode << "," << toNode << "," << qp->m_sPort << "," << qp->m_dPort << "," << qp->m_size
-      << "," << qp->m_priority << "," << startTime << "," << endTime << "," << duration << "\n";
+  logStreams["QueuePairRxComplete"] << fromNode << "," << toNode << "," << qp->m_sPort << ","
+                                    << qp->m_dPort << "," << qp->m_size << "," << qp->m_priority
+                                    << "," << startTime << "," << endTime << ","
+                                    << duration.GetNanoSeconds () << "\n";
   rxCompleteCnt++;
   CheckQueuePair ();
 }
