@@ -1,4 +1,6 @@
-// #pragma GCC diagnostic ignored "-Wstringop-truncation"
+#if __GNUC__ > 7
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
 // Copyright: (2012-2015) Ben Strasser <code@ben-strasser.net>
 // License: BSD-3
 //
