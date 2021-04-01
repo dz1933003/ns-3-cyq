@@ -1,4 +1,0 @@
-StartTime,FromNode,ToNode,SourcePort,DestinationPort,Size,Priority
-1000000036ns,h41,h55,1,1,64653B,0
-1000000454ns,h36,h49,1,1,37590B,0
-1000002693ns,h53,h27,1,1,620B,0

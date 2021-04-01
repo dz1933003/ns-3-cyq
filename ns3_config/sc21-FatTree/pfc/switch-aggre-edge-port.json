@@ -1,0 +1,18 @@
+[
+  {
+    "PortIndex": 0,
+    "QueueConfigFile": "ns3_config/sc21-FatTree/pfc/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 1,
+    "QueueConfigFile": "ns3_config/sc21-FatTree/pfc/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 2,
+    "QueueConfigFile": "ns3_config/sc21-FatTree/pfc/switch-interDC-queue.json"
+  },
+  {
+    "PortIndex": 3,
+    "QueueConfigFile": "ns3_config/sc21-FatTree/pfc/switch-interDC-queue.json"
+  }
+]

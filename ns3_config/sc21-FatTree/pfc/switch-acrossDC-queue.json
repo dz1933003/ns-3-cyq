@@ -1,0 +1,16 @@
+[
+  {
+    "QueueIndex": [
+      0
+    ],
+    "Headroom": "40MB",
+    "Reserve": "1MB"
+  },
+  {
+    "QueueIndex": [
+      1
+    ],
+    "Headroom": "40MB",
+    "Reserve": "1MB"
+  }
+]
