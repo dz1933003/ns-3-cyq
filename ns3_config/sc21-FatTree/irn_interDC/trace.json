@@ -3,78 +3,21 @@
     "Enable": true
   },
   "Switch": {
-    "Enable": false,
+    "Enable": true,
     "IngressDropPacket": {
       "Enable": true,
-      "Interval": "10us",
+      "Interval": "100us",
       "Start": "1s",
       "End": "3s"
     },
     "BufferUsed": {
-      "Enable": true,
-      "Interval": "10us",
-      "Start": "1s",
-      "End": "3s",
-      "Target": [
-        {
-          "Name": [
-            "s41",
-            "s42"
-          ],
-          "PortIndex": [
-            1,
-            2,
-            3,
-            4
-          ]
-        }
-      ]
+      "Enable": false
     }
   },
   "TxByte": {
-    "Enable": false,
-    "Interval": "10us",
-    "Start": "1s",
-    "End": "3s",
-    "Target": [
-      {
-        "Name": [
-          "s41",
-          "s42"
-        ],
-        "PortIndex": [
-          0
-        ]
-      }
-    ]
+    "Enable": false
   },
   "RxByte": {
-    "Enable": false,
-    "Interval": "1s",
-    "Start": "0s",
-    "End": "3s",
-    "Target": [
-      {
-        "Name": [
-          "s42"
-        ],
-        "PortIndex": [
-          0
-        ]
-      }
-    ]
-  },
-  "PfcRx": {
-    "Enable": false,
-    "Target": [
-      {
-        "Name": [
-          "h1"
-        ],
-        "PortIndex": [
-          0
-        ]
-      }
-    ]
+    "Enable": false
   }
 }
