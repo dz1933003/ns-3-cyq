@@ -72,7 +72,7 @@
         }
       ],
       "Config": {
-        "Buffer": "3180KB",
+        "Buffer": "13180KB",
         "Dynamic": 2,
         "ConfigFile": "ns3_config/sc21-FatTree/ptpfc/switch-core-port.json"
       }
