@@ -14,6 +14,7 @@ The Network Simulator, Version 3
   - [Changes on Branch `dev-cyq` by Yanqing](#changes-on-branch-dev-cyq-by-yanqing)
     - [Add Compiler Flag for Modified Socket Tos](#add-compiler-flag-for-modified-socket-tos)
     - [Essential Libraries](#essential-libraries)
+  - [Run Long-Range RDMA](#run-long-range-rdma)
 
 Note:  Much more substantial information about ns-3 can be found at
 http://www.nsnam.org
@@ -154,3 +155,14 @@ You need these libraries before building from this branch.
 - [Boost C++ Libraries](https://www.boost.org/)
 - [JSON for Modern C++](https://github.com/nlohmann/json) (included)
 - [Fast C++ CSV Parser](https://github.com/ben-strasser/fast-cpp-csv-parser) (included)
+
+## Run Long-Range RDMA
+
+Copy the flow file from `ns3_config/sc21-FatTree/flows` to
+`ns3_config/sc21-FatTree/flow.csv`. Then run
+
+```
+./waf --run "scratch/pfc-cyq ns3_config/sc21-FatTree/<algorithm>/<config file> <trace file prefix>"
+```
+
+The results will generate in `ns3_log/sc21-FatTree/`.
